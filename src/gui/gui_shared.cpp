@@ -1170,7 +1170,10 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
 }
 
 LRESULT handleListCustomDraw(AppState& state, LPNMHDR header) {
-    if (!header || static_cast<int>(header->code) != NM_CUSTOMDRAW) return CDRF_DODEFAULT;
+    if (header->code != NM_CUSTOMDRAW)
+{
+    return CDRF_DODEFAULT;
+}
     HWND tableHeader = state.tableList ? ListView_GetHeader(state.tableList) : nullptr;
     HWND squadHeader = state.squadList ? ListView_GetHeader(state.squadList) : nullptr;
     HWND transferHeader = state.transferList ? ListView_GetHeader(state.transferList) : nullptr;

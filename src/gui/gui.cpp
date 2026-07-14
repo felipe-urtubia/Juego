@@ -1,6 +1,7 @@
 #include "gui/gui.h"
 #include "gui/gui_audio.h"
 #include "gui/gui_internal.h"
+#include <cstring>
 
 #ifdef _WIN32
 
@@ -18,32 +19,73 @@ using SetProcessDpiAwareFn = BOOL(WINAPI*)();
 
 void enableHighDpiSupport() {
     HMODULE user32 = GetModuleHandleW(L"user32.dll");
-    if (user32) {
-        auto setDpiContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(
-            GetProcAddress(user32, "SetProcessDpiAwarenessContext"));
-        if (setDpiContext && setDpiContext(reinterpret_cast<HANDLE>(-4))) {
+
+    if (!user32) {
+        return;
+    }
+
+    FARPROC proc = GetProcAddress(user32, "SetProcessDpiAwarenessContext");
+
+    SetProcessDpiAwarenessContextFn setDpiContext = nullptr;
+
+    if (proc) {
+        setDpiContext = reinterpret_cast<SetProcessDpiAwarenessContextFn>(reinterpret_cast<void*>(proc));
+    }
+
+    if (setDpiContext) {
+        if (setDpiContext(reinterpret_cast<HANDLE>(-4))) {
             return;
         }
-        auto setDpiAware = reinterpret_cast<SetProcessDpiAwareFn>(GetProcAddress(user32, "SetProcessDPIAware"));
-        if (setDpiAware) {
-            setDpiAware();
-        }
+    }
+
+
+    proc = GetProcAddress(user32, "SetProcessDPIAware");
+
+    SetProcessDpiAwareFn setDpiAware = nullptr;
+
+    if (proc) {
+        setDpiAware = reinterpret_cast<SetProcessDpiAwareFn>(reinterpret_cast<void*>(proc));
+    }
+
+    if (setDpiAware) {
+        setDpiAware();
     }
 }
 
+
 UINT queryWindowDpi(HWND hwnd) {
     HMODULE user32 = GetModuleHandleW(L"user32.dll");
+
     if (user32) {
-        auto getDpiForWindow = reinterpret_cast<GetDpiForWindowFn>(GetProcAddress(user32, "GetDpiForWindow"));
+
+        FARPROC proc = GetProcAddress(user32, "GetDpiForWindow");
+
+        GetDpiForWindowFn getDpiForWindow = nullptr;
+
+        if (proc) {
+            getDpiForWindow = reinterpret_cast<GetDpiForWindowFn>(reinterpret_cast<void*>(proc));
+        }
+
         if (getDpiForWindow) {
+
             UINT dpi = getDpiForWindow(hwnd);
-            if (dpi != 0) return dpi;
+
+            if (dpi != 0) {
+                return dpi;
+            }
         }
     }
 
+
     HDC hdc = GetDC(hwnd ? hwnd : nullptr);
-    UINT dpi = hdc ? static_cast<UINT>(GetDeviceCaps(hdc, LOGPIXELSX)) : 96;
-    if (hdc) ReleaseDC(hwnd ? hwnd : nullptr, hdc);
+
+    UINT dpi = 96;
+
+    if (hdc) {
+        dpi = static_cast<UINT>(GetDeviceCaps(hdc, LOGPIXELSX));
+        ReleaseDC(hwnd ? hwnd : nullptr, hdc);
+    }
+
     return dpi == 0 ? 96 : dpi;
 }
 
@@ -632,7 +674,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             break;
         case WM_NOTIFY:
             if (!state) break;
-            if (static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->code) == NM_CUSTOMDRAW) {
+            if (reinterpret_cast<LPNMHDR>(lParam)->code == NM_CUSTOMDRAW) {
                 return handleListCustomDraw(*state, reinterpret_cast<LPNMHDR>(lParam));
             }
             if (reinterpret_cast<LPNMHDR>(lParam)->code == LVN_COLUMNCLICK) {
@@ -643,12 +685,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 reinterpret_cast<LPNMHDR>(lParam)->idFrom == IDC_TABLE_LIST ||
                 reinterpret_cast<LPNMHDR>(lParam)->idFrom == IDC_TRANSFER_LIST) {
                 if (reinterpret_cast<LPNMHDR>(lParam)->code == LVN_ITEMCHANGED ||
-                    static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->code) == NM_CLICK) {
+                    reinterpret_cast<LPNMHDR>(lParam)->code == NM_CLICK) {
                     handleListSelectionChange(*state, static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->idFrom));
                     return 0;
                 }
-                if (static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->code) == NM_DBLCLK ||
-                    static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->code) == NM_RETURN) {
+                if (reinterpret_cast<LPNMHDR>(lParam)->code == NM_DBLCLK ||
+                    reinterpret_cast<LPNMHDR>(lParam)->code == NM_RETURN) {
                     activateListAction(*state, static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->idFrom));
                     return 0;
                 }

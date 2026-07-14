@@ -13,6 +13,7 @@
 #include "simulation/match_stats.h"
 #include "simulation/tactics_engine.h"
 #include "utils/utils.h"
+#include "simulation/match_momentum.h"
 
 #include <cmath>
 #include <sstream>
@@ -60,8 +61,11 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
     homeState.goals.reserve(6);
     awayState.goals.reserve(6);
     int homePossAccumulator = 0;
+    MatchMomentum momentum;
+    momentum.reset();
 
     for (size_t phaseIndex = 0; phaseIndex < kPhases.size(); ++phaseIndex) {
+        momentum.decay();
         const int minuteStart = kPhases[phaseIndex].first;
         const int minuteEnd = kPhases[phaseIndex].second;
 

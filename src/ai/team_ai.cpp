@@ -3,6 +3,7 @@
 #include "engine/team_personality.h"
 #include "simulation/match_engine_internal.h"
 #include "utils/utils.h"
+#include "core/football_constants.h"
 
 #include <algorithm>
 
@@ -72,11 +73,11 @@ void adjustCpuTactics(Team& team, const Team& opponent, const Team* myTeam) {
     bool opponentAggressive = opponent.pressingIntensity >= 4 || opponent.tactics == "Pressing";
 
     if (avgFitness < 66 || unavailable >= 4) {
-        team.rotationPolicy = "Rotacion";
+        team.rotationPolicy = std::string(Football::Rotation::Rotation);
     } else if (diff >= 6 && avgFitness >= 72) {
-        team.rotationPolicy = "Titulares";
+        team.rotationPolicy = std::string(Football::Rotation::Starters);
     } else {
-        team.rotationPolicy = "Balanceado";
+        team.rotationPolicy = std::string(Football::Rotation::Balanced);
     }
 
     if (avgFitness < 60 || team.morale <= 35) {
@@ -181,6 +182,7 @@ bool applyInMatchCpuAdjustment(Team& team,
     bool changed = false;
     int scoreDiff = goalsFor - goalsAgainst;
     int avgFitness = averageAvailableFitness(team);
+    int opponentFitness = averageAvailableFitness(opponent);
     const TeamPersonalityProfile profile = buildTeamPersonalityProfile(team);
     string note;
 
@@ -239,6 +241,24 @@ bool applyInMatchCpuAdjustment(Team& team,
         }
         note = team.name + " busca romper el empate con un plan alineado a su identidad";
     }
+    if (minute >= 65 &&
+    scoreDiff == 0 &&
+    opponentFitness <= 55 &&
+    avgFitness >= opponentFitness + 8) {
+
+    bool pressChanged = false;
+
+    pressChanged |= applySetting(team.tactics, "Pressing");
+    pressChanged |= applySetting(team.matchInstruction, "Contra-presion");
+    pressChanged |= applySetting(team.pressingIntensity, 5, 1, 5);
+    pressChanged |= applySetting(team.tempo, 5, 1, 5);
+
+    if (pressChanged) {
+        changed = true;
+        note = team.name +
+               " detecta el desgaste rival y aumenta la intensidad";
+    }
+}
 
     if (scoreDiff == 0 && minute >= 60 && opponentAvailablePlayers <= 10) {
         bool redAdvantageChanged = false;

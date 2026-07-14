@@ -106,6 +106,7 @@ set(FM_SIMULATION_SOURCES
     src/simulation/player_condition.cpp
     src/simulation/simulation.cpp
     src/simulation/tactics_engine.cpp
+    src/simulation/match_momentum.cpp
 )
 
 set(FM_TRANSFER_SOURCES
@@ -264,6 +265,14 @@ function(fm_configure_target target_name)
         target_compile_options(${target_name} PRIVATE /W4)
     else()
         target_compile_options(${target_name} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+
+    if(MINGW)
+    target_link_options(${target_name} PRIVATE
+        -static
+        -static-libgcc
+        -static-libstdc++
+    )
     endif()
 
     set_target_properties(${target_name} PROPERTIES

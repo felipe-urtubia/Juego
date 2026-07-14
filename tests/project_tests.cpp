@@ -468,8 +468,10 @@ void testLowBlockSuppressesChanceQuality() {
 
 void testCompetitionRulesLoadFromCsv() {
     expect(reloadCompetitionConfigs(), "Las reglas de competicion deben poder cargarse desde competition_rules.csv.");
-    const CompetitionConfig& primera = getCompetitionConfig("primera division");
-    const CompetitionConfig& terceraB = getCompetitionConfig("tercera division b");
+    const string divName1 = "primera division";
+    const string divName2 = "tercera division b";
+    const CompetitionConfig primera = getCompetitionConfig(divName1);
+    const CompetitionConfig terceraB = getCompetitionConfig(divName2);
 
     expect(primera.baseIncome == 60000, "La Primera Division debe leer ingresos base desde el CSV externo.");
     expect(terceraB.groups.enabled && terceraB.groups.groupSize == 14,
