@@ -16,6 +16,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #ifdef _WIN32
 #include <process.h>
@@ -84,6 +85,28 @@ static CachedRosterAudit& rosterAuditCache() {
     static CachedRosterAudit cache;
     return cache;
 }
+static recursive_mutex& startupValidationMutex() {
+    static recursive_mutex mutex;
+    return mutex;
+}
+
+class ScopedValidationBuildFlag {
+public:
+    explicit ScopedValidationBuildFlag(bool& flag)
+        : flag_(flag) {
+        flag_ = true;
+    }
+
+    ~ScopedValidationBuildFlag() {
+        flag_ = false;
+    }
+
+    ScopedValidationBuildFlag(const ScopedValidationBuildFlag&) = delete;
+    ScopedValidationBuildFlag& operator=(const ScopedValidationBuildFlag&) = delete;
+
+private:
+    bool& flag_;
+};
 
 struct IgnoredFolderCache {
     bool loaded = false;
@@ -1174,8 +1197,14 @@ bool writeRosterDataValidationReport(const string& path) {
     return writeRosterDataValidationReportInternal(buildRosterDataValidationReport(), path);
 }
 
-StartupValidationSummary buildStartupValidationSummary(size_t maxLines, bool forceRefresh) {
-    static bool buildingSummary = false;
+StartupValidationSummary buildStartupValidationSummary(
+    size_t maxLines,
+    bool forceRefresh
+) {
+    lock_guard<recursive_mutex> lock(startupValidationMutex());
+
+    static thread_local bool buildingSummary = false;
+
     if (buildingSummary) {
         StartupValidationSummary skipped{};
         skipped.ok = true;
@@ -1184,11 +1213,20 @@ StartupValidationSummary buildStartupValidationSummary(size_t maxLines, bool for
         return skipped;
     }
 
-    buildingSummary = true;
+    ScopedValidationBuildFlag buildGuard(buildingSummary);
+
     CachedRosterAudit& cache = rosterAuditCache();
+
     if (!cache.ready || forceRefresh) {
-        cache.report = buildRosterDataValidationReport();
-        writeRosterDataValidationReportInternal(cache.report, "saves/roster_validation_report.txt");
+        DataValidationReport refreshedReport =
+            buildRosterDataValidationReport();
+
+        writeRosterDataValidationReportInternal(
+            refreshedReport,
+            "saves/roster_validation_report.txt"
+        );
+
+        cache.report = std::move(refreshedReport);
         cache.ready = true;
     }
 
@@ -1196,24 +1234,40 @@ StartupValidationSummary buildStartupValidationSummary(size_t maxLines, bool for
     summary.ok = cache.report.errorCount == 0;
     summary.errorCount = cache.report.errorCount;
     summary.warningCount = cache.report.warningCount;
-    summary.lines.push_back("Auditoria automatica de datos externos");
-    summary.lines.push_back("Errores: " + to_string(summary.errorCount) +
-                            " | Advertencias: " + to_string(summary.warningCount));
+
+    summary.lines.push_back(
+        "Auditoria automatica de datos externos"
+    );
+
+    summary.lines.push_back(
+        "Errores: " + to_string(summary.errorCount) +
+        " | Advertencias: " + to_string(summary.warningCount)
+    );
 
     if (cache.report.issues.empty()) {
-        summary.lines.push_back("No se detectaron incidencias al revisar la base externa.");
-        buildingSummary = false;
+        summary.lines.push_back(
+            "No se detectaron incidencias al revisar la base externa."
+        );
+
         return summary;
     }
 
-    const size_t limit = min(maxLines, cache.report.issues.size());
+    const size_t limit =
+        min(maxLines, cache.report.issues.size());
+
     for (size_t i = 0; i < limit; ++i) {
-        summary.lines.push_back(formatIssueLine(cache.report.issues[i]));
+        summary.lines.push_back(
+            formatIssueLine(cache.report.issues[i])
+        );
     }
+
     if (cache.report.issues.size() > limit) {
-        summary.lines.push_back("Reporte completo disponible en saves/roster_validation_report.txt");
+        summary.lines.push_back(
+            "Reporte completo disponible en "
+            "saves/roster_validation_report.txt"
+        );
     }
-    buildingSummary = false;
+
     return summary;
 }
 
@@ -1230,7 +1284,10 @@ ValidationSuiteSummary buildValidationSuiteSummary() {
     results.push_back(validateSaveLoad());
     results.push_back(validateTableSorting());
     DataValidationReport rosterReport = buildRosterDataValidationReport();
-    writeRosterDataValidationReport("saves/roster_validation_report.txt");
+    writeRosterDataValidationReportInternal(
+    rosterReport,
+    "saves/roster_validation_report.txt"
+);
 
     int failures = 0;
     ValidationSuiteSummary summary;

@@ -4,13 +4,34 @@
 
 using namespace std;
 
+namespace {
+
+constexpr double kNeutralConfidence = 0.5;
+
+double clampMomentum(double value)
+{
+    return clamp(value, -1.0, 1.0);
+}
+
+double clampConfidence(double value)
+{
+    return clamp(value, 0.0, 1.0);
+}
+
+double clampPressure(double value)
+{
+    return clamp(value, 0.0, 1.0);
+}
+
+} // namespace
+
 void MatchMomentum::reset()
 {
     homeMomentum = 0.0;
     awayMomentum = 0.0;
 
-    homeConfidence = 0.5;
-    awayConfidence = 0.5;
+    homeConfidence = kNeutralConfidence;
+    awayConfidence = kNeutralConfidence;
 
     homePressure = 0.0;
     awayPressure = 0.0;
@@ -22,9 +43,13 @@ void MatchMomentum::homeAttack()
     awayMomentum -= 0.02;
 
     homePressure += 0.02;
-    homePressure = clamp(homePressure, 0.0, 1.0);
-    homeMomentum = clamp(homeMomentum,-1.0,1.0);
-    awayMomentum = clamp(awayMomentum,-1.0,1.0);
+    awayPressure -= 0.01;
+
+    homeMomentum = clampMomentum(homeMomentum);
+    awayMomentum = clampMomentum(awayMomentum);
+
+    homePressure = clampPressure(homePressure);
+    awayPressure = clampPressure(awayPressure);
 }
 
 void MatchMomentum::awayAttack()
@@ -33,10 +58,13 @@ void MatchMomentum::awayAttack()
     homeMomentum -= 0.02;
 
     awayPressure += 0.02;
-    awayPressure = clamp(awayPressure, 0.0, 1.0);
+    homePressure -= 0.01;
 
-    homeMomentum = clamp(homeMomentum,-1.0,1.0);
-    awayMomentum = clamp(awayMomentum,-1.0,1.0);
+    homeMomentum = clampMomentum(homeMomentum);
+    awayMomentum = clampMomentum(awayMomentum);
+
+    homePressure = clampPressure(homePressure);
+    awayPressure = clampPressure(awayPressure);
 }
 
 void MatchMomentum::homeGoal()
@@ -47,8 +75,11 @@ void MatchMomentum::homeGoal()
     homeMomentum += 0.20;
     awayMomentum -= 0.20;
 
-    homeConfidence = clamp(homeConfidence,0.0,1.0);
-    awayConfidence = clamp(awayConfidence,0.0,1.0);
+    homeConfidence = clampConfidence(homeConfidence);
+    awayConfidence = clampConfidence(awayConfidence);
+
+    homeMomentum = clampMomentum(homeMomentum);
+    awayMomentum = clampMomentum(awayMomentum);
 }
 
 void MatchMomentum::awayGoal()
@@ -59,29 +90,47 @@ void MatchMomentum::awayGoal()
     awayMomentum += 0.20;
     homeMomentum -= 0.20;
 
-    homeConfidence = clamp(homeConfidence,0.0,1.0);
-    awayConfidence = clamp(awayConfidence,0.0,1.0);
+    homeConfidence = clampConfidence(homeConfidence);
+    awayConfidence = clampConfidence(awayConfidence);
+
+    homeMomentum = clampMomentum(homeMomentum);
+    awayMomentum = clampMomentum(awayMomentum);
 }
 
 void MatchMomentum::decay()
 {
-    homeMomentum*=0.94;
-    awayMomentum*=0.94;
+    homeMomentum *= 0.94;
+    awayMomentum *= 0.94;
 
-    homePressure*=0.96;
-    awayPressure*=0.96;
+    homePressure *= 0.96;
+    awayPressure *= 0.96;
+
+    homeConfidence +=
+        (kNeutralConfidence - homeConfidence) * 0.04;
+
+    awayConfidence +=
+        (kNeutralConfidence - awayConfidence) * 0.04;
+
+    homeMomentum = clampMomentum(homeMomentum);
+    awayMomentum = clampMomentum(awayMomentum);
+
+    homePressure = clampPressure(homePressure);
+    awayPressure = clampPressure(awayPressure);
+
+    homeConfidence = clampConfidence(homeConfidence);
+    awayConfidence = clampConfidence(awayConfidence);
 }
 
 double MatchMomentum::homeBonus() const
 {
-    return homeMomentum*0.30
-            +homeConfidence*0.20
-            +homePressure*0.15;
+    return homeMomentum * 0.30
+           + (homeConfidence - kNeutralConfidence) * 0.20
+           + homePressure * 0.15;
 }
 
 double MatchMomentum::awayBonus() const
 {
-    return awayMomentum*0.30
-            +awayConfidence*0.20
-            +awayPressure*0.15;
+    return awayMomentum * 0.30
+           + (awayConfidence - kNeutralConfidence) * 0.20
+           + awayPressure * 0.15;
 }

@@ -157,7 +157,6 @@ set(FM_CONSOLE_UI_SOURCES
     src/ui/team_ui.cpp
     src/ui/ui.cpp
     src/ui/global_search.cpp
-    src/ui/keyboard_shortcuts.cpp
     src/ui/context_menu.cpp
     src/ui/economy_fairplay.cpp
 )
@@ -183,6 +182,7 @@ if(WIN32)
         src/gui/gui_view_management.cpp
         src/gui/gui_view_overview.cpp
         src/gui/gui_views.cpp
+        src/ui/keyboard_shortcuts.cpp
     )
     set(FM_GUI_ENTRY_SOURCES
         src/winmain.cpp

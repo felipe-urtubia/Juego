@@ -124,6 +124,8 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
 
         const int homeShotsBefore = stats.homeShots;
         const int awayShotsBefore = stats.awayShots;
+        const int homeGoalsBefore = stats.homeGoals;
+    const int awayGoalsBefore = stats.awayGoals;
         match_event_generator::playPhaseSequences(homeState.team,
                                                   awayState.team,
                                                   homeState.xi,
@@ -137,7 +139,7 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
                                                   phaseEval.homeProgressions,
                                                   phaseEval.homeAttacks,
                                                   phaseEval.homeChanceCount,
-                                                  phaseEval.homeAttack - phaseEval.awayDefense,
+                                                  phaseEval.homeAttack - phaseEval.awayDefense + momentum.homeBonus() * 10.0,
                                                   phase.awayDefensiveRisk,
                                                   timeline,
                                                   stats,
@@ -155,13 +157,31 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
                                                   phaseEval.awayProgressions,
                                                   phaseEval.awayAttacks,
                                                   phaseEval.awayChanceCount,
-                                                  phaseEval.awayAttack - phaseEval.homeDefense,
+                                                  phaseEval.awayAttack - phaseEval.homeDefense + momentum.awayBonus() * 10.0,
                                                   phase.homeDefensiveRisk,
                                                   timeline,
                                                   stats,
                                                   awayState.goals);
         timeline.phases.back().homeShotsGenerated = stats.homeShots - homeShotsBefore;
         timeline.phases.back().awayShotsGenerated = stats.awayShots - awayShotsBefore;
+        const int homeShotsGenerated = stats.homeShots - homeShotsBefore;
+const int awayShotsGenerated = stats.awayShots - awayShotsBefore;
+
+for (int i = 0; i < homeShotsGenerated; ++i) {
+    momentum.homeAttack();
+}
+
+for (int i = 0; i < awayShotsGenerated; ++i) {
+    momentum.awayAttack();
+}
+
+if (stats.homeGoals > homeGoalsBefore) {
+    momentum.homeGoal();
+}
+
+if (stats.awayGoals > awayGoalsBefore) {
+    momentum.awayGoal();
+}
 
         match_event_generator::registerDiscipline(homeState.team,
                                                   homeState.xi,
