@@ -243,10 +243,18 @@ int Team::getAverageSkill() const {
 }
 
 int Team::getAverageStamina() const {
-    auto xi = getStartingXIIndices();
-    if (xi.empty()) return 0;
+    const auto xi = getStartingXIIndices();
+
+    if (xi.empty()) {
+        return 0;
+    }
+
     int total = 0;
-    for (int idx : xi) total += players[idx].fitness;
+
+    for (int idx : xi) {
+        total += players[static_cast<size_t>(idx)].stamina;
+    }
+
     return total / static_cast<int>(xi.size());
 }
 

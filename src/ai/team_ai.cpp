@@ -62,8 +62,8 @@ void adjustCpuTactics(Team& team, const Team& opponent, const Team* myTeam) {
     if (&team == myTeam) return;
 
     ensureTeamIdentity(team);
-    ensureTeamIdentity(const_cast<Team&>(opponent));
-    const TeamPersonalityProfile profile = buildTeamPersonalityProfile(team);
+    const TeamPersonalityProfile profile =
+    buildTeamPersonalityProfile(team);
 
     int diff = team.getAverageSkill() - opponent.getAverageSkill();
     int avgFitness = averageAvailableFitness(team);

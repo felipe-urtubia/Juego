@@ -339,17 +339,41 @@ void manageLineup(Career& career) {
         while (static_cast<int>(chosen.size()) < maxCount) {
             int idx = readInt("Jugador (0 para terminar): ", 0, static_cast<int>(team.players.size()));
             if (idx == 0) break;
-            const Player& p = team.players[idx - 1];
-            if (excludePreferredXI &&
-                find(team.preferredXI.begin(), team.preferredXI.end(), p.name) != team.preferredXI.end()) {
-                cout << "Ese jugador ya esta en los titulares preferidos." << endl;
-                continue;
-            }
-            if (find(chosen.begin(), chosen.end(), p.name) != chosen.end()) {
-                cout << "Ya fue elegido." << endl;
-                continue;
-            }
-            chosen.push_back(p.name);
+          const Player& p =
+    team.players[static_cast<size_t>(idx - 1)];
+
+if (p.injured) {
+    cout << "No puedes seleccionar a un jugador lesionado."
+         << endl;
+    continue;
+}
+
+if (p.matchesSuspended > 0) {
+    cout << "No puedes seleccionar a un jugador suspendido."
+         << endl;
+    continue;
+}
+
+if (excludePreferredXI &&
+    find(team.preferredXI.begin(),
+         team.preferredXI.end(),
+         p.name) != team.preferredXI.end()) {
+    cout << "Ese jugador ya esta en los titulares preferidos."
+         << endl;
+    continue;
+}
+
+if (find(chosen.begin(), chosen.end(), p.name) !=
+    chosen.end()) {
+    cout << "Ese jugador ya fue elegido." << endl;
+    continue;
+}
+
+chosen.push_back(p.name);
+
+cout << "Seleccionado: " << p.name
+     << " (" << chosen.size()
+     << "/" << maxCount << ")" << endl;
         }
         target = chosen;
     };
@@ -701,5 +725,3 @@ void displayStatistics(Team& team) {
              << endl;
     }
 }
-
-

@@ -6241,3 +6241,63 @@ Fecha: 2026-04-04
 - Agregado soporte de filosofia de club y coherencia entre estilo, juventud y objetivos de directiva en el motor de carrera.
 - Se introdujo un score de coherencia tactica en analisis de equipo y asesoramiento al manager.
 - El objetivo mensual ahora se genera priorizando el estilo del club o la identidad juvenil del equipo.
+
+---
+
+# Auditoría técnica (Julio 2026)
+
+## Correcciones realizadas
+
+### Sistema de compilación
+- Se migró completamente el proyecto a MSYS2 UCRT64 + GCC 16.1.
+- Se configuró correctamente CMake para utilizar Ninja.
+- Se eliminaron problemas de compilación relacionados con el compilador anterior.
+- Se verificó la compilación correcta mediante CMake y Ninja.
+
+### CMake
+- Se corrigieron opciones de compilación.
+- Se ajustó el enlace estático para MinGW.
+- Se verificó la generación limpia del proyecto.
+
+### Match Engine
+
+#### Match Context
+- Se corrigió el cálculo de `defensePower`.
+- El portero dejó de aportar dos veces al cálculo defensivo.
+- Se reemplazó el bonus directo por una bonificación relativa al nivel del arquero.
+
+#### Match Momentum
+- Se corrigieron problemas que impedían la compilación del módulo.
+- Se verificó la correcta integración con el resto del motor de simulación.
+
+### Validators
+
+- Se eliminó una reconstrucción duplicada del `RosterDataValidationReport`.
+- Ahora el reporte se genera una sola vez y posteriormente se reutiliza para escribir el archivo de salida.
+- Se redujo trabajo innecesario durante la validación.
+
+### IA Táctica
+
+#### team_ai.cpp
+
+- Se eliminó un uso innecesario de `const_cast`.
+- La IA ya no modifica el equipo rival cuando solamente necesita leer sus datos.
+- Se respetó la const-correctness de la función `adjustCpuTactics()`.
+
+### Calidad del código
+
+- Se comenzó una auditoría completa del proyecto.
+- Se están eliminando:
+  - const_cast innecesarios.
+  - cálculos duplicados.
+  - código redundante.
+  - posibles comportamientos indefinidos.
+  - problemas de mantenimiento.
+
+### Verificación
+
+Después de cada modificación se ejecuta:
+
+```bash
+cmake --build out/build -- -j1
+ctest --test-dir out/build --output-on-failure
