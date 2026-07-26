@@ -12,7 +12,8 @@ struct IncomingOfferDecision {
 
 enum class WeekSimulationPresentation {
     Compact,
-    Detailed
+    Detailed,
+    MatchCenter
 };
 
 using ManagerJobSelectionCallback = int (*)(const Career& career, const std::vector<Team*>& jobs);
