@@ -25,7 +25,17 @@ int pressingRecoveryBonus(const Team& team, const std::vector<int>& xi);
 int directPlayBonus(const Team& attacking, const Team& defending, const std::vector<int>& xi);
 int crowdSupportBonus(const Team& home, const Team& away, bool neutralVenue);
 int clutchModifier(const Team& team, const std::vector<int>& xi, bool keyMatch);
-int bestBenchReplacement(const Team& team, const std::vector<int>& activeXI, const std::string& targetPos);
+int bestBenchReplacement(const Team& team,
+                         const std::vector<int>& activeXI,
+                         const std::string& targetPos);
+
+int bestBenchReplacement(const Team& team,
+                         const std::vector<int>& activeXI,
+                         const std::string& targetPos,
+                         int minute,
+                         int goalsFor,
+                         int goalsAgainst,
+                         int opponentAvailablePlayers);
 
 void pushTacticalEvent(std::vector<std::string>* events, int minute, const std::string& text);
 void applyMatchFatigue(Team& team, const std::vector<int>& xi, const std::string& tactics);

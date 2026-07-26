@@ -18,6 +18,7 @@
 #include "competition.h"
 #include "development/monthly_development.h"
 #include "simulation.h"
+#include "simulation/match_center.h"
 #include "transfers/negotiation_system.h"
 #include "transfers/transfer_market.h"
 #include "engine/social_system.h"
@@ -1196,8 +1197,18 @@ void processWeekMatches(Career& career, const vector<pair<int, int>>& matches,
         }
         const bool userControlledMatch =
             fixture.home.id == managedTeamId || fixture.away.id == managedTeamId;
+
+        const WeekSimulationPresentation presentation =
+            weekSimulationPresentation();
+
         const bool verbose =
-            userControlledMatch && weekSimulationPresentation() == WeekSimulationPresentation::Detailed;
+            userControlledMatch &&
+            presentation == WeekSimulationPresentation::Detailed;
+
+        const bool useMatchCenter =
+            userControlledMatch &&
+            presentation == WeekSimulationPresentation::MatchCenter;
+
         team_ai::adjustCpuTactics(*home, *away, career.myTeam);
         team_ai::adjustCpuTactics(*away, *home, career.myTeam);
 
@@ -1217,8 +1228,24 @@ void processWeekMatches(Career& career, const vector<pair<int, int>>& matches,
         }
         if (verbose && key) emitUiMessage("[Aviso] Partido clave de la semana.");
 
-        MatchResult result = userControlledMatch ? playMatch(&career, *home, *away, verbose, key)
-                                                 : playMatch(*home, *away, verbose, key);
+        MatchResult result =
+            userControlledMatch
+                ? playMatch(&career, *home, *away, verbose, key)
+                : playMatch(*home, *away, verbose, key);
+
+        if (useMatchCenter) {
+            match_center::PlaybackOptions options;
+            options.speed = match_center::PlaybackSpeed::Normal;
+            options.clearScreenBetweenEvents = true;
+            options.showAllEvents = false;
+
+            match_center::showMatchCenter(
+                *home,
+                *away,
+                result,
+                options);
+        }
+
         storeMatchAnalysis(career, *home, *away, result, false);
         updateRivalMemoryForUserMatch(career, *home, *away, result);
         if (userControlledMatch) {

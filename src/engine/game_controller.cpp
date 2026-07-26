@@ -316,11 +316,29 @@ void GameController::runCareerLoop() {
             case 2: trainPlayer(*career.myTeam, career.currentSeason, career.currentWeek); break;
             case 3: changeTactics(*career.myTeam); break;
             case 4: {
-                const WeekSimulationPresentation previousPresentation = weekSimulationPresentation();
-                setWeekSimulationPresentation(game_settings::isDetailedSimulation(settings_)
-                                                  ? WeekSimulationPresentation::Detailed
-                                                  : WeekSimulationPresentation::Compact);
-                
+                cout << "\nComo deseas disputar el partido de esta semana?" << endl;
+                cout << "1. Simular semana normalmente" << endl;
+                cout << "2. Ver mi partido en Match Center" << endl;
+                cout << "3. Cancelar" << endl;
+
+                const int simulationMode = readInt("Elige una opcion: ", 1, 3);
+                if (simulationMode == 3) {
+                    break;
+                }
+
+                const WeekSimulationPresentation previousPresentation =
+                    weekSimulationPresentation();
+
+                if (simulationMode == 2) {
+                    setWeekSimulationPresentation(
+                        WeekSimulationPresentation::MatchCenter);
+                } else {
+                    setWeekSimulationPresentation(
+                        game_settings::isDetailedSimulation(settings_)
+                            ? WeekSimulationPresentation::Detailed
+                            : WeekSimulationPresentation::Compact);
+                }
+
                 // Create idle callback to prevent UI freezing during week simulation
                 // Processes Windows messages periodically to keep UI responsive
                 auto idleFunc = []() {
@@ -337,7 +355,7 @@ void GameController::runCareerLoop() {
                     }
                     #endif
                 };
-                
+
                 ServiceResult simResult = engine_.simulateCareerWeek(idleFunc);
                 setWeekSimulationPresentation(previousPresentation);
                 for (const auto& message : simResult.messages) cout << message << endl;

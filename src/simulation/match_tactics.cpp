@@ -318,29 +318,126 @@ int clutchModifier(const Team& team, const vector<int>& xi, bool keyMatch) {
     return clampInt((nerve / static_cast<int>(xi.size()) - 45) / 3, -4, 12);
 }
 
-int bestBenchReplacement(const Team& team, const vector<int>& activeXI, const string& targetPos) {
+int bestBenchReplacement(const Team& team,
+                         const vector<int>& activeXI,
+                         const string& targetPos) {
+    return bestBenchReplacement(team, activeXI, targetPos, 0, 0, 0, 11);
+}
+
+int bestBenchReplacement(const Team& team,
+                         const vector<int>& activeXI,
+                         const string& targetPos,
+                         int minute,
+                         int goalsFor,
+                         int goalsAgainst,
+                         int opponentAvailablePlayers) {
     const vector<int> bench = team.getBenchIndices(7);
+    const int scoreDiff = goalsFor - goalsAgainst;
+    const bool losing = scoreDiff < 0;
+    const bool winning = scoreDiff > 0;
+    const bool lateMatch = minute >= 70;
+    const bool urgentAttack = losing && minute >= 65;
+    const bool protectLead = winning && minute >= 70;
+    const bool numericalAdvantage =
+        opponentAvailablePlayers < 11 && scoreDiff <= 0;
+
     int bestIndex = -1;
     int bestScore = -100000;
+
     for (int idx : bench) {
         if (idx < 0 || idx >= static_cast<int>(team.players.size())) continue;
         if (find(activeXI.begin(), activeXI.end(), idx) != activeXI.end()) continue;
+
         const Player& player = team.players[static_cast<size_t>(idx)];
         if (player.injured || player.matchesSuspended > 0) continue;
 
-        int score = player.skill * 4 + player.currentForm * 2 + player.consistency;
-        score += player.fitness * 2 + player.attack + player.defense;
+        const string playerPos = normalizePosition(player.position);
+        const string normalizedTarget = normalizePosition(targetPos);
+        const string role = compactToken(player.role);
+        const string duty = compactToken(player.roleDuty);
+
+        int score = player.skill * 4;
+        score += player.currentForm * 2;
+        score += player.consistency;
+        score += player.fitness * 2;
+        score += player.attack + player.defense;
         score += positionFitScore(player, targetPos) * 4;
         score += player_condition::readinessScore(player, team) / 2;
-        if (normalizePosition(player.position) == normalizePosition(targetPos)) score += 10;
-        if (playerHasTrait(player, "Versatil")) score += 6;
-        if (playerHasTrait(player, "Competidor")) score += 4;
+
+        if (playerPos == normalizedTarget) score += 18;
+        if (playerHasTrait(player, "Versatil")) score += 8;
+        if (playerHasTrait(player, "Competidor")) score += 5;
+
+        if (losing) {
+            score += player.attack * (urgentAttack ? 3 : 2);
+
+            if (playerPos == "DEL") score += urgentAttack ? 24 : 12;
+            if (playerPos == "MED") score += urgentAttack ? 10 : 5;
+            if (duty == "ataque") score += 14;
+
+            if (role == "poacher" ||
+                role == "enganche" ||
+                role == "interior" ||
+                role == "objetivo" ||
+                role == "falso9") {
+                score += 12;
+            }
+
+            if (playerHasTrait(player, "Llega al area")) score += 10;
+            if (playerHasTrait(player, "Pase riesgoso")) score += 7;
+        }
+
+        if (winning) {
+            score += player.defense * (protectLead ? 3 : 2);
+            score += player.tacticalDiscipline * 2;
+            score += player.stamina;
+
+            if (playerPos == "DEF") score += protectLead ? 20 : 8;
+            if (playerPos == "MED") score += protectLead ? 10 : 5;
+            if (duty == "defensa") score += 14;
+
+            if (role == "stopper" ||
+                role == "pivote" ||
+                role == "ballplaying") {
+                score += 12;
+            }
+
+            if (playerHasTrait(player, "Muralla")) score += 10;
+            if (playerHasTrait(player, "Lider")) score += 6;
+        }
+
+        if (scoreDiff == 0) {
+            score += (player.attack + player.defense) * 2;
+
+            if (lateMatch) {
+                score += player.attack;
+                if (duty == "ataque") score += 6;
+                if (playerHasTrait(player, "Competidor")) score += 4;
+            }
+        }
+
+        if (numericalAdvantage) {
+            score += player.attack * 2;
+            if (playerPos == "DEL" || playerPos == "MED") score += 10;
+            if (duty == "ataque") score += 8;
+        }
+
+        if (lateMatch) {
+            score += player.fitness * 2;
+            score += player.stamina;
+        }
+
+        const int positionalFit = positionFitScore(player, targetPos);
+        if (positionalFit < 35 && !playerHasTrait(player, "Versatil")) {
+            score -= urgentAttack ? 25 : 45;
+        }
 
         if (score > bestScore) {
             bestScore = score;
             bestIndex = idx;
         }
     }
+
     return bestIndex;
 }
 
