@@ -154,23 +154,6 @@ vector<int> Team::getStartingXIIndices() const {
             if (xi.size() >= 11) break;
         }
     }
-    if (xi.size() < 11) {
-        vector<int> candidates;
-        for (size_t i = 0; i < players.size(); ++i) {
-            if (!used[i]) candidates.push_back(static_cast<int>(i));
-        }
-        sort(candidates.begin(), candidates.end(), [&](int a, int b) {
-            int aScore = selectionScore(*this, a);
-            int bScore = selectionScore(*this, b);
-            if (aScore != bScore) return aScore > bScore;
-            return players[a].skill > players[b].skill;
-        });
-        for (int idx : candidates) {
-            used[idx] = true;
-            xi.push_back(idx);
-            if (xi.size() >= 11) break;
-        }
-    }
     return xi;
 }
 

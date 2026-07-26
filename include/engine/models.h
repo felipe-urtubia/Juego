@@ -245,6 +245,7 @@ public:
     std::string youthIdentity;
     std::string primaryRival;
     std::string matchInstruction;
+    int lastTacticalChangeMinute = -100;
     std::string headCoachName;
     int headCoachReputation;
     std::string headCoachStyle;
