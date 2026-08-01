@@ -6241,3 +6241,361 @@ Fecha: 2026-04-04
 - Agregado soporte de filosofia de club y coherencia entre estilo, juventud y objetivos de directiva en el motor de carrera.
 - Se introdujo un score de coherencia tactica en analisis de equipo y asesoramiento al manager.
 - El objetivo mensual ahora se genera priorizando el estilo del club o la identidad juvenil del equipo.
+
+
+---
+
+# Avance de Desarrollo - Integración del Match Center al Modo Carrera
+**Fecha:** Julio 2026
+
+## Objetivo
+
+Integrar el Match Center al flujo del Modo Carrera sin alterar la arquitectura existente ni romper la compatibilidad con los tests automáticos.
+
+---
+
+## Funcionalidades implementadas
+
+### Integración del Match Center
+
+- Se integró el Match Center al flujo de simulación semanal del Modo Carrera.
+- Antes de simular una jornada ahora aparece un menú para seleccionar el modo de simulación.
+
+```
+1. Simular semana normalmente
+2. Ver mi partido en Match Center
+3. Cancelar
+```
+
+- El usuario puede cancelar la simulación antes de comenzar.
+- Se mantiene el comportamiento tradicional para quienes prefieran la simulación normal.
+
+---
+
+### Nuevo modo de presentación
+
+Se añadió un nuevo modo de visualización:
+
+- `WeekSimulationPresentation::MatchCenter`
+
+Este nuevo modo permite que la simulación reproduzca automáticamente el partido del usuario utilizando el Match Center.
+
+---
+
+### Integración con la simulación semanal
+
+La simulación semanal ahora distingue entre tres modos:
+
+- Compact
+- Detailed
+- MatchCenter
+
+Dependiendo de la opción seleccionada por el usuario.
+
+---
+
+### Integración con MatchTimeline
+
+El Match Center utiliza el `MatchTimeline` generado durante la simulación.
+
+Esto permite:
+
+- simular el partido una única vez;
+- reutilizar todos los eventos registrados;
+- evitar ejecutar dos simulaciones diferentes del mismo encuentro.
+
+---
+
+### Reproducción del partido
+
+Cuando el partido pertenece al usuario:
+
+- se simula normalmente mediante `playMatch()`;
+- posteriormente el Match Center reproduce el encuentro utilizando la información almacenada.
+
+Los partidos del resto de equipos continúan simulándose normalmente.
+
+---
+
+### Compatibilidad
+
+Se mantuvo completamente la compatibilidad con el resto del proyecto.
+
+No fue necesario modificar:
+
+- `playMatch()`
+- los tests existentes
+- la arquitectura de simulación
+
+El Match Center funciona como una capa adicional sobre la simulación ya existente.
+
+---
+
+## Archivos modificados
+
+### src/engine/game_controller.cpp
+
+Se agregó:
+
+- selección del modo de simulación;
+- integración con `WeekSimulationPresentation::MatchCenter`;
+- opción para cancelar la simulación.
+
+---
+
+### src/career/week_simulation.cpp
+
+Se agregó:
+
+- soporte para `MatchCenter`;
+- llamada a `match_center::showMatchCenter()`;
+- integración con `MatchTimeline`;
+- reproducción automática únicamente para el partido del usuario.
+
+---
+
+## Arquitectura resultante
+
+```
+Modo Carrera
+      │
+      ▼
+Seleccionar modo de simulación
+      │
+      ├────────► Simulación tradicional
+      │
+      ▼
+Match Center
+      │
+      ▼
+simulateCareerWeek()
+      │
+      ▼
+playMatch()
+      │
+      ▼
+MatchTimeline
+      │
+      ▼
+match_center::showMatchCenter()
+```
+
+---
+
+## Validación
+
+Se verificó correctamente:
+
+- ✔ Integración con el modo Carrera.
+- ✔ Selección del modo de simulación.
+- ✔ Reproducción mediante Match Center.
+- ✔ Simulación única del partido.
+- ✔ Compatibilidad con el resto de la jornada.
+- ✔ Compatibilidad con la arquitectura existente.
+- ✔ Compatibilidad con los tests automáticos.
+
+---
+
+## Repositorio
+
+Los cambios fueron confirmados y subidos correctamente al repositorio de GitHub mediante un nuevo commit.
+
+---
+
+## Próximo objetivo
+
+Convertir el Match Center en una experiencia completamente interactiva incorporando:
+
+- estadísticas en tiempo real;
+- posesión dinámica;
+- tiros;
+- xG;
+- córners;
+- tarjetas;
+- barra de momentum;
+- cambios tácticos durante el partido;
+- sustituciones;
+- cambio de mentalidad;
+- experiencia similar a Football Manager.
+
+---
+
+# Avance de Desarrollo - Refactorización interna del Match Center
+**Fecha:** Julio 2026
+
+## Objetivo
+
+Mejorar la arquitectura interna del Match Center separando responsabilidades para facilitar futuras expansiones como estadísticas en vivo, momentum, cambios tácticos y decisiones durante el partido.
+
+---
+
+## Cambios realizados
+
+### Separación del estado del partido
+
+Se creó un módulo independiente para manejar el estado interno del Match Center.
+
+Nuevo archivo:
+
+```
+include/simulation/match_center_state.h
+src/simulation/match_center_state.cpp
+```
+
+Responsabilidades:
+
+- Mantener el estado actual del encuentro.
+- Actualizar estadísticas mediante eventos.
+- Generar el estado final del partido.
+- Procesar información proveniente de `MatchTimeline`.
+
+---
+
+### Nuevo sistema LiveState
+
+Se separó la estructura:
+
+```
+LiveState
+```
+
+del archivo principal `match_center.cpp`.
+
+Ahora contiene:
+
+- Minuto actual.
+- Goles.
+- Tiros.
+- Tiros al arco.
+- Córners.
+- Faltas.
+- Tarjetas.
+- xG.
+- Último evento mostrado.
+
+---
+
+### Procesamiento de eventos
+
+Se trasladó la lógica:
+
+```
+MatchEvent
+        |
+        v
+applyEventImpact()
+        |
+        v
+LiveState actualizado
+```
+
+Esto permite que futuras estadísticas puedan agregarse sin modificar el reproductor principal.
+
+---
+
+## Nuevo Match Center Renderer
+
+Se creó un módulo independiente para la representación visual.
+
+Nuevos archivos:
+
+```
+include/simulation/match_center_renderer.h
+src/simulation/match_center_renderer.cpp
+```
+
+Responsabilidades:
+
+- Dibujar marcador.
+- Mostrar minuto.
+- Mostrar posesión.
+- Mostrar estadísticas.
+- Mostrar último evento.
+- Mostrar estado final.
+
+---
+
+## Nueva arquitectura
+
+Antes:
+
+```
+match_center.cpp
+
+├── Estado del partido
+├── Procesamiento de eventos
+├── Renderizado
+└── Reproducción
+```
+
+Después:
+
+```
+Match Center
+
+match_center.cpp
+        |
+        |-- Control de reproducción
+        |
+        v
+
+match_center_state.cpp
+        |
+        |-- Estado
+        |-- Estadísticas
+        |-- Eventos
+        |
+        v
+
+match_center_renderer.cpp
+        |
+        |-- Interfaz visual
+```
+
+---
+
+## Archivos modificados/agregados
+
+### Nuevos
+
+```
+include/simulation/match_center_state.h
+
+src/simulation/match_center_state.cpp
+
+include/simulation/match_center_renderer.h
+
+src/simulation/match_center_renderer.cpp
+```
+
+### Modificados
+
+```
+src/simulation/match_center.cpp
+
+CMakeLists.txt
+```
+
+---
+
+## Validación
+
+Comprobado correctamente:
+
+- Compilación exitosa con CMake + Ninja.
+- Integración correcta de los nuevos módulos.
+- El Match Center mantiene su funcionamiento original.
+- La arquitectura queda preparada para nuevas características.
+
+---
+
+## Próximos pasos
+
+Continuar mejorando el Match Center:
+
+- Estadísticas dinámicas durante el partido.
+- Momentum del encuentro.
+- Ataques peligrosos.
+- Valoraciones de jugadores.
+- Cambios tácticos durante el partido.
+- Sustituciones en vivo.

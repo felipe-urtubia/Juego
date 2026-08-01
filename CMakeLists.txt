@@ -108,6 +108,8 @@ set(FM_SIMULATION_SOURCES
     src/simulation/tactics_engine.cpp
     src/simulation/match_momentum.cpp
     src/simulation/match_center.cpp
+    src/simulation/match_center_state.cpp
+    src/simulation/match_center_renderer.cpp
 )
 
 set(FM_TRANSFER_SOURCES
