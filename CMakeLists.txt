@@ -230,6 +230,7 @@ set(FM_FOOTBALLMANAGER_CLI_SOURCES
 )
 set(FM_FOOTBALLMANAGER_TEST_SOURCES
     tests/project_tests.cpp
+    tests/match_center_tests.cpp
     ${FM_CORE_SOURCES}
     ${FM_VALIDATOR_SOURCES}
     src/ui/economy_fairplay.cpp

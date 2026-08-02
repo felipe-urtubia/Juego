@@ -1,6 +1,6 @@
 #include "simulation/match_center.h"
-#include "simulation/match_center_state.h"
 #include "simulation/match_center_renderer.h"
+#include "simulation/match_center_state.h"
 
 #include <chrono>
 #include <cstdlib>
@@ -55,7 +55,9 @@ void clearConsole() {
 }
 
 void pauseAfterEvent(PlaybackSpeed speed, MatchEventType type) {
-    const int milliseconds = delayForSpeed(speed, isImportantEvent(type));
+    const int milliseconds =
+        delayForSpeed(speed, isImportantEvent(type));
+
     if (milliseconds > 0) {
         std::this_thread::sleep_for(
             std::chrono::milliseconds(milliseconds));
@@ -69,17 +71,22 @@ void showMatchCenter(const Team& home,
                      const MatchResult& result,
                      const PlaybackOptions& options) {
     LiveState state;
+    updateLivePossession(state, result, 0);
 
     if (options.clearScreenBetweenEvents) {
         clearConsole();
     }
 
     drawMatchCenter(home, away, result, state, false);
+
     std::this_thread::sleep_for(
-        std::chrono::milliseconds(delayForSpeed(options.speed, false)));
+        std::chrono::milliseconds(
+            delayForSpeed(options.speed, false)));
 
     for (const MatchEvent& event : result.timeline.events) {
         applyEventImpact(state, event);
+        updateLivePossession(state, result, state.minute);
+        updateLiveMomentum(state, event, home, away);
 
         if (!shouldDisplayEvent(event, options.showAllEvents)) {
             continue;

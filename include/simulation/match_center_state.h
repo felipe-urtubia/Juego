@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/models.h"
+#include "simulation/match_momentum.h"
 
 #include <string>
 
@@ -17,6 +18,12 @@ struct LiveState {
 
     int homeShotsOnTarget = 0;
     int awayShotsOnTarget = 0;
+
+    int homePossession = 50;
+    int awayPossession = 50;
+
+    MatchMomentum momentum;
+    int momentumScore = 0;
 
     int homeCorners = 0;
     int awayCorners = 0;
@@ -43,7 +50,20 @@ void applyEventImpact(
     LiveState& state,
     const MatchEvent& event);
 
+void updateLivePossession(
+    LiveState& state,
+    const MatchResult& result,
+    int currentMinute);
+
+void updateLiveMomentum(
+    LiveState& state,
+    const MatchEvent& event,
+    const Team& home,
+    const Team& away);
+
+std::string momentumLabel(int momentumScore);
+
 LiveState makeFinalState(
     const MatchResult& result);
 
-} // namespace match_center
+}  // namespace match_center

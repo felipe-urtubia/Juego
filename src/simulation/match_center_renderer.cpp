@@ -22,6 +22,29 @@ std::string progressBar(int percentage, int width = 24) {
     return bar;
 }
 
+
+std::string momentumBar(int score, int width = 41) {
+    score = std::clamp(score, -100, 100);
+
+    const int center = width / 2;
+    const int magnitude = std::abs(score) * center / 100;
+
+    std::string bar(static_cast<std::size_t>(width), '.');
+    bar[static_cast<std::size_t>(center)] = '|';
+
+    if (score > 0) {
+        for (int i = 1; i <= magnitude; ++i) {
+            bar[static_cast<std::size_t>(center - i)] = '#';
+        }
+    } else if (score < 0) {
+        for (int i = 1; i <= magnitude; ++i) {
+            bar[static_cast<std::size_t>(center + i)] = '#';
+        }
+    }
+
+    return bar;
+}
+
 }  // namespace
 
 void drawMatchCenter(const Team& home,
@@ -29,8 +52,11 @@ void drawMatchCenter(const Team& home,
                      const MatchResult& result,
                      const LiveState& state,
                      bool finished) {
-    const int homePossession = std::clamp(result.homePossession, 0, 100);
-    const int awayPossession = std::clamp(result.awayPossession, 0, 100);
+    const int homePossession =
+        std::clamp(state.homePossession, 0, 100);
+
+    const int awayPossession =
+        100 - homePossession;
 
     std::cout << "============================================================\n";
     std::cout << "                       MATCH CENTER\n";
@@ -50,11 +76,17 @@ void drawMatchCenter(const Team& home,
     }
 
     std::cout << "\n------------------------------------------------------------\n";
-    std::cout << "Posesion\n";
+    std::cout << "Posesion en vivo\n";
     std::cout << home.name << " [" << progressBar(homePossession) << "] "
               << homePossession << "%\n";
     std::cout << away.name << " [" << progressBar(awayPossession) << "] "
               << awayPossession << "%\n";
+
+    std::cout << "\nMomentum\n";
+    std::cout << "LOCAL [" << momentumBar(state.momentumScore)
+              << "] VISITA\n";
+    std::cout << momentumLabel(state.momentumScore)
+              << " (" << state.momentumScore << ")\n";
 
     std::cout << "\nEstadisticas\n";
     std::cout << std::left << std::setw(22) << "Tiros"

@@ -6599,3 +6599,139 @@ Continuar mejorando el Match Center:
 - Valoraciones de jugadores.
 - Cambios tácticos durante el partido.
 - Sustituciones en vivo.
+
+# Match Center - Mejoras implementadas (Julio 2026)
+
+## Arquitectura
+
+- Se refactorizó el Match Center dividiendo responsabilidades en módulos independientes.
+- Se creó `match_center.cpp` como controlador principal de la reproducción del partido.
+- Se creó `match_center_state.cpp` para administrar el estado en vivo del encuentro.
+- Se creó `match_center_renderer.cpp` para desacoplar completamente la presentación de la lógica del partido.
+- Se mejoró la mantenibilidad del sistema siguiendo el principio de responsabilidad única (SRP).
+
+---
+
+## Simulación en vivo
+
+- Se implementó la reproducción cronológica de los eventos del partido mediante `MatchTimeline`.
+- Se incorporó una vista tipo "Match Center" para visualizar el desarrollo completo del encuentro.
+- Se añadió actualización progresiva del marcador durante la simulación.
+- Se integró la actualización del minuto de juego en tiempo real.
+- Se añadió visualización del último evento ocurrido.
+
+---
+
+## Estadísticas dinámicas
+
+Se implementó actualización progresiva de:
+
+- Goles.
+- Tiros.
+- Tiros al arco.
+- Córners.
+- Faltas.
+- Tarjetas amarillas.
+- Tarjetas rojas.
+- xG (Expected Goals).
+
+Las estadísticas dejan de mostrarse únicamente al finalizar el partido y ahora evolucionan durante la simulación.
+
+---
+
+## Posesión dinámica
+
+Se implementó un sistema de posesión en vivo utilizando la información almacenada en `MatchPhaseReport`.
+
+Características:
+
+- La posesión cambia durante el desarrollo del partido.
+- Se calcula utilizando las fases reales de la simulación.
+- Se elimina la utilización de la posesión final como valor fijo.
+- El Match Center muestra la evolución del dominio del balón minuto a minuto.
+
+---
+
+## Sistema de Momentum
+
+Se integró el sistema `MatchMomentum` ya existente dentro del Match Center.
+
+El sistema ahora considera:
+
+- Ataques.
+- Grandes ocasiones.
+- Tiros.
+- Contraataques.
+- Goles.
+- Tarjetas.
+- Faltas.
+- Presión.
+- Confianza.
+- Decaimiento progresivo del momentum.
+
+El Match Center ahora representa visualmente qué equipo domina el partido en cada momento.
+
+---
+
+## Renderer
+
+El renderer fue actualizado para mostrar:
+
+- Marcador en vivo.
+- Minuto actual.
+- Clima.
+- Posesión dinámica.
+- Barra de Momentum.
+- Estadísticas en tiempo real.
+- Último evento del partido.
+
+---
+
+## Calidad del código
+
+Se realizaron mejoras de arquitectura:
+
+- Separación clara entre lógica y presentación.
+- Eliminación de responsabilidades mezcladas.
+- Integración con el sistema de pruebas existente (`FootballManagerTests`).
+- Compatibilidad completa con CMake y Ninja.
+- Compatibilidad con el flujo de simulación semanal.
+
+---
+
+## Testing
+
+- Se creó la base para las pruebas unitarias del Match Center.
+- Se integró el módulo al ejecutable `FootballManagerTests`.
+- Se corrigieron problemas de enlace (linker) relacionados con `runMatchCenterTests`.
+- Se verificó la compilación correcta mediante CMake + Ninja.
+
+---
+
+## Estado actual
+
+Estado: ✅ Operativo
+
+Implementado:
+
+- Match Center funcional.
+- Timeline de eventos.
+- Estadísticas dinámicas.
+- Posesión dinámica.
+- Momentum en vivo.
+- Arquitectura modular.
+- Integración con Career Mode.
+- Integración con el sistema de tests.
+
+## Próximas mejoras del Match Center
+
+- [ ] Sistema de ataques peligrosos.
+- [ ] Comentarios dinámicos del partido.
+- [ ] Sustituciones automáticas de la IA durante el encuentro.
+- [ ] Cambios tácticos en tiempo real.
+- [ ] Valoraciones dinámicas de los jugadores.
+- [ ] Mapa de calor por zonas del campo.
+- [ ] Estadísticas avanzadas por jugador.
+- [ ] Línea temporal interactiva del partido.
+- [ ] Integración completa con el análisis postpartido.
+- [ ] Cobertura de pruebas unitarias para todos los módulos del Match Center.

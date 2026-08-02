@@ -47,6 +47,8 @@
 #include "validators/validators.h"
 #include "utils/localization.h"
 
+void runMatchCenterTests();
+
 #include <algorithm>
 #include <cstddef>
 #include <exception>
@@ -3574,6 +3576,7 @@ void testLocalizationSupportsMultipleLanguages() {
 
 int main() {
     const vector<pair<string, void (*)()>> tests = {
+        {"match_center_state", runMatchCenterTests},
         {"validation_suite", testValidationSuiteReflectsRosterAudit},
         {"validation_suite_concurrency", testValidationSuiteSupportsConcurrentRuns},
         {"loaded_player_profiles", testLoadedPlayersHaveBoundedProfileMetrics},
