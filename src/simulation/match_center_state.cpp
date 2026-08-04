@@ -258,6 +258,45 @@ std::string momentumLabel(int momentumScore) {
 }
 
 
+
+void applyLiveManagementEvent(
+    LiveState& state,
+    const MatchEvent& event,
+    const Team& home,
+    const Team& away) {
+
+    bool isHomeTeam = false;
+    bool teamResolved = false;
+
+    if (event.teamName == home.name) {
+        isHomeTeam = true;
+        teamResolved = true;
+    } else if (event.teamName == away.name) {
+        isHomeTeam = false;
+        teamResolved = true;
+    }
+
+    if (!teamResolved) {
+        return;
+    }
+
+    if (event.type == MatchEventType::Substitution) {
+        if (isHomeTeam) {
+            state.homeSubstitutions++;
+        } else {
+            state.awaySubstitutions++;
+        }
+    }
+
+    if (event.type == MatchEventType::TacticalChange) {
+        if (isHomeTeam) {
+            state.homeTacticalChanges++;
+        } else {
+            state.awayTacticalChanges++;
+        }
+    }
+}
+
 LiveState makeFinalState(
     const MatchResult& result) {
 

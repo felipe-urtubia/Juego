@@ -1,4 +1,5 @@
 #include "simulation/match_center.h"
+#include "simulation/match_commentary.h"
 #include "simulation/match_center_renderer.h"
 #include "simulation/match_center_state.h"
 
@@ -87,6 +88,13 @@ void showMatchCenter(const Team& home,
         applyEventImpact(state, event);
         updateLivePossession(state, result, state.minute);
         updateLiveMomentum(state, event, home, away);
+        applyLiveManagementEvent(state, event, home, away);
+        state.playerRatings.applyEvent(event);
+        state.lastEvent = match_commentary::buildCommentary(
+            event,
+            state,
+            home,
+            away);
 
         if (!shouldDisplayEvent(event, options.showAllEvents)) {
             continue;

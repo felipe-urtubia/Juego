@@ -16,6 +16,7 @@ bool applyInMatchManagement(Team& team,
                             int goalsFor,
                             int goalsAgainst,
                             int opponentAvailablePlayers,
+                            int momentumScore,
                             MatchTimeline& timeline);
 
 }  // namespace ai_match_manager

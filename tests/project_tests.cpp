@@ -49,6 +49,8 @@
 
 void runMatchCenterTests();
 
+void runTeamAiMomentumTests();
+
 #include <algorithm>
 #include <cstddef>
 #include <exception>
@@ -3577,6 +3579,7 @@ void testLocalizationSupportsMultipleLanguages() {
 int main() {
     const vector<pair<string, void (*)()>> tests = {
         {"match_center_state", runMatchCenterTests},
+        {"team_ai_momentum", runTeamAiMomentumTests},
         {"validation_suite", testValidationSuiteReflectsRosterAudit},
         {"validation_suite_concurrency", testValidationSuiteSupportsConcurrentRuns},
         {"loaded_player_profiles", testLoadedPlayersHaveBoundedProfileMetrics},

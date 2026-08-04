@@ -42,6 +42,36 @@ string formatDouble2(double value) {
     return out.str();
 }
 
+int momentumScoreForTeam(
+    const MatchMomentum& momentum,
+    bool homeTeam) {
+
+    const double momentumDifference =
+        homeTeam
+            ? momentum.homeMomentum - momentum.awayMomentum
+            : momentum.awayMomentum - momentum.homeMomentum;
+
+    const double confidenceDifference =
+        homeTeam
+            ? momentum.homeConfidence - momentum.awayConfidence
+            : momentum.awayConfidence - momentum.homeConfidence;
+
+    const double pressureDifference =
+        homeTeam
+            ? momentum.homePressure - momentum.awayPressure
+            : momentum.awayPressure - momentum.homePressure;
+
+    const double combined =
+        momentumDifference * 55.0 +
+        confidenceDifference * 25.0 +
+        pressureDifference * 20.0;
+
+    return clampInt(
+        static_cast<int>(std::round(combined)),
+        -100,
+        100);
+}
+
 }  // namespace
 
 namespace match_engine {
@@ -73,6 +103,12 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
         phase.minuteStart = minuteStart;
         phase.minuteEnd = minuteEnd;
 
+        const int homeMomentumScore =
+            momentumScoreForTeam(momentum, true);
+
+        const int awayMomentumScore =
+            momentumScoreForTeam(momentum, false);
+
         const bool homeTacticalChange = ai_match_manager::applyInMatchManagement(homeState.team,
                                                                                  awayState.team,
                                                                                  homeState.xi,
@@ -82,6 +118,7 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
                                                                                  stats.homeGoals,
                                                                                  stats.awayGoals,
                                                                                  static_cast<int>(awayState.xi.size()),
+                                                                                 homeMomentumScore,
                                                                                  timeline);
         const bool awayTacticalChange = ai_match_manager::applyInMatchManagement(awayState.team,
                                                                                  homeState.team,
@@ -92,6 +129,7 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
                                                                                  stats.awayGoals,
                                                                                  stats.homeGoals,
                                                                                  static_cast<int>(homeState.xi.size()),
+                                                                                 awayMomentumScore,
                                                                                  timeline);
 
         const TeamMatchSnapshot homeSnapshot = match_context::rebuildSnapshot(homeState.team, awayState.team, homeState.xi, keyMatch);

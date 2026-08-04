@@ -45,6 +45,35 @@ std::string momentumBar(int score, int width = 41) {
     return bar;
 }
 
+
+void drawPlayerRatings(
+    const player_rating_system::LiveRatings& ratings) {
+
+    if (ratings.empty()) {
+        return;
+    }
+
+    const auto topPlayers =
+        ratings.topPlayers(3);
+
+    std::cout << "\nMejores valoraciones en vivo\n";
+
+    for (const auto& player : topPlayers) {
+        std::cout << std::left
+                  << std::setw(24)
+                  << player.playerName
+                  << std::fixed
+                  << std::setprecision(1)
+                  << player.rating;
+
+        if (!player.teamName.empty()) {
+            std::cout << "  (" << player.teamName << ')';
+        }
+
+        std::cout << '\n';
+    }
+}
+
 }  // namespace
 
 void drawMatchCenter(const Team& home,
@@ -103,10 +132,18 @@ void drawMatchCenter(const Team& home,
               << state.awayYellowCards << '\n';
     std::cout << std::left << std::setw(22) << "Tarjetas rojas"
               << state.homeRedCards << " - " << state.awayRedCards << '\n';
+    std::cout << std::left << std::setw(22) << "Sustituciones"
+              << state.homeSubstitutions << " - "
+              << state.awaySubstitutions << '\n';
+    std::cout << std::left << std::setw(22) << "Cambios tacticos"
+              << state.homeTacticalChanges << " - "
+              << state.awayTacticalChanges << '\n';
     std::cout << std::left << std::setw(22) << "xG"
               << std::fixed << std::setprecision(2)
               << state.homeExpectedGoals << " - "
               << state.awayExpectedGoals << '\n';
+
+    drawPlayerRatings(state.playerRatings);
 
     std::cout << "\n------------------------------------------------------------\n";
     std::cout << "Ultimo evento\n\n";

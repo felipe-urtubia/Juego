@@ -318,6 +318,125 @@ bool evaluateFinalPush(Team& team,
 }
 
 
+bool evaluateMomentumSituation(
+    Team& team,
+    const TeamPersonalityProfile& profile,
+    int minute,
+    int scoreDiff,
+    int avgFitness,
+    int momentumScore,
+    bool strategicAdjustmentAllowed,
+    string& note) {
+
+    if (!strategicAdjustmentAllowed || minute < 30) {
+        return false;
+    }
+
+    bool changed = false;
+
+    if (momentumScore <= -55 && scoreDiff <= 0) {
+        if (avgFitness >= 58 &&
+            profile.pressBias >= profile.transitionBias) {
+
+            changed |= applySetting(team.tactics, "Pressing");
+            changed |= applySetting(team.matchInstruction, "Contra-presion");
+            changed |= applySetting(
+                team.pressingIntensity,
+                team.pressingIntensity + 1,
+                1,
+                5);
+            changed |= applySetting(
+                team.defensiveLine,
+                team.defensiveLine + 1,
+                1,
+                5);
+            changed |= applySetting(
+                team.tempo,
+                team.tempo + 1,
+                1,
+                5);
+
+            if (changed) {
+                note = team.name +
+                       " reacciona al dominio rival con una presion mas alta";
+            }
+        } else {
+            changed |= applySetting(team.tactics, "Counter");
+            changed |= applySetting(team.matchInstruction, "Juego directo");
+            changed |= applySetting(
+                team.tempo,
+                team.tempo + 1,
+                1,
+                5);
+            changed |= applySetting(
+                team.width,
+                team.width + 1,
+                1,
+                5);
+
+            if (changed) {
+                note = team.name +
+                       " busca salir del asedio mediante transiciones directas";
+            }
+        }
+    } else if (momentumScore <= -25 &&
+               scoreDiff <= 0 &&
+               minute >= 45) {
+
+        changed |= applySetting(
+            team.matchInstruction,
+            profile.transitionBias >= HIGH_PROFILE_BIAS
+                ? "Juego directo"
+                : "Contra-presion");
+
+        changed |= applySetting(
+            team.pressingIntensity,
+            team.pressingIntensity + 1,
+            1,
+            5);
+
+        changed |= applySetting(
+            team.tempo,
+            team.tempo + 1,
+            1,
+            5);
+
+        if (changed) {
+            note = team.name +
+                   " intenta recuperar la iniciativa del encuentro";
+        }
+    } else if (momentumScore >= 55 &&
+               scoreDiff > 0 &&
+               minute >= 65) {
+
+        changed |= applySetting(
+            team.tempo,
+            team.tempo - 1,
+            1,
+            5);
+
+        changed |= applySetting(
+            team.pressingIntensity,
+            team.pressingIntensity - 1,
+            1,
+            5);
+
+        changed |= applySetting(
+            team.matchInstruction,
+            avgFitness < 58
+                ? "Pausar juego"
+                : "Equilibrado");
+
+        if (changed) {
+            note = team.name +
+                   " administra el ritmo tras controlar el partido";
+        }
+    }
+
+    return changed;
+}
+
+
 }  // namespace
 
 namespace team_ai {
@@ -443,7 +562,8 @@ bool applyInMatchCpuAdjustment(Team& team,
                                vector<string>* events,
                                int availablePlayers,
                                int cautionedPlayers,
-                               int opponentAvailablePlayers) {
+                               int opponentAvailablePlayers,
+                               int momentumScore) {
     bool changed = false;
     int scoreDiff = goalsFor - goalsAgainst;
     int avgFitness = averageAvailableFitness(team);
@@ -457,7 +577,8 @@ bool applyInMatchCpuAdjustment(Team& team,
         (scoreDiff <= -2 && minute >= 55) ||
         availablePlayers <= 10 ||
         (minute >= 80 && scoreDiff <= -1) ||
-        (avgFitness < 48 && minute >= 72);
+        (avgFitness < 48 && minute >= 72) ||
+        (momentumScore <= -60 && minute >= 45);
     const bool strategicAdjustmentAllowed =
         tacticalCooldownReady || emergencyTacticalChange;
 
@@ -471,6 +592,16 @@ bool applyInMatchCpuAdjustment(Team& team,
                                       avgFitness,
                                       strategicAdjustmentAllowed,
                                       note);
+
+    changed |= evaluateMomentumSituation(
+        team,
+        profile,
+        minute,
+        scoreDiff,
+        avgFitness,
+        momentumScore,
+        strategicAdjustmentAllowed,
+        note);
 
     changed |= evaluateOpponentFatigue(team,
                                        minute,

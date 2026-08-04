@@ -110,6 +110,8 @@ set(FM_SIMULATION_SOURCES
     src/simulation/match_center.cpp
     src/simulation/match_center_state.cpp
     src/simulation/match_center_renderer.cpp
+    src/simulation/match_commentary.cpp
+    src/simulation/player_rating_system.cpp
 )
 
 set(FM_TRANSFER_SOURCES
@@ -229,6 +231,7 @@ set(FM_FOOTBALLMANAGER_CLI_SOURCES
     ${FM_VALIDATOR_SOURCES}
 )
 set(FM_FOOTBALLMANAGER_TEST_SOURCES
+    tests/team_ai_momentum_tests.cpp
     tests/project_tests.cpp
     tests/match_center_tests.cpp
     ${FM_CORE_SOURCES}

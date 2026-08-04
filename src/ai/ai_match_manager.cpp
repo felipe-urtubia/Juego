@@ -334,6 +334,7 @@ bool applyInMatchManagement(Team& team,
                             int goalsFor,
                             int goalsAgainst,
                             int opponentAvailablePlayers,
+                            int momentumScore,
                             MatchTimeline& timeline) {
     bool changed = false;
     vector<string> notes;
@@ -347,7 +348,8 @@ bool applyInMatchManagement(Team& team,
             &notes,
             static_cast<int>(xi.size()),
             static_cast<int>(cautionedPlayers.size()),
-            opponentAvailablePlayers)) {
+            opponentAvailablePlayers,
+            momentumScore)) {
         changed = true;
 
         for (const string& note : notes) {

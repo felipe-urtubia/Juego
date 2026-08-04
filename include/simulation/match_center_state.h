@@ -2,6 +2,7 @@
 
 #include "engine/models.h"
 #include "simulation/match_momentum.h"
+#include "simulation/player_rating_system.h"
 
 #include <string>
 
@@ -37,6 +38,14 @@ struct LiveState {
     int homeRedCards = 0;
     int awayRedCards = 0;
 
+    int homeSubstitutions = 0;
+    int awaySubstitutions = 0;
+
+    int homeTacticalChanges = 0;
+    int awayTacticalChanges = 0;
+
+    player_rating_system::LiveRatings playerRatings;
+
     double homeExpectedGoals = 0.0;
     double awayExpectedGoals = 0.0;
 
@@ -62,6 +71,12 @@ void updateLiveMomentum(
     const Team& away);
 
 std::string momentumLabel(int momentumScore);
+
+void applyLiveManagementEvent(
+    LiveState& state,
+    const MatchEvent& event,
+    const Team& home,
+    const Team& away);
 
 LiveState makeFinalState(
     const MatchResult& result);
