@@ -6744,3 +6744,27 @@ Implementado:
 - Compatibilidad con implementaciones anteriores.
 - Nuevas pruebas automatizadas para validar la IA basada en momentum.
 - Validación mediante compilación y ejecución completa de la suite de pruebas.
+
+## ✅ Documentación principal del proyecto
+
+**Estado:** Completado
+
+### Mejoras realizadas
+
+- Reescritura completa del README.
+- Nueva presentación del proyecto.
+- Documentación de la arquitectura.
+- Documentación del motor de simulación.
+- Documentación del Modo Carrera.
+- Documentación de la Inteligencia Artificial.
+- Guía de compilación.
+- Guía de pruebas.
+- Roadmap actualizado.
+
+### Próximas tareas
+
+- Crear la carpeta `docs/`.
+- Documentar cada módulo del proyecto.
+- Incorporar diagramas Mermaid.
+- Añadir capturas de pantalla del juego.
+- Diseñar un banner y un logotipo para el repositorio.

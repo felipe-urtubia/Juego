@@ -1,284 +1,1750 @@
-# Chilean Footballito
+# ⚽ Football Manager Game
 
-Simulador de gestion futbolistica en C++ inspirado en la profundidad de juegos tipo Football Manager, con foco en carrera, scouting, vestuario, mercado y motor de partido.
+<p align="center">
 
-El proyecto ya es jugable y hoy combina tres capas que trabajan juntas:
+# Football Manager Game
 
-- frontend inicial `Chilean Footballito` con portada, `Continuar`, `Jugar`, `Cargar guardado`, `Creditos` y configuraciones compartidas
-- simulacion de partidos con fases, contexto tactico, xG, riesgo y fatiga
-- modo carrera con directiva, finanzas, scouting, contratos, cantera y staff
-- GUI Win32 para jugar sin consola, mas una CLI para validacion y depuracion
+### Simulador de Gestión Futbolística desarrollado en C++17
 
-## Que trae hoy
+Motor de simulación propio • Arquitectura modular • IA táctica • Match Center • Modo Carrera
 
-### Carrera y gestion
+</p>
 
-- multiples divisiones chilenas
-- calendario semanal y transicion de temporada
-- objetivos de directiva y confianza del cargo
-- finanzas, deuda, sponsor, salarios e infraestructura
-- mercado con shortlist, scouting, precontratos, cesiones y negociacion estructurada
-- guardado/carga con versionado `save_version = 1`, validacion de integridad y rechazo de saves corruptos
-- desarrollo mensual, progresion juvenil y manejo de carga
-- vestuario con moral, promesas, tension social y reuniones de plantel
-- atributos avanzados por jugador: personalidad, disciplina, liderazgo, propension a lesiones, adaptacion y forma
+---
 
-### Profundidad tipo Football Manager
+## 📖 Descripción
 
-- mesa de staff con recomendaciones semanales priorizadas
-- centro del manager con agenda, scouting, mercado e inbox accionable con prioridad, destino y accion sugerida
-- scouting por cobertura regional, foco posicional, confianza de informe y rangos de atributos cuando el dato aun es incierto
-- lectura de proyecto de club en negociaciones: estilo, cantera, politica, clima interno y seguridad del cargo
-- dashboard con contexto de rival, microciclo, decisiones sugeridas y narrativa semanal
-- datos externos tolerantes a campos faltantes en `data/teams.json`, `data/players.json`, `data/leagues.json` y overlays en `mods/`
+**Football Manager Game** es un simulador de gestión futbolística desarrollado completamente en **C++17** cuyo objetivo es recrear la experiencia de dirigir un club profesional mediante un motor de simulación propio, una arquitectura modular y un conjunto de sistemas interconectados que permiten gestionar todos los aspectos deportivos e institucionales de un equipo.
 
-### Motor de partido
+A diferencia de otros proyectos académicos centrados únicamente en la simulación de partidos, este proyecto busca representar el funcionamiento completo de un club de fútbol moderno, integrando la administración deportiva, el desarrollo de jugadores, la planificación de temporadas, la inteligencia artificial táctica y la evolución del mundo futbolístico dentro de un mismo ecosistema.
 
-- contexto previo al partido y snapshots de cada equipo
-- partido dividido en seis fases estructuradas
-- posesion, progresiones, ataques, ocasiones, xG y eventos tipados
-- influencia de tactica, instruccion de partido, moral, disponibilidad y fatiga
-- lesiones con cambio forzado real
-- reportes post partido con explicacion tactica y recomendaciones
+El proyecto ha sido diseñado utilizando una arquitectura modular que facilita el mantenimiento, la escalabilidad y la incorporación de nuevas funcionalidades sin afectar el resto del sistema.
 
-### GUI Win32
+---
 
-- menu de inicio con presentacion tipo dashboard y `Chilean Footballito` como portada central
-- portada Win32 con `Continuar`, `Jugar`, `Cargar guardado`, `Configuraciones`, `Creditos` y `Salir`
-- configuraciones persistentes entre sesiones para volumen, dificultad, velocidad, idioma, texto, perfil visual y musica del frontend
-- reproduccion del tema versionado `assets/audio/Los Miserables - El Crack  Video Oficial (HD Remastered).mp3` mientras la portada principal o el frontend activo lo permiten
-- `FootballManager.exe` sin consola innecesaria
-- arranque maximizado con soporte DPI
-- boton y `F11` para alternar ventana, maximizado y fullscreen sin borde
-- dashboard owner-draw con KPIs e insights clicables
-- Noticias/Centro del manager muestra cola accionable para decidir entre plantilla, tacticas, mercado, finanzas y directiva
-- tablas con autosize por vista y suavizado entre refrescos
-- cambio de pagina diferido con cache basica para vistas pesadas como `Fichajes`, `Finanzas` y `Noticias`
+# 🎯 Objetivos del Proyecto
 
-## Ejecutables
+Football Manager Game tiene como objetivo desarrollar un simulador completo de gestión futbolística que combine simulación deportiva, administración de clubes e inteligencia artificial.
 
-Los binarios principales quedan en `build-cmake/bin/`:
+Entre sus principales objetivos se encuentran:
 
-- `FootballManager.exe`: version GUI principal
-- `FootballManagerCLI.exe`: version consola
-- `FootballManagerTests.exe`: suite automatizada
+- Crear un motor de simulación de partidos propio.
+- Implementar un Modo Carrera completamente funcional.
+- Simular temporadas completas.
+- Gestionar plantillas profesionales.
+- Administrar presupuestos y finanzas.
+- Simular un mercado de fichajes dinámico.
+- Desarrollar una IA capaz de tomar decisiones tácticas durante los partidos.
+- Mantener una arquitectura modular y fácilmente extensible.
+- Incorporar pruebas automatizadas para garantizar la estabilidad del proyecto.
 
-## Requisitos
+---
 
-### Windows
+# ⭐ Características principales
 
-- CMake 3.16 o superior
-- MinGW con `g++`
-- `mingw32-make`
+Actualmente el proyecto incorpora sistemas para:
 
-### Otros entornos
+## 🏟️ Gestión del Club
 
-El proyecto puede compilarse tambien fuera de Windows con CMake, pero la GUI actual es Win32. En esos casos el flujo principal es la CLI.
+- Gestión de plantillas
+- Desarrollo de jugadores
+- Mercado de fichajes
+- Finanzas
+- Objetivos de la directiva
+- Desarrollo juvenil
+- Instalaciones
+- Noticias
+- Historial de temporadas
+- Informes deportivos
 
-## Compilacion
+---
 
-### Opcion recomendada: CMake
+## ⚽ Motor de Simulación
 
-```powershell
-cmake -S . -B build-cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++
-cmake --build build-cmake --config Release --target FootballManager FootballManagerCLI FootballManagerTests
-```
+El motor de simulación ha sido desarrollado específicamente para este proyecto e incorpora diferentes subsistemas encargados de representar el desarrollo de un encuentro.
 
-### VS Code
+Entre ellos destacan:
 
-1. Instala las extensiones de C/C++ y CMake Tools.
-2. Abre la carpeta del repo.
-3. Configura el kit de MinGW si CMake Tools lo solicita.
-4. Ejecuta `CMake: Configure` con `build-cmake` como carpeta de build.
-5. Ejecuta `CMake: Build Target` y elige `FootballManager`, `FootballManagerCLI` o `FootballManagerTests`.
+- Simulación minuto a minuto
+- Eventos dinámicos
+- Resolución de acciones
+- Estadísticas del encuentro
+- Sistema de fatiga
+- Moral de jugadores
+- Lesiones
+- Tarjetas
+- Sustituciones
+- Cambios tácticos
+- Momentum del partido
+- Valoraciones individuales
 
-### Opcion rapida en Windows
+---
 
-```powershell
-build.bat
-```
+## 📺 Match Center
 
-Si solo quieres compilar sin ejecutar automaticamente:
+Durante la simulación el jugador puede seguir el desarrollo del encuentro mediante un Match Center que muestra información en tiempo real.
 
-```powershell
-$env:FM_SKIP_RUN='1'
-cmd /c build.bat
-```
+Incluye:
 
-### Flags utiles de `build.bat`
+- Marcador
+- Cronómetro
+- Timeline de eventos
+- Estadísticas
+- Posesión
+- Momentum
+- Comentarios dinámicos
+- Cambios tácticos
+- Sustituciones
+- Valoraciones en vivo
 
-```powershell
-build.bat --gui
-build.bat --cli
-build.bat --tests --run-tests
-build.bat --all --run-tests
-build.bat --validate
-build.bat --verify
-```
+---
 
-El script ahora informa si uso la ruta CMake o la fallback, que targets compilo y donde quedaron los binarios.
-Tambien mantiene sincronizados los ejecutables visibles de la raiz del repo y `build-cmake/bin`, incluso si la compilacion cae al fallback directo con `g++`.
-`--verify` compila GUI, CLI y tests; ejecuta CTest; y luego corre la validacion completa de datos/proyecto sin abrir la GUI.
+## 🧠 Inteligencia Artificial
 
-## Ejecucion
+El proyecto incorpora diversos sistemas de IA especializados.
 
-### GUI
+Entre ellos:
 
-```powershell
-.\build-cmake\bin\FootballManager.exe
-```
+- IA táctica
+- IA de gestión de plantilla
+- IA de fichajes
+- IA para sustituciones
+- IA de cambios tácticos
+- IA basada en Momentum
+- Personalidad de equipos
 
-### Consola
+Cada entrenador puede modificar el comportamiento de su equipo dependiendo del contexto del partido.
 
-```powershell
-.\build-cmake\bin\FootballManagerCLI.exe
-```
+---
 
-La CLI abre primero el frontend textual `Chilean Footballito`, con paneles ASCII, navegacion por `W/S`, `Enter`, numeros y acceso al submenu de configuraciones.
+## 📈 Estadísticas
 
-### Validacion de datos y proyecto
+El motor registra información detallada de cada encuentro.
 
-```powershell
-.\build-cmake\bin\FootballManagerCLI.exe --validate
-```
+Por ejemplo:
 
-## Cómo Jugar
+- Goles
+- Asistencias
+- Tiros
+- Tiros al arco
+- Posesión
+- Faltas
+- Tarjetas
+- xG
+- Momentum
+- Cambios tácticos
+- Sustituciones
+- Valoraciones
 
-### Portada ("Chilean Footballito")
+---
 
-1. **Nueva carrera**: Selecciona tu división (Primera, Primera B, Segunda), tu club y nombre del manager. Recibirás presupuesto inicial, objetivos de directiva y calendario de 34 semanas.
-2. **Cargar partida**: Abre tu último guardado. El juego restaura todos los datos, dinero, lesiones, progresión de jugadores, contratos pendientes y narrativa.
-3. **Configuraciones**: Ajusta volumen, dificultad (Accesible, Normal, Desafiante), velocidad de simulación, idioma, perfil visual y música del menú.
-4. **Créditos**: Información sobre el proyecto y contribuidores.
+# 🏗 Filosofía del Proyecto
 
-### Panel de Carrera
+Football Manager Game ha sido diseñado siguiendo varios principios fundamentales.
 
-El corazón del juego. Desde aquí accedes a:
+## Arquitectura Modular
 
-- **Club**: Resumen división, presupuesto, moral del equipo, próximo partido y objetivo de directiva.
-- **Plantilla**: Lista de jugadores, posiciones, forma, salario y lesiones. Edita roles, formación y planes de desarrollo.
-- **Calendario**: Próximas fechas, rivales, ventas y competencias (Copa incluida en semanas clave).
-- **Mercado**: Busca jugadores, maneja shortlist, negocia traspasos, precontratos y cesiones.
-- **Finanzas**: Presupuesto, ingresos/gastos semanales, deuda, sponsor. Planifica a largo plazo.
-- **Cantera**: Jóvenes promesas, desarrollo mensual, llamadas a plantilla principal.
-- **Scouting**: Asigna scouts por región, observa cobertura, maneja reportes.
-- **Directiva**: Objetivos mensuales, confianza del cargo, eventos de club.
-- **Guardar partida**: Persiste todo el progreso (versión 15 del sistema).
-- **Salir al menú**: Regresa sin perder datos.
+Cada sistema del juego se encuentra separado en módulos independientes con responsabilidades claramente definidas.
 
-### Simulación de Semana
+Esto permite:
 
-Avanza la carrera:
+- facilitar el mantenimiento;
+- reducir el acoplamiento entre componentes;
+- incorporar nuevas funcionalidades sin modificar grandes partes del código;
+- simplificar las pruebas.
 
-1. Se simulan todos los partidos de la jornada (tu equipo + rivales de fondo).
-2. Se actualiza forma física, lesiones y suspensiones.
-3. Se procesan transferencias pendientes.
-4. Se aplican ingresos/gastos.
-5. Se generan noticias y eventos.
-6. Avanza a siguiente semana.
+---
 
-### Tips Estratégicos
+## Escalabilidad
 
-- **Presupuesto**: Gasta en fichajes durante off-season; evita deudas severas que limitan operaciones.
-- **Plantilla**: Mantén 3-4 opciones por posición. Los jóvenes crecen si los usas regularmente.
-- **Táctica**: Cambia según rival. Equipos débiles = presión alta. Rivales fuertes = contención y contraataque.
-- **Staff**: Los asistentes dan recomendaciones semanales; úsalas para entrenamientos, rotaciones y ajustes tácticos.
-- **Moral**: Reuniones de plantel suben cohesión. Promesas incumplidas bajan moral y pueden generar conflictos.
-- **Scouting**: Cubre regiones con potencial joven. Los reportes mejoran cada semana; paciencia.
-- **Rivalidades**: El sistema recuerda enfrentamientos. Rivales intensos pueden jugar con más agresión.
+El proyecto está preparado para seguir creciendo mediante la incorporación de nuevos módulos y sistemas sin necesidad de rediseñar la arquitectura existente.
 
-## Tests
+---
 
-Compilar y ejecutar:
+## Mantenibilidad
 
-```powershell
-cmake --build build-cmake --config Release --target FootballManagerTests
-.\build-cmake\bin\FootballManagerTests.exe
-```
+La organización del código busca favorecer la legibilidad, la reutilización y la separación de responsabilidades.
 
-La suite valida, entre otras cosas:
+---
 
-- integridad de datos y carga inicial
-- estructura del motor de partido
-- urgencia competitiva, fatiga y perfil tactico
-- scouting, shortlist y negociacion
-- riesgo medico y reemplazos por lesion
-- desarrollo mensual y servicios de carrera
-- guardado, carga, integridad de saves, migracion legacy, JSON/mods y transicion de temporada
+## Calidad
 
-## Arquitectura
+Cada nueva funcionalidad busca incorporarse junto con pruebas y documentación para mantener la estabilidad del proyecto.
 
-### Modulos principales
+---
 
-- `engine`: estado base, modelos y controlador del juego
-- `simulation`: contexto de partido, fases, eventos, resolucion y reportes
-- `career`: servicios de carrera, managers ligeros, inbox, staff, narrativas, semana y mundo
-- `ai`: planificacion de plantilla, ajustes CPU y evaluacion de mercado
-- `transfers`: mercado, tipos y negociacion
-- `development`: entrenamiento, progresion y cantera
-- `finance`: proyecciones y buffer economico
-- `gui`: runtime, layout, acciones y vistas Win32
-- `ui`: flujo de consola y pantallas de texto
-- `io`: guardado, carga y serializacion
-- `validators`: chequeos de integridad y arranque
+# 🚀 Estado actual del proyecto
 
-### Datos JSON y mods
+Actualmente Football Manager Game se encuentra en desarrollo activo.
 
-El juego sigue cargando la base historica desde `data/LigaChilena`, pero ahora tambien lee:
+Entre los sistemas disponibles destacan:
 
-- `data/leagues.json`: ligas adicionales o experimentales.
-- `data/teams.json`: equipos nuevos o ajustes livianos sobre equipos existentes.
-- `data/players.json`: jugadores externos con atributos avanzados opcionales.
-- `mods/leagues.json`, `mods/teams.json`, `mods/players.json`: overlays locales para agregar contenido sin tocar la base.
+✅ Motor de simulación
 
-Los campos faltantes usan fallback seguro; un jugador JSON con solo `team`, `name`, `position`, `age` y `market_value` ya puede entrar al juego.
+✅ Modo Carrera
 
-### Estructura del repo
+✅ Match Center
+
+✅ IA táctica
+
+✅ Mercado de fichajes
+
+✅ Finanzas
+
+✅ Desarrollo juvenil
+
+✅ Desarrollo de jugadores
+
+✅ Sistema de noticias
+
+✅ Estadísticas
+
+✅ Sistema de Momentum
+
+✅ Valoraciones dinámicas
+
+✅ Pruebas automatizadas
+
+---
+
+# 💻 Tecnologías utilizadas
+
+El proyecto utiliza principalmente:
+
+| Tecnología | Uso |
+|------------|-------------------------------|
+| C++17 | Lenguaje principal |
+| STL | Estructuras de datos |
+| CMake | Sistema de compilación |
+| Ninja | Build System |
+| MSYS2 UCRT64 | Toolchain |
+| GCC | Compilador |
+| Git | Control de versiones |
+| GitHub | Repositorio |
+
+---
+
+# 📑 Índice
+
+1. Introducción
+2. Arquitectura del Proyecto
+3. Organización del Código
+4. Motor de Simulación
+5. Match Center
+6. Inteligencia Artificial
+7. Modo Carrera
+8. Mercado de Fichajes
+9. Finanzas
+10. Desarrollo Juvenil
+11. Sistema de Tests
+12. Compilación
+13. Roadmap
+14. Documentación
+15. Contribuciones
+16. Licencia
+
+
+# 🏗 Arquitectura del Proyecto
+
+Football Manager Game ha sido diseñado siguiendo una arquitectura modular donde cada sistema posee responsabilidades claramente definidas.
+
+En lugar de concentrar toda la lógica del juego en unos pocos archivos de gran tamaño, el proyecto divide cada área funcional en módulos independientes que interactúan entre sí mediante interfaces bien definidas.
+
+Esta organización permite:
+
+- Facilitar el mantenimiento del código.
+- Reducir el acoplamiento entre sistemas.
+- Reutilizar componentes.
+- Agregar nuevas funcionalidades sin modificar el resto del proyecto.
+- Mejorar la cobertura de pruebas.
+- Escalar el proyecto conforme aumenta su complejidad.
+
+---
+
+# 📁 Organización General
+
+El proyecto está organizado utilizando una estructura modular.
 
 ```text
-include/
-src/
-tests/
-data/
-docs/
-saves/
-tools/
+FootballManagerGame/
+
+│
+├── assets/
+├── data/
+├── docs/
+├── include/
+├── mods/
+├── saves/
+├── src/
+├── tests/
+├── tools/
+│
+├── CMakeLists.txt
+├── CMakePresets.json
+├── README.md
+├── TODO.md
+├── CHANGELOG.md
+└── ...
 ```
 
-### Estado actual
+Cada carpeta tiene una responsabilidad específica dentro del proyecto.
 
-- La carrera mantiene compatibilidad con el agregado `Career`, pero ya expone `TeamId`, `TeamRepository`, `SeasonManager`, `FinanceManager`, `TransferManager`, `InboxManager` y `NewsManager` como capa progresiva.
-- La simulacion semanal esta dividida en fases: partidos, estado fisico, transferencias, finanzas, noticias/sistemas y calendario.
-- El mundo guarda campeones, records, tabla historica del club controlado y fichajes importantes dentro del historial persistente.
-- Los tres ejecutables principales siguen vigentes: GUI, CLI y tests.
-- Los archivos temporales de ejecucion CLI se ignoran y no forman parte del codigo fuente.
+---
 
-## Flujo de entrada
+# 📂 Estructura de Carpetas
 
-- `src/winmain.cpp`: entrada GUI en Windows
-- `src/main.cpp`: entrada consola
-- `src/engine/game_controller.cpp`: seleccion de GUI, CLI o validacion
-- `src/engine/front_menu.cpp`: frontend compartido para el menu principal y configuraciones
-- `src/engine/game_settings.cpp`: persistencia de configuraciones del frontend
-- `src/gui/gui_audio.cpp`: musica del menu, manifiesto de assets y fade de audio
+## src/
 
-## Documentacion adicional
+Contiene prácticamente toda la implementación del juego.
 
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Reporte de limpieza de datos](docs/data_cleanup_report.md)
-- [Changelog](CHANGELOG.md)
-- [Audio del frontend](assets/audio/README.md)
+Aquí se encuentran los distintos módulos que conforman Football Manager Game.
 
-## Roadmap natural
+```text
+src/
 
-- seguir profundizando el motor de partido con mas lectura rival y balon parado
-- ampliar staff y networking del mercado con mas memoria del mundo
-- enriquecer cantera, intake juvenil y narrativa de largo plazo
-- pulir la GUI con mas widgets de comparacion y centros de informacion
-- migrar usos internos de `Team*` hacia `TeamId` en reportes, UI y validadores
-- mover mas logica financiera y de mercado desde `week_simulation.cpp` hacia managers dedicados
+ai/
 
-## Repositorio
+career/
 
-GitHub: https://github.com/elmetaleroxdcontacto/Juego
+competition/
+
+development/
+
+engine/
+
+finance/
+
+gui/
+
+io/
+
+simulation/
+
+transfers/
+
+ui/
+
+utils/
+
+validators/
+```
+
+---
+
+## include/
+
+Contiene los archivos de cabecera del proyecto.
+
+Aquí se definen las clases, estructuras e interfaces utilizadas por los distintos módulos.
+
+Separar las declaraciones de las implementaciones permite mantener una organización más limpia y facilita la reutilización del código.
+
+---
+
+## tests/
+
+Contiene las pruebas automatizadas del proyecto.
+
+El objetivo es validar el correcto funcionamiento de los diferentes sistemas del juego.
+
+Las pruebas permiten detectar regresiones durante el desarrollo y garantizan que nuevas funcionalidades no rompan el comportamiento existente.
+
+---
+
+## assets/
+
+Almacena recursos utilizados por el juego.
+
+Por ejemplo:
+
+- imágenes
+- logotipos
+- iconos
+- sonidos
+- recursos gráficos
+
+---
+
+## data/
+
+Contiene información utilizada por el motor.
+
+Dependiendo del sistema puede incluir:
+
+- ligas
+- clubes
+- jugadores
+- configuraciones
+- bases de datos
+- parámetros de simulación
+
+---
+
+## docs/
+
+Documentación técnica del proyecto.
+
+Aquí se almacenará toda la documentación interna para desarrolladores.
+
+Entre ella:
+
+- arquitectura
+- motor de simulación
+- inteligencia artificial
+- modo carrera
+- guía de compilación
+- sistema de pruebas
+
+---
+
+## saves/
+
+Almacena las partidas guardadas generadas por el usuario.
+
+---
+
+## tools/
+
+Herramientas auxiliares utilizadas durante el desarrollo.
+
+---
+
+# 🧩 Organización por Módulos
+
+Cada módulo posee una responsabilidad concreta.
+
+Esto evita mezclar lógica de distintas áreas dentro del mismo archivo.
+
+---
+
+## 🎮 Engine
+
+El módulo **Engine** actúa como núcleo del juego.
+
+Es responsable de coordinar el funcionamiento general de Football Manager Game.
+
+Entre sus responsabilidades se encuentran:
+
+- inicialización
+- control del flujo principal
+- menús
+- navegación
+- tablas
+- sistemas sociales
+- configuración
+
+El resto de módulos dependen del Engine para integrarse correctamente dentro del flujo del juego.
+
+---
+
+## 🏟 Career
+
+El módulo **Career** administra el modo carrera.
+
+Gestiona:
+
+- temporadas
+- calendario
+- progresión
+- informes
+- noticias
+- bandeja de entrada
+- desarrollo semanal
+- objetivos
+- evolución del club
+
+Es uno de los módulos más grandes del proyecto.
+
+---
+
+## ⚽ Simulation
+
+Este módulo representa el corazón del juego.
+
+Aquí se encuentra el motor encargado de simular cada partido.
+
+Incluye diferentes sistemas especializados para resolver cada aspecto del encuentro.
+
+Entre ellos:
+
+- Match Engine
+- Match Context
+- Match Phase
+- Match Events
+- Match Statistics
+- Match Center
+- Match Renderer
+- Match Resolution
+- Momentum
+- Valoraciones
+
+Toda la simulación deportiva ocurre dentro de este módulo.
+
+---
+
+## 🧠 AI
+
+El módulo de Inteligencia Artificial contiene los algoritmos que permiten que los equipos controlados por la CPU tomen decisiones de forma autónoma.
+
+Actualmente incluye sistemas para:
+
+- planificación de plantillas
+- decisiones tácticas
+- sustituciones
+- gestión del partido
+- mercado de fichajes
+
+La IA utiliza el contexto del encuentro para adaptar su comportamiento durante la simulación.
+
+---
+
+## 💰 Finance
+
+Administra toda la economía del club.
+
+Entre sus funciones:
+
+- presupuesto
+- ingresos
+- gastos
+- salarios
+- situación financiera
+
+---
+
+## 🔄 Transfers
+
+Gestiona el mercado de fichajes.
+
+Incluye:
+
+- negociaciones
+- ofertas
+- compras
+- ventas
+- movimientos de jugadores
+
+---
+
+## 📈 Development
+
+Responsable de la evolución de los jugadores.
+
+Administra:
+
+- progresión
+- entrenamiento
+- potencial
+- crecimiento
+- desarrollo juvenil
+
+---
+
+## 🖥 UI
+
+Contiene la interfaz del juego.
+
+Gestiona:
+
+- pantallas
+- menús
+- navegación
+- informes
+- visualización de información
+
+---
+
+## 💾 IO
+
+Responsable del sistema de persistencia.
+
+Gestiona:
+
+- guardado
+- carga
+- serialización
+- almacenamiento de partidas
+
+---
+
+## ✔ Validators
+
+Incluye diferentes rutinas de validación utilizadas por el proyecto para verificar la consistencia de los datos.
+
+---
+
+## 🛠 Utils
+
+Agrupa funciones reutilizables utilizadas por múltiples módulos.
+
+Por ejemplo:
+
+- utilidades generales
+- registro de eventos
+- localización
+- herramientas de soporte
+
+---
+
+# 🔄 Flujo General del Juego
+
+El funcionamiento del proyecto puede resumirse mediante el siguiente flujo.
+
+```text
+Inicio del Juego
+
+        │
+
+        ▼
+
+Game Controller
+
+        │
+
+        ▼
+
+Modo Carrera
+
+        │
+
+        ▼
+
+Simulación Semanal
+
+        │
+
+        ▼
+
+Preparación del Partido
+
+        │
+
+        ▼
+
+Match Engine
+
+        │
+
+        ▼
+
+Match Center
+
+        │
+
+        ▼
+
+Resultados
+
+        │
+
+        ▼
+
+Actualización del Mundo
+
+        │
+
+        ▼
+
+Guardar Progreso
+```
+
+Este flujo representa el ciclo principal que sigue el jugador durante una temporada.
+
+Cada módulo interviene únicamente cuando corresponde, evitando dependencias innecesarias y manteniendo una arquitectura limpia.
+
+---
+
+# 🎯 Filosofía de Diseño
+
+El desarrollo de Football Manager Game se basa en cuatro principios fundamentales.
+
+## Modularidad
+
+Cada sistema debe cumplir una única responsabilidad.
+
+---
+
+## Escalabilidad
+
+Las nuevas funcionalidades deben poder incorporarse sin rediseñar el proyecto.
+
+---
+
+## Mantenibilidad
+
+La organización del código busca facilitar futuras modificaciones y reducir el riesgo de errores.
+
+---
+
+## Reutilización
+
+Siempre que sea posible, los componentes se diseñan para ser reutilizados por otros módulos del proyecto.
+
+---
+
+Con esta arquitectura el proyecto puede seguir creciendo mediante la incorporación de nuevos sistemas sin comprometer la estabilidad del código existente.
+
+
+# ⚽ Motor de Simulación
+
+El Motor de Simulación constituye el núcleo de Football Manager Game y es el encargado de transformar el estado de dos equipos en el desarrollo completo de un partido.
+
+A diferencia de un sistema basado únicamente en probabilidades, el motor utiliza un conjunto de módulos especializados que colaboran entre sí para representar el comportamiento de un encuentro de fútbol de forma coherente y extensible.
+
+Su arquitectura modular permite añadir nuevas mecánicas sin modificar la estructura principal del sistema.
+
+---
+
+# Objetivos del Motor
+
+El motor ha sido diseñado con los siguientes objetivos:
+
+- Simular partidos completos.
+- Mantener consistencia estadística.
+- Permitir que la IA intervenga durante el encuentro.
+- Generar eventos dinámicos.
+- Registrar estadísticas.
+- Alimentar el Match Center.
+- Producir información para el Modo Carrera.
+
+---
+
+# Flujo General de un Partido
+
+Todo encuentro sigue un flujo similar al siguiente:
+
+```text
+Crear Contexto del Partido
+
+            │
+
+            ▼
+
+Inicializar Equipos
+
+            │
+
+            ▼
+
+Preparar Estado Inicial
+
+            │
+
+            ▼
+
+Iniciar Simulación
+
+            │
+
+            ▼
+
+Resolver Minuto
+
+            │
+
+            ▼
+
+Actualizar Momentum
+
+            │
+
+            ▼
+
+Generar Eventos
+
+            │
+
+            ▼
+
+Actualizar Estadísticas
+
+            │
+
+            ▼
+
+Ejecutar IA Táctica
+
+            │
+
+            ▼
+
+Actualizar Match Center
+
+            │
+
+            ▼
+
+Finalizar Partido
+
+            │
+
+            ▼
+
+Generar Reporte Final
+```
+
+---
+
+# Componentes Principales
+
+El motor está compuesto por varios subsistemas especializados.
+
+---
+
+## Match Engine
+
+Es el componente encargado de coordinar toda la simulación.
+
+Entre sus responsabilidades destacan:
+
+- controlar el flujo del partido;
+- avanzar el reloj;
+- coordinar los módulos de simulación;
+- actualizar el estado del encuentro;
+- comunicar cambios al Match Center.
+
+Actúa como el punto central desde el que se orquesta toda la simulación.
+
+---
+
+## Match Context
+
+Representa el estado actual del partido.
+
+Incluye información como:
+
+- marcador;
+- minuto;
+- posesión;
+- fatiga;
+- moral;
+- sustituciones;
+- lesiones;
+- tarjetas;
+- estadísticas;
+- contexto táctico.
+
+Todos los módulos consultan este contexto para tomar decisiones.
+
+---
+
+## Match Events
+
+Durante cada iteración del motor pueden generarse diferentes eventos.
+
+Por ejemplo:
+
+- goles;
+- tiros;
+- córners;
+- faltas;
+- tarjetas;
+- lesiones;
+- cambios;
+- fueras de juego;
+- oportunidades de gol.
+
+Cada evento modifica el estado del encuentro y puede desencadenar nuevas acciones.
+
+---
+
+## Match Resolution
+
+Este sistema determina el resultado de cada acción del partido.
+
+Entre otras tareas:
+
+- resolver disparos;
+- calcular probabilidades;
+- decidir recuperaciones;
+- validar acciones ofensivas;
+- actualizar el marcador.
+
+---
+
+## Match Statistics
+
+Registra toda la información estadística producida durante el encuentro.
+
+Entre las estadísticas almacenadas se encuentran:
+
+- tiros;
+- tiros al arco;
+- goles;
+- posesión;
+- faltas;
+- tarjetas;
+- córners;
+- xG;
+- asistencias;
+- recuperaciones;
+- pérdidas.
+
+Estas estadísticas alimentan tanto el Match Center como los informes posteriores.
+
+---
+
+## Match Momentum
+
+Uno de los sistemas más importantes del proyecto.
+
+El objetivo del Momentum es representar cuál de los dos equipos domina el desarrollo del partido.
+
+No depende únicamente del marcador.
+
+También considera diferentes factores generados durante la simulación.
+
+Por ejemplo:
+
+- ocasiones creadas;
+- presión ofensiva;
+- posesión;
+- tiros;
+- ritmo del encuentro;
+- secuencia reciente de eventos.
+
+Este valor es utilizado posteriormente por la Inteligencia Artificial para modificar el comportamiento táctico de cada entrenador.
+
+---
+
+## Player Ratings
+
+Cada jugador recibe una valoración dinámica durante el partido.
+
+La puntuación evoluciona dependiendo de:
+
+- goles;
+- asistencias;
+- recuperaciones;
+- pérdidas;
+- precisión de pase;
+- acciones defensivas;
+- influencia ofensiva;
+- errores cometidos.
+
+Estas valoraciones son utilizadas posteriormente para determinar:
+
+- mejor jugador;
+- rendimiento individual;
+- informes;
+- análisis posteriores.
+
+---
+
+# Sistema de Eventos
+
+El motor trabaja continuamente generando eventos.
+
+Ejemplo simplificado.
+
+```text
+Minuto
+
+↓
+
+Calcular contexto
+
+↓
+
+Actualizar Momentum
+
+↓
+
+Generar oportunidades
+
+↓
+
+Resolver acciones
+
+↓
+
+Actualizar estadísticas
+
+↓
+
+Actualizar valoraciones
+
+↓
+
+Notificar Match Center
+```
+
+Este proceso se repite continuamente hasta finalizar el encuentro.
+
+---
+
+# Integración con la IA
+
+Uno de los aspectos más importantes del motor consiste en la comunicación con la Inteligencia Artificial.
+
+Durante el encuentro la IA recibe información relacionada con:
+
+- resultado;
+- minuto;
+- cansancio;
+- tarjetas;
+- marcador;
+- número de sustituciones;
+- Momentum.
+
+Con esta información cada entrenador puede:
+
+- modificar la presión;
+- cambiar el ritmo;
+- alterar la formación;
+- realizar sustituciones;
+- cambiar instrucciones tácticas.
+
+Esto permite que cada partido evolucione de forma dinámica.
+
+---
+
+# Integración con Match Center
+
+Toda la información generada por el motor es enviada al Match Center.
+
+Entre ella:
+
+- marcador;
+- cronómetro;
+- estadísticas;
+- comentarios;
+- Momentum;
+- sustituciones;
+- cambios tácticos;
+- timeline;
+- valoraciones.
+
+De esta manera el jugador puede seguir el desarrollo del encuentro en tiempo real.
+
+---
+
+# Integración con el Modo Carrera
+
+Al finalizar un partido el motor entrega información a otros módulos del proyecto.
+
+Entre ellos:
+
+- calendario;
+- clasificación;
+- estadísticas de temporada;
+- desarrollo de jugadores;
+- moral;
+- informes;
+- noticias;
+- historial del club.
+
+Esto permite que cada encuentro tenga consecuencias dentro del Modo Carrera.
+
+---
+
+# Diseño Modular
+
+El Motor de Simulación ha sido construido siguiendo una arquitectura desacoplada.
+
+```text
+Match Engine
+
+      │
+
+      ├────────► Match Context
+
+      ├────────► Match Events
+
+      ├────────► Match Resolution
+
+      ├────────► Match Statistics
+
+      ├────────► Match Momentum
+
+      ├────────► Player Ratings
+
+      ├────────► Tactical AI
+
+      └────────► Match Center
+```
+
+Cada módulo posee una responsabilidad específica, reduciendo el acoplamiento y facilitando la incorporación de nuevas funcionalidades.
+
+---
+
+# Ventajas de esta Arquitectura
+
+La organización modular ofrece múltiples beneficios:
+
+- Mayor mantenibilidad.
+- Código más limpio.
+- Separación de responsabilidades.
+- Escalabilidad.
+- Facilidad para realizar pruebas.
+- Incorporación de nuevos sistemas sin modificar el núcleo del motor.
+
+Esta arquitectura permite que Football Manager Game continúe creciendo sin necesidad de rediseñar completamente el sistema de simulación.
+
+
+# 🏆 Modo Carrera
+
+El Modo Carrera representa el núcleo de la experiencia de Football Manager Game.
+
+Su objetivo es permitir que el jugador gestione un club de fútbol a largo plazo, tomando decisiones deportivas, económicas y estratégicas que afectan directamente la evolución de la institución.
+
+Cada temporada genera nuevos desafíos, oportunidades y consecuencias derivadas de las decisiones tomadas por el jugador.
+
+---
+
+# Objetivos del Modo Carrera
+
+El sistema de carrera busca simular el funcionamiento de un club profesional mediante múltiples sistemas que trabajan de forma integrada.
+
+Entre ellos:
+
+- Gestión deportiva.
+- Administración económica.
+- Planificación de plantillas.
+- Desarrollo juvenil.
+- Evolución de jugadores.
+- Objetivos institucionales.
+- Calendario competitivo.
+- Mercado de fichajes.
+- Informes técnicos.
+- Estadísticas históricas.
+
+---
+
+# Flujo General
+
+El ciclo del Modo Carrera puede resumirse de la siguiente forma.
+
+```text
+Nueva Temporada
+
+        │
+
+        ▼
+
+Calendario
+
+        │
+
+        ▼
+
+Entrenamientos
+
+        │
+
+        ▼
+
+Preparación del Partido
+
+        │
+
+        ▼
+
+Simulación
+
+        │
+
+        ▼
+
+Actualización del Club
+
+        │
+
+        ▼
+
+Noticias
+
+        │
+
+        ▼
+
+Mercado
+
+        │
+
+        ▼
+
+Nueva Semana
+```
+
+---
+
+# Gestión del Club
+
+El jugador controla prácticamente todos los aspectos deportivos del equipo.
+
+Entre ellos:
+
+- Plantilla.
+- Formación.
+- Tácticas.
+- Convocatorias.
+- Presupuesto.
+- Objetivos.
+- Desarrollo de jugadores.
+- Mercado de fichajes.
+
+Cada decisión repercute en el rendimiento deportivo y económico del club.
+
+---
+
+# Calendario
+
+El calendario organiza toda la temporada.
+
+Incluye:
+
+- Jornadas de liga.
+- Copas.
+- Fechas internacionales.
+- Entrenamientos.
+- Descanso.
+- Mercado de fichajes.
+
+El avance semanal constituye el eje principal del modo carrera.
+
+---
+
+# Desarrollo de Jugadores
+
+Cada futbolista evoluciona con el paso del tiempo.
+
+Su crecimiento depende de diferentes factores como:
+
+- Edad.
+- Potencial.
+- Rendimiento.
+- Minutos disputados.
+- Entrenamiento.
+- Estado físico.
+- Moral.
+
+Esto permite construir proyectos deportivos a largo plazo.
+
+---
+
+# Desarrollo Juvenil
+
+El sistema juvenil permite incorporar nuevos talentos al club.
+
+Su finalidad es ofrecer una fuente constante de jugadores jóvenes capaces de integrarse progresivamente al primer equipo.
+
+Este sistema favorece la planificación a largo plazo y la sostenibilidad deportiva.
+
+---
+
+# Finanzas
+
+La economía constituye uno de los pilares del Modo Carrera.
+
+El sistema financiero administra:
+
+- Presupuesto.
+- Salarios.
+- Ingresos.
+- Gastos.
+- Balance del club.
+- Situación económica.
+
+La gestión responsable de estos recursos resulta fundamental para garantizar la estabilidad del proyecto deportivo.
+
+---
+
+# Mercado de Fichajes
+
+Durante la temporada el jugador puede reforzar su plantilla mediante el mercado de transferencias.
+
+El sistema contempla procesos como:
+
+- Compra de jugadores.
+- Venta de futbolistas.
+- Negociaciones.
+- Valoración económica.
+- Incorporación de nuevos talentos.
+
+Las decisiones realizadas durante el mercado condicionan el rendimiento del equipo en las competiciones futuras.
+
+---
+
+# Informes
+
+El Modo Carrera genera distintos informes destinados a facilitar la toma de decisiones.
+
+Entre ellos pueden encontrarse:
+
+- Informes deportivos.
+- Informes económicos.
+- Estado de la plantilla.
+- Rendimiento de jugadores.
+- Evolución de la temporada.
+
+Estos informes permiten disponer de una visión global de la situación del club.
+
+---
+
+# Inteligencia Artificial
+
+Football Manager Game incorpora diferentes sistemas de Inteligencia Artificial especializados.
+
+En lugar de concentrar toda la lógica en un único componente, el proyecto divide el comportamiento automático en módulos independientes.
+
+Esto permite ampliar las capacidades de la IA sin modificar el resto del motor.
+
+---
+
+# Objetivos de la IA
+
+La Inteligencia Artificial busca representar el comportamiento de entrenadores y clubes controlados por la CPU.
+
+Entre sus objetivos destacan:
+
+- Gestionar plantillas.
+- Realizar sustituciones.
+- Adaptar tácticas.
+- Gestionar fichajes.
+- Reaccionar al desarrollo del partido.
+- Mantener coherencia deportiva.
+
+---
+
+# IA Táctica
+
+Durante cada encuentro la IA analiza continuamente el contexto del partido.
+
+Entre las variables consideradas destacan:
+
+- Resultado.
+- Minuto.
+- Estado físico.
+- Tarjetas.
+- Diferencia de goles.
+- Momentum.
+- Cambios disponibles.
+
+A partir de esta información puede modificar el planteamiento táctico del equipo.
+
+---
+
+# IA de Sustituciones
+
+La IA decide cuándo realizar cambios de jugadores considerando factores como:
+
+- Fatiga.
+- Rendimiento.
+- Lesiones.
+- Tarjetas.
+- Situación táctica.
+- Resultado.
+
+El objetivo es mantener la competitividad del equipo durante todo el encuentro.
+
+---
+
+# IA basada en Momentum
+
+Uno de los desarrollos más recientes del proyecto consiste en integrar el sistema de Momentum dentro de la toma de decisiones de la IA.
+
+El comportamiento del entrenador puede modificarse dependiendo del dominio mostrado durante el encuentro.
+
+Cuando un equipo atraviesa una fase favorable puede aumentar la presión ofensiva o asumir mayores riesgos.
+
+Por el contrario, si pierde el control del partido puede optar por reorganizar su estructura táctica o introducir cambios para recuperar la iniciativa.
+
+Esta integración permite que el desarrollo de los partidos resulte más dinámico y menos predecible.
+
+---
+
+# Diseño Modular de la IA
+
+```text
+AI
+
+│
+
+├── Gestión de Plantilla
+
+├── Gestión del Partido
+
+├── Cambios Tácticos
+
+├── Sustituciones
+
+├── Mercado de Fichajes
+
+└── Momentum
+```
+
+Cada componente posee responsabilidades claramente definidas y puede evolucionar de forma independiente.
+
+---
+
+# Integración con el resto del Proyecto
+
+La Inteligencia Artificial mantiene comunicación con distintos módulos.
+
+```text
+Match Engine
+
+        │
+
+        ▼
+
+Momentum
+
+        │
+
+        ▼
+
+IA Táctica
+
+        │
+
+        ▼
+
+Cambios
+
+        │
+
+        ▼
+
+Match Center
+
+        │
+
+        ▼
+
+Modo Carrera
+```
+
+Esta comunicación permite que las decisiones tomadas durante los partidos tengan repercusiones dentro del Modo Carrera y contribuyan a la evolución general del mundo del juego.
+
+---
+
+# Filosofía de Diseño
+
+El diseño del Modo Carrera y de la Inteligencia Artificial persigue tres objetivos fundamentales:
+
+- Simular decisiones coherentes.
+- Favorecer la planificación a largo plazo.
+- Mantener una experiencia dinámica y variada en cada temporada.
+
+Gracias a esta arquitectura modular, el proyecto puede seguir incorporando nuevas funcionalidades sin comprometer la estabilidad del resto de sistemas.
+
+
+# 🔨 Compilación del Proyecto
+
+Football Manager Game utiliza **CMake** como sistema de generación de proyectos y está preparado para compilarse utilizando distintos entornos de desarrollo.
+
+Actualmente el entorno recomendado para Windows es:
+
+- MSYS2 UCRT64
+- GCC
+- Ninja
+- CMake 3.16 o superior
+
+Esta configuración permite obtener compilaciones rápidas, reproducibles y compatibles con el resto del proyecto.
+
+---
+
+# Requisitos
+
+Antes de compilar el proyecto es necesario disponer de las siguientes herramientas.
+
+| Herramienta | Versión recomendada |
+|------------|---------------------|
+| CMake | 3.16 o superior |
+| GCC | Compatible con C++17 |
+| Ninja | Última versión estable |
+| Git | Última versión |
+| MSYS2 UCRT64 | Recomendado para Windows |
+
+---
+
+# Obtener el Proyecto
+
+```bash
+git clone https://github.com/TU_USUARIO/FootballManagerGame.git
+
+cd FootballManagerGame
+```
+
+---
+
+# Configuración
+
+El proyecto utiliza **CMake Presets** para simplificar el proceso de configuración.
+
+```bash
+cmake --preset Juego-UCRT64-Ninja
+```
+
+Este comando genera automáticamente la carpeta de compilación utilizando la configuración definida en `CMakePresets.json`.
+
+---
+
+# Compilación
+
+Una vez configurado el proyecto basta con ejecutar:
+
+```bash
+cmake --build out/build
+```
+
+El sistema compilará todos los ejecutables configurados por CMake.
+
+---
+
+# Ejecutables
+
+El proyecto genera diferentes ejecutables dependiendo de la configuración.
+
+Entre ellos pueden encontrarse:
+
+- FootballManager
+- FootballManagerCLI
+- FootballManagerTests
+
+Cada uno cumple una función específica dentro del proyecto.
+
+---
+
+# Sistema de Pruebas
+
+Uno de los objetivos principales del proyecto consiste en mantener un alto nivel de estabilidad.
+
+Para ello Football Manager Game incorpora una colección de pruebas automatizadas que permiten detectar regresiones durante el desarrollo.
+
+---
+
+# Ejecutar las pruebas
+
+Una vez compilado el proyecto es posible ejecutar todas las pruebas mediante:
+
+```bash
+ctest --test-dir out/build --output-on-failure
+```
+
+También es posible ejecutar directamente el ejecutable de pruebas.
+
+---
+
+# Cobertura de pruebas
+
+Las pruebas verifican distintos módulos del proyecto.
+
+Entre ellos:
+
+- Motor de simulación.
+- Match Center.
+- IA táctica.
+- Sistema de validaciones.
+- Persistencia.
+- Calendario.
+- Economía.
+- Desarrollo de jugadores.
+- Momentum.
+- Valoraciones.
+- Componentes auxiliares.
+
+El objetivo es detectar errores antes de incorporar nuevas funcionalidades.
+
+---
+
+# Filosofía de Desarrollo
+
+Cada nueva característica debería seguir el siguiente flujo de trabajo:
+
+```text
+Implementar
+
+      │
+
+      ▼
+
+Compilar
+
+      │
+
+      ▼
+
+Ejecutar pruebas
+
+      │
+
+      ▼
+
+Corregir errores
+
+      │
+
+      ▼
+
+Actualizar documentación
+
+      │
+
+      ▼
+
+Realizar commit
+
+      │
+
+      ▼
+
+Publicar cambios
+```
+
+---
+
+# Organización del Código
+
+El proyecto intenta mantener una separación clara entre responsabilidades.
+
+Como norma general:
+
+- La lógica del juego pertenece a `src/`.
+- Las declaraciones públicas se mantienen en `include/`.
+- Las pruebas se almacenan en `tests/`.
+- La documentación técnica se encuentra en `docs/`.
+- Los recursos del juego permanecen en `assets/`.
+- Los datos del proyecto se almacenan en `data/`.
+
+Esta organización facilita el mantenimiento conforme aumenta el tamaño del proyecto.
+
+---
+
+# Convenciones del Proyecto
+
+Durante el desarrollo se recomienda seguir las siguientes prácticas.
+
+## Código
+
+- Mantener funciones con una única responsabilidad.
+- Evitar duplicación de lógica.
+- Documentar algoritmos complejos.
+- Favorecer la modularidad.
+
+---
+
+## Nuevos módulos
+
+Cuando se incorpora un nuevo sistema es recomendable:
+
+- crear un módulo independiente;
+- añadir sus cabeceras correspondientes;
+- registrar las nuevas fuentes en CMake;
+- incorporar pruebas automatizadas;
+- documentar el funcionamiento del sistema.
+
+---
+
+## Commits
+
+Se recomienda utilizar mensajes descriptivos.
+
+Ejemplos:
+
+```text
+feat(match): agregar Match Center
+
+feat(ai): integrar IA basada en momentum
+
+fix(simulation): corregir cálculo de estadísticas
+
+refactor(engine): reorganizar flujo de simulación
+
+docs(readme): actualizar documentación del proyecto
+```
+
+---
+
+# Roadmap
+
+Football Manager Game continúa evolucionando de forma activa.
+
+Entre las funcionalidades previstas para futuras versiones destacan:
+
+## Motor de Simulación
+
+- Repeticiones de jugadas.
+- Sistema de highlights.
+- Clima dinámico.
+- Árbitros con comportamiento propio.
+- VAR.
+- Eventos especiales.
+
+---
+
+## Inteligencia Artificial
+
+- Entrenadores con personalidad.
+- Adaptación táctica avanzada.
+- Aprendizaje basado en temporadas.
+- Estrategias específicas según competición.
+
+---
+
+## Modo Carrera
+
+- Conferencias de prensa.
+- Patrocinadores.
+- Relaciones con la directiva.
+- Historial completo de entrenadores.
+- Academia juvenil ampliada.
+
+---
+
+## Interfaz
+
+- Mejoras visuales del Match Center.
+- Paneles configurables.
+- Más estadísticas en tiempo real.
+- Comparativas entre jugadores.
+
+---
+
+# Documentación
+
+Además de este README, el proyecto incluye documentación complementaria destinada tanto a usuarios como a desarrolladores.
+
+Entre ella:
+
+- TODO.md
+- CHANGELOG.md
+- INDEX.md
+- CODEBASE_ANALYSIS.md
+- BUG_SUMMARY.md
+- BUG_ANALYSIS_DETAILED.md
+- BUG_FIXES_GUIDE.md
+
+La intención es mantener toda la información técnica organizada y actualizada conforme evolucione el proyecto.
+
+---
+
+# Contribuciones
+
+Las contribuciones son bienvenidas.
+
+Antes de enviar cambios se recomienda:
+
+1. Compilar el proyecto.
+2. Ejecutar todas las pruebas.
+3. Mantener la arquitectura modular.
+4. Documentar nuevas funcionalidades.
+5. Actualizar la documentación correspondiente.
+
+---
+
+# Licencia
+
+La licencia del proyecto deberá definirse o actualizarse conforme evolucione el desarrollo.
+
+Hasta entonces, se recomienda consultar el repositorio para conocer las condiciones de uso y distribución.
+
+---
+
+# Agradecimientos
+
+Football Manager Game es el resultado de un proceso continuo de diseño, desarrollo, refactorización y mejora incremental.
+
+Cada nuevo sistema incorporado busca aumentar el nivel de realismo, mantenibilidad y escalabilidad del proyecto, manteniendo una arquitectura preparada para seguir creciendo en futuras versiones.
