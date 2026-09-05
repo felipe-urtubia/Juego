@@ -1,6 +1,6 @@
 #include "simulation.h"
 
-#include "io.h"
+#include "io/io.h"
 #include "simulation/match_engine.h"
 #include "simulation/match_engine_internal.h"
 #include "simulation/match_postprocess.h"
