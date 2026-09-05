@@ -249,6 +249,7 @@ struct AppState {
     HBRUSH topBarBrush = nullptr;
     HBRUSH shellBrush = nullptr;
     HBRUSH inputBrush = nullptr;
+    HBITMAP mainMenuBackground = nullptr;
 
     Career career;
     GameSettings settings;

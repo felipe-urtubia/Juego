@@ -969,7 +969,7 @@ static wchar_t buttonBadgeGlyph(int id, DisplayMode displayMode) {
              : (displayMode == DisplayMode::MaximizedWindow ? L'F' : L'M');
     }
     if (id == IDC_MENU_CONTINUE_BUTTON) return L'C';
-    if (id == IDC_MENU_PLAY_BUTTON) return L'J';
+    if (id == IDC_MENU_PLAY_BUTTON) return L'N';
     if (id == IDC_MENU_LOAD_BUTTON) return L'L';
     if (id == IDC_MENU_DELETE_SAVE_BUTTON) return L'B';
     if (id == IDC_FRONT_MENU_BUTTON) return L'M';
@@ -980,6 +980,41 @@ static wchar_t buttonBadgeGlyph(int id, DisplayMode displayMode) {
     if (id == IDC_MENU_APPLY_SETTINGS_BUTTON) return L'A';
     if (id == IDC_MENU_RESET_SETTINGS_BUTTON) return L'O';
     return pageButtonGlyph(id);
+}
+
+
+static bool isMainMenuHeroButton(const AppState& state, int id) {
+    if (state.currentPage != GuiPage::MainMenu) return false;
+    return id == IDC_MENU_PLAY_BUTTON ||
+           id == IDC_MENU_CONTINUE_BUTTON ||
+           id == IDC_MENU_LOAD_BUTTON ||
+           id == IDC_MENU_SETTINGS_BUTTON ||
+           id == IDC_MENU_CREDITS_BUTTON ||
+           id == IDC_MENU_EXIT_BUTTON;
+}
+
+static const wchar_t* mainMenuButtonSubtitle(int id) {
+    switch (id) {
+        case IDC_MENU_PLAY_BUTTON: return L"Comienza una nueva historia";
+        case IDC_MENU_CONTINUE_BUTTON: return L"Sigue tu carrera actual";
+        case IDC_MENU_LOAD_BUTTON: return L"Abre una partida guardada";
+        case IDC_MENU_SETTINGS_BUTTON: return L"Ajusta el juego a tu medida";
+        case IDC_MENU_CREDITS_BUTTON: return L"Equipo, proyecto y agradecimientos";
+        case IDC_MENU_EXIT_BUTTON: return L"Salir de Chilean Footballito";
+        default: return L"";
+    }
+}
+
+static wchar_t mainMenuButtonSymbol(int id) {
+    switch (id) {
+        case IDC_MENU_PLAY_BUTTON: return L'+';
+        case IDC_MENU_CONTINUE_BUTTON: return L'>';
+        case IDC_MENU_LOAD_BUTTON: return L'L';
+        case IDC_MENU_SETTINGS_BUTTON: return L'*';
+        case IDC_MENU_CREDITS_BUTTON: return L'i';
+        case IDC_MENU_EXIT_BUTTON: return L'X';
+        default: return L' ';
+    }
 }
 
 void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
@@ -1007,8 +1042,8 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
         fill = RGB(16, 67, 74);
         border = RGB(74, 184, 196);
     } else if (id == IDC_MENU_PLAY_BUTTON) {
-        fill = RGB(18, 75, 56);
-        border = RGB(71, 180, 128);
+        fill = RGB(15, 88, 60);
+        border = RGB(67, 199, 132);
     } else if (id == IDC_MENU_LOAD_BUTTON) {
         fill = RGB(25, 41, 60);
         border = RGB(93, 139, 198);
@@ -1068,12 +1103,12 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
                    std::max(0, static_cast<int>(GetBValue(fill)) - 12));
     }
     if (disabled) {
-        fill = RGB(28, 32, 38);
+        fill = RGB(23, 28, 32);
         border = RGB(48, 55, 62);
-        text = RGB(103, 111, 118);
+        text = RGB(100, 108, 114);
     }
     if (focused && !disabled) {
-        border = RGB(235, 221, 176);
+        border = RGB(242, 225, 164);
     }
 
     drawRoundedPanel(hdc, rect, fill, border, isFrontMenuButtonId(id) ? 16 : 12);
@@ -1105,7 +1140,7 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
     if (focused && !disabled) {
         RECT focusRect = rect;
         InflateRect(&focusRect, -4, -4);
-        HPEN focusPen = CreatePen(PS_SOLID, 1, RGB(238, 224, 170));
+        HPEN focusPen = CreatePen(PS_SOLID, 2, RGB(244, 226, 158));
         HGDIOBJ oldPen = SelectObject(hdc, focusPen);
         HGDIOBJ oldBrush = SelectObject(hdc, GetStockObject(HOLLOW_BRUSH));
         RoundRect(hdc, focusRect.left, focusRect.top, focusRect.right, focusRect.bottom, 12, 12);
@@ -1116,6 +1151,80 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
 
     wchar_t textBuffer[128]{};
     GetWindowTextW(drawItem->hwndItem, textBuffer, static_cast<int>(sizeof(textBuffer) / sizeof(textBuffer[0])));
+
+    if (isMainMenuHeroButton(state, id)) {
+        const int height = std::max(1L, rect.bottom - rect.top);
+        const int iconSize = std::max(30, std::min(44, height - 18));
+        RECT iconRect{
+            rect.left + 18,
+            rect.top + (height - iconSize) / 2,
+            rect.left + 18 + iconSize,
+            rect.top + (height - iconSize) / 2 + iconSize
+        };
+
+        COLORREF iconFill = RGB(31, 54, 68);
+        if (id == IDC_MENU_PLAY_BUTTON) iconFill = RGB(50, 164, 105);
+        else if (id == IDC_MENU_CONTINUE_BUTTON) iconFill = RGB(55, 145, 153);
+        else if (id == IDC_MENU_LOAD_BUTTON) iconFill = RGB(75, 126, 190);
+        else if (id == IDC_MENU_SETTINGS_BUTTON) iconFill = RGB(68, 117, 190);
+        else if (id == IDC_MENU_CREDITS_BUTTON) iconFill = RGB(176, 139, 57);
+        else if (id == IDC_MENU_EXIT_BUTTON) iconFill = RGB(175, 72, 84);
+
+        if (disabled) iconFill = RGB(59, 65, 70);
+
+        drawRoundedPanel(hdc,
+                         iconRect,
+                         iconFill,
+                         disabled ? RGB(73, 78, 83) : RGB(
+                             std::min(255, static_cast<int>(GetRValue(iconFill)) + 30),
+                             std::min(255, static_cast<int>(GetGValue(iconFill)) + 30),
+                             std::min(255, static_cast<int>(GetBValue(iconFill)) + 30)),
+                         12);
+
+        RECT iconText = iconRect;
+        HGDIOBJ oldIconFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, disabled ? RGB(125, 130, 134) : RGB(245, 248, 250));
+        wchar_t symbolText[2]{mainMenuButtonSymbol(id), L'\0'};
+        DrawTextW(hdc, symbolText, -1, &iconText, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(hdc, oldIconFont);
+
+        RECT titleRect{
+            iconRect.right + 18,
+            rect.top + 8,
+            rect.right - 50,
+            rect.top + height / 2 + 4
+        };
+        RECT subtitleRect{
+            iconRect.right + 18,
+            rect.top + height / 2 - 2,
+            rect.right - 50,
+            rect.bottom - 7
+        };
+
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, text);
+        HGDIOBJ oldTitleFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
+        DrawTextW(hdc, textBuffer, -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(hdc, oldTitleFont);
+
+        SetTextColor(hdc, disabled ? RGB(82, 89, 95) : RGB(166, 192, 203));
+        HGDIOBJ oldSubFont = SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+        DrawTextW(hdc,
+                  mainMenuButtonSubtitle(id),
+                  -1,
+                  &subtitleRect,
+                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(hdc, oldSubFont);
+
+        RECT arrowRect{rect.right - 42, rect.top, rect.right - 12, rect.bottom};
+        SetTextColor(hdc, disabled ? RGB(76, 82, 87) : border);
+        HGDIOBJ oldArrowFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
+        DrawTextW(hdc, L">", -1, &arrowRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(hdc, oldArrowFont);
+        return;
+    }
+
     RECT textRect = rect;
     if (usesButtonBadge(id)) {
         RECT badgeRect{rect.left + 14, rect.top + 8, rect.left + 38, rect.bottom - 8};
@@ -1124,7 +1233,7 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
         else if (id == IDC_FRONT_MENU_BUTTON) badgeFill = RGB(105, 156, 219);
         else if (activePage) badgeFill = kThemeAccent;
         else if (id == IDC_MENU_CONTINUE_BUTTON) badgeFill = RGB(87, 196, 204);
-        else if (id == IDC_MENU_PLAY_BUTTON) badgeFill = kThemeAccentGreen;
+        else if (id == IDC_MENU_PLAY_BUTTON) badgeFill = RGB(67, 199, 132);
         else if (id == IDC_MENU_LOAD_BUTTON) badgeFill = RGB(110, 157, 215);
         else if (id == IDC_MENU_SETTINGS_BUTTON) badgeFill = kThemeAccentBlue;
         else if (id == IDC_MENU_CREDITS_BUTTON) badgeFill = kThemeAccent;

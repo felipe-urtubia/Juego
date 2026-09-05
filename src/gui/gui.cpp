@@ -333,11 +333,10 @@ void executeInsightAction(AppState& state, InsightAction action) {
 std::vector<HWND> activeFrontMenuButtons(const AppState& state) {
     if (state.currentPage == GuiPage::MainMenu) {
         return {
-            state.menuContinueButton,
             state.menuPlayButton,
-            state.menuSettingsButton,
+            state.menuContinueButton,
             state.menuLoadButton,
-            state.menuDeleteSaveButton,
+            state.menuSettingsButton,
             state.menuCreditsButton,
             state.menuExitButton
         };
@@ -481,10 +480,10 @@ bool handleFrontMenuKey(AppState& state, WPARAM key) {
             }
             return false;
         case '1':
-            if (state.currentPage == GuiPage::MainMenu) return clickFrontMenuButton(state.menuContinueButton);
+            if (state.currentPage == GuiPage::MainMenu) return clickFrontMenuButton(state.menuPlayButton);
             return clickFrontMenuButton(state.menuVolumeButton);
         case '2':
-            if (state.currentPage == GuiPage::MainMenu) return clickFrontMenuButton(state.menuPlayButton);
+            if (state.currentPage == GuiPage::MainMenu) return clickFrontMenuButton(state.menuContinueButton);
             return clickFrontMenuButton(state.menuDifficultyButton);
         case '3':
             if (state.currentPage == GuiPage::MainMenu) return clickFrontMenuButton(state.menuLoadButton);
@@ -1088,6 +1087,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 if (state->topBarBrush) DeleteObject(state->topBarBrush);
                 if (state->shellBrush) DeleteObject(state->shellBrush);
                 if (state->inputBrush) DeleteObject(state->inputBrush);
+                if (state->mainMenuBackground) DeleteObject(state->mainMenuBackground);
                 state->font = nullptr;
                 state->titleFont = nullptr;
                 state->heroFont = nullptr;
@@ -1099,6 +1099,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 state->topBarBrush = nullptr;
                 state->shellBrush = nullptr;
                 state->inputBrush = nullptr;
+                state->mainMenuBackground = nullptr;
                 state->teamLogoImageList = nullptr;
             }
             PostQuitMessage(0);

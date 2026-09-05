@@ -6768,3 +6768,27 @@ Implementado:
 - Incorporar diagramas Mermaid.
 - Añadir capturas de pantalla del juego.
 - Diseñar un banner y un logotipo para el repositorio.
+
+CHILEAN FOOTBALLITO - REDISEÑO MENU PRINCIPAL V1
+
+Reemplazar:
+- src/gui/gui_layout.cpp
+- src/gui/gui_shared.cpp
+- src/gui/gui_view_menu.cpp
+- src/gui/gui.cpp
+
+Cambios:
+- Nueva portada en dos columnas.
+- Botones: Nueva carrera, Continuar, Cargar, Opciones, Creditos y Salir.
+- Se eliminan de la portada los chips de dificultad/velocidad/modo/musica.
+- Esas opciones siguen disponibles en Configuraciones.
+- Nueva tarjeta de Centro del Manager.
+- Cabecera y pie simplificados.
+- Navegacion por teclado actualizada al orden visual.
+- Se mantienen las acciones reales existentes.
+- No se añaden dependencias ni archivos nuevos a CMake.
+
+Compilar:
+cmake --preset Juego-UCRT64-Ninja
+cmake --build out/build
+ctest --test-dir out/build --output-on-failure

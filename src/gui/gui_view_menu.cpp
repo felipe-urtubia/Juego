@@ -183,7 +183,7 @@ GuiPageModel buildMainMenuModel(AppState& state) {
 
     model.title = game_settings::gameTitle();
     model.breadcrumb = "Inicio > Menu principal";
-    model.infoLine = "Portada principal del manager. Continuar, cargar, creditos y configuraciones viven en el mismo frontend real.";
+    model.infoLine = "Gestiona tu club. Toma decisiones. Escribe tu historia.";
     model.summary.title = "FrontMenuOverview";
     model.detail.title = "FrontMenuProfile";
     model.feed.title = "FrontMenuRoadmap";
@@ -196,16 +196,16 @@ GuiPageModel buildMainMenuModel(AppState& state) {
     };
 
     model.summary.content =
-        "Panel de acceso\r\n"
-        "- Continuar retoma la sesion activa o intenta cargar el ultimo guardado.\r\n"
-        "- Jugar abre el flujo real del proyecto: dashboard, club, carrera, mercado, tacticas y noticias.\r\n"
-        "- Guardados abre el gestor para elegir, cargar o borrar saves.\r\n"
-        "- Configuraciones abre la cabina persistente de frontend.\r\n"
-        "- Creditos y Salir completan la portada como una base real, no decorativa.\r\n\r\n"
+        "Centro del manager\r\n"
+        "- Nueva carrera inicia una historia desde cero.\r\n"
+        "- Continuar retoma la sesion activa o el ultimo guardado disponible.\r\n"
+        "- Cargar partida abre el gestor de guardados.\r\n"
+        "- Opciones concentra audio, simulacion, idioma y perfil visual.\r\n"
+        "- Creditos presenta la informacion del proyecto.\r\n\r\n"
         "Guardado visible\r\n"
         "- Principal: " + saveState + " (" + savePath + ")\r\n"
         "- Respaldo: " + backupState + "\r\n"
-        "- Simular crea un autosave antes de avanzar la semana.";
+        "- El frontend mantiene las acciones reales del juego.";
 
     std::ostringstream detail;
     detail << "Guardado\r\n";
@@ -230,7 +230,7 @@ GuiPageModel buildMainMenuModel(AppState& state) {
     model.feed.lines = {
         "Guardado principal: " + savePath + " | " + saveState,
         "Respaldo automatico: " + backupState,
-        "Estado actual: frontend listo para una experiencia tipo manager game.",
+        "Estado actual: portada completa con carrera, guardado y configuracion en tiempo real.",
         "Navegacion GUI: Tab, Enter, flechas, numeros, F11 y Esc desde ajustes o creditos.",
         "Continuar usa el flujo real y Guardados abre el selector de saves.",
         "Simular guarda automaticamente antes de avanzar la semana."
