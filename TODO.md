@@ -6792,3 +6792,82 @@ Compilar:
 cmake --preset Juego-UCRT64-Ninja
 cmake --build out/build
 ctest --test-dir out/build --output-on-failure
+
+## ✅ Refactor de App Services - Separación de reportes
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Reducir responsabilidades de `src/career/app_services.cpp` separando los servicios relacionados con reportes, sin modificar la API pública ni el comportamiento del juego.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_reports.cpp`.
+* Se movieron desde `app_services.cpp` los siguientes servicios:
+
+  * `buildCompetitionSummaryService`
+  * `buildBoardSummaryService`
+  * `buildClubSummaryService`
+  * `buildScoutingSummaryService`
+  * `runValidationService`
+* Se mantuvieron las declaraciones públicas existentes en `include/career/app_services.h`.
+* Se agregó `app_services_reports.cpp` a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+* Se agregó la prueba estructural `app_services_report_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+* La prueba `app_services_report_split` falló antes de crear `app_services_reports.cpp`.
+* Resultado esperado: el nuevo módulo todavía no existía.
+
+**GREEN:**
+
+* Después de realizar la separación, la suite completa volvió a pasar.
+* `FootballManagerTests`: 100% tests passed.
+* Tiempo de pruebas: 1.12 segundos.
+
+### Compilación
+
+Compilación correcta de:
+
+* `FootballManager.exe`
+* `FootballManagerCLI.exe`
+* `FootballManagerTests.exe`
+
+Los nuevos targets compilan correctamente incluyendo:
+
+`src/career/app_services_reports.cpp`
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: 5
+* Equipos revisados: 90
+* Jugadores crudos: 2200
+* Errores: 0
+* Advertencias: 0
+* Resultado: sin fallas
+
+### Verificación del diff
+
+Ejecutado:
+
+`git diff --check`
+
+Resultado:
+
+* Sin errores de espacios ni formato en el diff.
+* Solo aparecen advertencias de conversión LF/CRLF propias del entorno Windows.
+
+### Resultado
+
+La primera etapa de separación de responsabilidades de `app_services.cpp` queda completada sin cambios funcionales en el juego.
+
+El módulo principal conserva su API y los servicios de reportes ahora tienen un archivo de implementación independiente.

@@ -3117,6 +3117,14 @@ void testSaveCareerOverwriteDoesNotKeepTrailingBlocks() {
     std::remove((resolvedSavePath + ".bak").c_str());
 }
 
+void testAppServiceReportsAreSeparatedFromMainOrchestrator() {
+    const string reportsPath =
+        resolveProjectPath("src/career/app_services_reports.cpp");
+
+    expect(pathExists(reportsPath),
+           "Los wrappers de reportes de app_services deben vivir en app_services_reports.cpp.");
+}
+
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -3661,6 +3669,7 @@ int main() {
         {"save_backup", testSaveCareerCreatesBackup},
         {"save_overwrite_structure", testSaveCareerOverwriteDoesNotKeepTrailingBlocks},
         {"save_nested_directory", testSaveCareerCreatesNestedDirectory},
+        {"app_services_report_split", testAppServiceReportsAreSeparatedFromMainOrchestrator},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},
