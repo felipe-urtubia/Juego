@@ -23,6 +23,7 @@ set(FM_CAREER_SOURCES
     src/career/app_services.cpp
     src/career/app_services_reports.cpp
     src/career/app_services_scouting.cpp
+    src/career/app_services_transfers.cpp
     src/career/career_manager.cpp
     src/career/career_modules.cpp
     src/career/career_reports.cpp

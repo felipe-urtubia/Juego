@@ -3180,6 +3180,13 @@ void testAppServiceScoutingIsSeparatedFromMainOrchestrator() {
            "Los servicios de scouting de app_services deben vivir en app_services_scouting.cpp.");
 }
 
+void testAppServiceTransfersAreSeparatedFromMainOrchestrator() {
+    const string transfersPath =
+        resolveProjectPath("src/career/app_services_transfers.cpp");
+
+    expect(pathExists(transfersPath),
+           "Los servicios de transferencias de app_services deben vivir en app_services_transfers.cpp.");
+}
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -3627,14 +3634,14 @@ void testAutoWeeklyDecisionUsesMatchCenterContext() {
 void testLocalizationSupportsMultipleLanguages() {
     Localization& loc = Localization::getInstance();
     loc.setLanguage(Localization::Language::Spanish);
-    expect(loc.getText("menu_continue") == "Continuar", "Debe retornar texto en español.");
+    expect(loc.getText("menu_continue") == "Continuar", "Debe retornar texto en espaÃ±ol.");
     loc.setLanguage(Localization::Language::English);
-    expect(loc.getText("menu_continue") == "Continue", "Debe retornar texto en inglés.");
+    expect(loc.getText("menu_continue") == "Continue", "Debe retornar texto en inglÃ©s.");
     loc.setLanguage(Localization::Language::Portuguese);
-    expect(loc.getText("menu_continue") == "Continuar", "Debe retornar texto en portugués.");
+    expect(loc.getText("menu_continue") == "Continuar", "Debe retornar texto en portuguÃ©s.");
     loc.setLanguage(Localization::Language::French);
-    expect(loc.getText("menu_continue") == "Continuer", "Debe retornar texto en francés.");
-    expect(loc.getText("unknown_key") == "unknown_key", "Debe retornar la clave si no existe traducción.");
+    expect(loc.getText("menu_continue") == "Continuer", "Debe retornar texto en francÃ©s.");
+    expect(loc.getText("unknown_key") == "unknown_key", "Debe retornar la clave si no existe traducciÃ³n.");
 }
 
 }  // namespace
@@ -3727,6 +3734,7 @@ int main() {
         {"save_nested_directory", testSaveCareerCreatesNestedDirectory},
         {"app_services_report_split", testAppServiceReportsAreSeparatedFromMainOrchestrator},
         {"app_services_scouting_split", testAppServiceScoutingIsSeparatedFromMainOrchestrator},
+        {"app_services_transfers_split", testAppServiceTransfersAreSeparatedFromMainOrchestrator},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},

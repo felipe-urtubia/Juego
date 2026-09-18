@@ -6975,3 +6975,96 @@ Resultado:
 La etapa de separación de scouting de `app_services.cpp` queda completada sin cambios funcionales en el juego.
 
 El módulo principal conserva su API pública y los servicios de scouting ahora tienen un archivo de implementación independiente.
+
+## ✅ Refactor de App Services - Separación de transferencias
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Reducir responsabilidades de `src/career/app_services.cpp` separando la lógica de transferencias, contratos y préstamos en un módulo independiente, sin modificar la API pública ni el comportamiento del juego.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_transfers.cpp`.
+* Se movieron desde `app_services.cpp` los siguientes servicios públicos:
+
+  * `buyTransferTargetService`
+  * `triggerReleaseClauseService`
+  * `signPreContractService`
+  * `renewPlayerContractService`
+  * `sellPlayerService`
+  * `loanInPlayerService`
+  * `loanOutPlayerService`
+
+* Se movieron al nuevo módulo los helpers privados de transferencias:
+
+  * `debtRestrictionMessage`
+  * `totalNegotiationCommitment`
+  * `describeContractExtras`
+  * `eraseNamedSelection`
+  * `failureFromNegotiation`
+  * `transferWindowClosedFailure`
+  * `appendNegotiationMessages`
+  * `registerNegotiatedPromise`
+
+* Se mantuvieron las declaraciones públicas existentes en `include/career/app_services.h`.
+* Se mantuvo el helper genérico `failure` en `app_services.cpp` y se utiliza una copia privada mínima en el nuevo módulo.
+* No se movieron servicios de juveniles, empleo del manager, desarrollo de jugadores, scouting ni vestuario.
+* Se agregó `app_services_transfers.cpp` a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+* Se agregó la prueba estructural `app_services_transfers_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+* La prueba `app_services_transfers_split` falló antes de crear `app_services_transfers.cpp`.
+* Resultado esperado: el nuevo módulo todavía no existía.
+* Todos los demás tests continuaron pasando.
+
+**GREEN:**
+
+* Después de crear el módulo y completar la separación, la suite completa volvió a pasar.
+* `FootballManagerTests`: 100% tests passed.
+* Tiempo de pruebas final: 1.12 segundos.
+
+### Compilación
+
+Compilación correcta de:
+
+* `FootballManager.exe`
+* `FootballManagerCLI.exe`
+* `FootballManagerTests.exe`
+
+Los targets compilan correctamente incluyendo:
+
+`src/career/app_services_transfers.cpp`
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: 5
+* Equipos revisados: 90
+* Jugadores crudos: 2200
+* Errores: 0
+* Advertencias: 0
+* Resultado: sin fallas
+
+### Verificación estructural
+
+Se comprobó que las definiciones de los servicios y helpers de transferencias se encuentran en:
+
+`src/career/app_services_transfers.cpp`
+
+En `src/career/app_services.cpp` solo permanecen llamadas legítimas a los servicios públicos desde otros flujos del juego.
+
+### Resultado
+
+La etapa de separación de transferencias de `app_services.cpp` queda completada sin cambios funcionales en el juego.
+
+El módulo principal conserva su API pública y las operaciones de transferencias, contratos y préstamos ahora tienen un archivo de implementación independiente.
