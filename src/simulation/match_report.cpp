@@ -1,10 +1,10 @@
 #include "simulation/match_report.h"
+#include "simulation/player_rating_system.h"
 
 #include "simulation/tactics_engine.h"
 
 #include <algorithm>
 #include <cmath>
-#include <map>
 #include <sstream>
 
 using namespace std;
@@ -55,10 +55,6 @@ string buildLikelyReason(const MatchSetup& setup, const MatchStats& stats, const
     return "El resultado se definio por detalles en un partido de margenes cortos.";
 }
 
-string playerKey(const string& teamName, const string& playerName) {
-    return teamName + "|" + playerName;
-}
-
 }  // namespace
 
 namespace match_report {
@@ -69,8 +65,7 @@ MatchReport buildReport(const MatchSetup& setup,
                         const MatchTimeline& timeline,
                         const MatchStats& stats) {
     MatchReport report;
-    map<string, int> playerScores;
-    map<string, string> playerNames;
+    player_rating_system::LiveRatings liveRatings;
     int homeDominantPhases = 0;
     int awayDominantPhases = 0;
     int homeFatigueLoad = 0;
@@ -127,23 +122,26 @@ MatchReport buildReport(const MatchSetup& setup,
     }
 
     for (const MatchEvent& event : timeline.events) {
-        if (event.playerName.empty() || event.teamName.empty()) continue;
-        const string key = playerKey(event.teamName, event.playerName);
-        playerNames[key] = event.playerName;
-        int delta = 0;
-        switch (event.type) {
-            case MatchEventType::Goal: delta = 12; break;
-            case MatchEventType::BigChance: delta = 5; break;
-            case MatchEventType::Save: delta = 6; break;
-            case MatchEventType::Shot: delta = 2; break;
-            case MatchEventType::AttackBuildUp: delta = 1; break;
-            case MatchEventType::Counterattack: delta = 2; break;
-            case MatchEventType::YellowCard: delta = -2; break;
-            case MatchEventType::RedCard: delta = -7; break;
-            case MatchEventType::Injury: delta = -2; break;
-            default: break;
-        }
-        playerScores[key] += delta;
+        liveRatings.applyEvent(event);
+    }
+
+    const auto finalRatings =
+        liveRatings.topPlayers(home.players.size() + away.players.size());
+
+    for (const auto& playerRating : finalRatings) {
+        ostringstream ratingLine;
+        ratingLine.setf(ios::fixed);
+        ratingLine.precision(1);
+        ratingLine << playerRating.playerName
+                   << " | " << playerRating.teamName
+                   << " | " << playerRating.rating;
+        report.playerRatingLines.push_back(ratingLine.str());
+    }
+
+    if (!finalRatings.empty()) {
+        report.playerOfTheMatch = finalRatings.front().playerName;
+        report.playerOfTheMatchScore =
+            static_cast<int>(lround(finalRatings.front().rating * 10.0));
     }
 
     report.tacticalImpact.homeControlScore =
@@ -220,15 +218,6 @@ MatchReport buildReport(const MatchSetup& setup,
         " | ataques " + to_string(homeTotalAttacks) + "-" + to_string(awayTotalAttacks) +
         " | tiros " + to_string(stats.homeShots) + "-" + to_string(stats.awayShots) +
         " | cambios tacticos " + to_string(tacticalChanges);
-    if (!playerScores.empty()) {
-        auto best = max_element(playerScores.begin(), playerScores.end(),
-                                [](const pair<string, int>& left, const pair<string, int>& right) {
-                                    if (left.second != right.second) return left.second < right.second;
-                                    return left.first > right.first;
-                                });
-        report.playerOfTheMatch = playerNames[best->first];
-        report.playerOfTheMatchScore = best->second;
-    }
     report.postMatchImpact =
         "Moral " + to_string(stats.homeGoals > stats.awayGoals ? +3 : stats.homeGoals < stats.awayGoals ? -2 : +1) +
         "/" +
@@ -245,7 +234,18 @@ void appendSummaryLines(const MatchReport& report, vector<string>& lines) {
                     " | transicion " + formatDouble2(report.tacticalImpact.homeTransitionThreat) + "-" +
                     formatDouble2(report.tacticalImpact.awayTransitionThreat));
     if (!report.playerOfTheMatch.empty()) {
-        lines.push_back("Figura: " + report.playerOfTheMatch + " (" + to_string(report.playerOfTheMatchScore) + ")");
+        ostringstream figureLine;
+        figureLine.setf(ios::fixed);
+        figureLine.precision(1);
+        figureLine << "Figura: " << report.playerOfTheMatch
+                   << " (" << report.playerOfTheMatchScore / 10.0 << ")";
+        lines.push_back(figureLine.str());
+    }
+    if (!report.playerRatingLines.empty()) {
+        lines.push_back("Valoraciones:");
+        for (const string& ratingLine : report.playerRatingLines) {
+            lines.push_back("- " + ratingLine);
+        }
     }
     lines.push_back("Claves: " + report.explanation.likelyReason);
     lines.push_back("Tactica: " + report.explanation.tacticalStory);

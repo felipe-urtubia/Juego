@@ -163,6 +163,7 @@ struct MatchCenterSnapshot {
     std::string tacticalSummary;
     std::string fatigueSummary;
     std::string postMatchImpact;
+    std::vector<std::string> playerRatingLines;
     std::vector<std::string> phaseSummaries;
 };
 

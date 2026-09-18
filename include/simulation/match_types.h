@@ -166,6 +166,7 @@ struct MatchReport {
     FatigueImpactSummary fatigueImpact;
     std::string playerOfTheMatch;
     int playerOfTheMatchScore = 0;
+    std::vector<std::string> playerRatingLines;
     std::string postMatchImpact;
 };
 

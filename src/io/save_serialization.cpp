@@ -773,6 +773,7 @@ bool serializeCareer(ostream& file, const Career& career) {
     file << "LASTMATCH_POTM " << escapeSaveField(lastMatchPlayerOfTheMatch) << "\n";
     file << "LASTMATCH_CENTER " << encodeMatchCenterSnapshot(lastMatchCenter) << "\n";
     file << "LASTMATCH_PHASES " << encodeStringList(lastMatchCenter.phaseSummaries) << "\n";
+    file << "LASTMATCH_RATINGS " << encodeStringList(lastMatchCenter.playerRatingLines) << "\n";
     
     // Serialize new gameplay systems
     file << "GAMEPLAY_SYSTEMS " 
@@ -1161,6 +1162,10 @@ bool deserializeCareer(istream& file, Career& career) {
         }
         if (teamsLine.rfind("LASTMATCH_PHASES ", 0) == 0) {
             lastMatchCenter.phaseSummaries = decodeStringList(teamsLine.substr(16));
+            if (!getline(file, teamsLine)) return false;
+        }
+        if (teamsLine.rfind("LASTMATCH_RATINGS ", 0) == 0) {
+            lastMatchCenter.playerRatingLines = decodeStringList(teamsLine.substr(18));
             if (!getline(file, teamsLine)) return false;
         }
         

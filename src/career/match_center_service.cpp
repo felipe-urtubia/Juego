@@ -118,6 +118,7 @@ void captureLastMatchCenter(Career& career,
     snapshot.tacticalSummary = result.report.explanation.tacticalStory;
     snapshot.fatigueSummary = result.report.explanation.fatigueStory;
     snapshot.postMatchImpact = result.report.postMatchImpact;
+    snapshot.playerRatingLines = result.report.playerRatingLines;
     snapshot.phaseSummaries = result.report.phaseSummaries;
     career.lastMatchCenter = snapshot;
 }
@@ -180,6 +181,12 @@ string formatLastMatchCenter(const Career& career,
     if (!view.headline.empty()) out << "Lectura rapida: " << view.headline << "\r\n";
     if (!snapshot.opponentName.empty()) out << "Control: " << matchControlLabel(snapshot) << "\r\n";
     if (!view.playerOfTheMatch.empty()) out << "Jugador clave: " << view.playerOfTheMatch << "\r\n";
+    if (!snapshot.playerRatingLines.empty()) {
+        out << "\r\nValoraciones:\r\n";
+        for (const string& ratingLine : snapshot.playerRatingLines) {
+            out << "- " << ratingLine << "\r\n";
+        }
+    }
     if (!view.metrics.empty()) {
         out << "\r\nIndicadores (tu equipo / rival)\r\n";
         for (const MatchCenterMetric& metric : view.metrics) {

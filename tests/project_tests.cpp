@@ -39,6 +39,7 @@
 #include "simulation/match_engine.h"
 #include "simulation/match_event_generator.h"
 #include "simulation/match_phase.h"
+#include "simulation/match_report.h"
 #include "simulation/player_condition.h"
 #include "simulation/simulation.h"
 #include "transfers/negotiation_system.h"
@@ -420,11 +421,47 @@ void testMatchSimulationProducesStructuredPhases() {
            "El reporte del partido debe incluir una explicacion probable.");
     expect(!result.report.playerOfTheMatch.empty(),
            "El reporte del partido debe identificar una figura del partido.");
+
     const string reportText = joinLines(result.reportLines);
+
+    expect(reportText.find("Valoraciones:") != string::npos,
+           "El resumen postpartido debe incluir las valoraciones finales de los jugadores.");
     expect(reportText.find("Riesgo tactico:") != string::npos,
            "El resumen del partido debe exponer el riesgo tactico.");
     expect(reportText.find("Disciplina:") != string::npos,
            "El resumen del partido debe explicar el impacto disciplinario.");
+}
+
+void testPlayerOfTheMatchMatchesHighestFinalRating() {
+    Team home = makeTeam("Ratings Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Ratings Rival", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 650000);
+
+    const MatchSetup setup = match_context::buildMatchSetup(home, away, false, false);
+    MatchTimeline timeline;
+    MatchStats stats;
+
+    const string oldScoreLeader = home.players[0].name;
+    const string liveRatingLeader = home.players[1].name;
+
+    timeline.events.push_back({12, home.name, oldScoreLeader, MatchEventType::Shot, "Remate aislado", {}});
+    timeline.events.push_back({18, home.name, liveRatingLeader, MatchEventType::AttackBuildUp, "Construccion de ataque", {}});
+    for (int minute = 20; minute < 30; ++minute) {
+        timeline.events.push_back({minute, home.name, liveRatingLeader, MatchEventType::Progression, "Progresion con balon", {}});
+    }
+
+    const MatchReport report = match_report::buildReport(setup, home, away, timeline, stats);
+
+    expect(!report.playerRatingLines.empty(),
+           "El reporte debe producir valoraciones para comparar la figura del partido.");
+
+    const string& highestRatingLine = report.playerRatingLines.front();
+    const size_t separator = highestRatingLine.find(" | ");
+    expect(separator != string::npos,
+           "La primera valoracion debe conservar el formato Jugador | Equipo | Nota.");
+    const string highestRatedPlayer = highestRatingLine.substr(0, separator);
+
+    expect(report.playerOfTheMatch == highestRatedPlayer,
+           "La figura del partido debe ser exactamente el jugador con la valoracion final mas alta.");
 }
 
 void testHighPressRaisesPhaseFatigue() {
@@ -968,6 +1005,10 @@ void testMatchCenterServiceBuildsStructuredView() {
     expect(!center.phaseLines.empty(), "El match center debe conservar lectura por fases.");
     expect(!center.eventLines.empty(), "El match center debe conservar una timeline resumida.");
     expect(!career.lastMatchCenter.opponentName.empty(), "El snapshot persistente del ultimo partido debe llenarse.");
+
+    const string formattedCenter = match_center_service::formatLastMatchCenter(career, 3, 4);
+    expect(formattedCenter.find("Valoraciones:") != string::npos,
+           "El match center postpartido debe mostrar las valoraciones finales de los jugadores.");
 }
 
 void testDressingRoomServiceFlagsPromiseAndFatigueRisk() {
@@ -1142,6 +1183,10 @@ void testSaveLoadRoundTripPreservesCareerState() {
     original.lastMatchCenter.fatigueSummary = "El rival llego; fundido al cierre.";
     original.lastMatchCenter.postMatchImpact = "Moral +3 | / -2";
     original.lastMatchCenter.phaseSummaries = {"1-15: domina | Club Persistencia", "16-30: domina ^ Club Persistencia"};
+    original.lastMatchCenter.playerRatingLines = {
+        "Jugador Persistente | Club Persistencia | 8.4",
+        "Jugador Rival | Club Destino | 7.8"
+    };
     original.newsFeed.push_back("T8-F5: Noticia| de prueba;");
     original.managerInbox.push_back("[Resumen] T8-F5: Bandeja| de manager");
     original.scoutingAssignments.push_back({"Sur", "DEF", "Urgente", 2, 61});
@@ -1247,6 +1292,8 @@ void testSaveLoadRoundTripPreservesCareerState() {
            "La carga debe preservar el snapshot del match center.");
     expect(loaded.lastMatchCenter.phaseSummaries.size() == original.lastMatchCenter.phaseSummaries.size(),
            "La carga debe preservar las fases resumidas del match center.");
+    expect(loaded.lastMatchCenter.playerRatingLines == original.lastMatchCenter.playerRatingLines,
+           "La carga debe preservar las valoraciones finales del match center.");
     expect(loaded.history.size() == 1 && loaded.history.front().champion == "Club Persistencia",
            "La carga debe preservar historial de temporada.");
     expect(!loaded.managerInbox.empty() && loaded.managerInbox.front().find("Bandeja") != string::npos,
@@ -3592,6 +3639,7 @@ int main() {
         {"validation_suite_concurrency", testValidationSuiteSupportsConcurrentRuns},
         {"loaded_player_profiles", testLoadedPlayersHaveBoundedProfileMetrics},
         {"match_engine_structure", testMatchSimulationProducesStructuredPhases},
+        {"match_player_ratings_potm", testPlayerOfTheMatchMatchesHighestFinalRating},
         {"tactical_fatigue", testHighPressRaisesPhaseFatigue},
         {"low_block_chance_quality", testLowBlockSuppressesChanceQuality},
         {"competition_rules_csv", testCompetitionRulesLoadFromCsv},
