@@ -6871,3 +6871,107 @@ Resultado:
 La primera etapa de separación de responsabilidades de `app_services.cpp` queda completada sin cambios funcionales en el juego.
 
 El módulo principal conserva su API y los servicios de reportes ahora tienen un archivo de implementación independiente.
+
+## ✅ Refactor de App Services - Separación de scouting
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Reducir responsabilidades de `src/career/app_services.cpp` separando los servicios relacionados con scouting, sin modificar la API pública, las reglas del juego, los costos, los cálculos ni los mensajes visibles.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_scouting.cpp`.
+* Se movieron desde `app_services.cpp` los siguientes servicios públicos:
+
+  * `runScoutingSessionService`
+  * `scoutPlayersService`
+  * `createScoutingAssignmentService`
+  * `shortlistPlayerService`
+  * `followShortlistService`
+  * `listYouthRegionsService`
+
+* Se movieron al nuevo módulo los helpers privados de scouting:
+
+  * `resolveAssignmentRegion`
+  * `assignmentPriorityLabel`
+  * `hasScoutingCoverage`
+  * `scoutingCoverageLabel`
+  * `availabilityLabel`
+  * `agentProfileLabel`
+  * `scoutingReportStage`
+  * `scoutingHiddenRiskLabel`
+  * `scoutingAssignmentBoost`
+  * `appendScoutInbox`
+
+* Se mantuvieron las declaraciones públicas existentes en `include/career/app_services.h`.
+* `changeYouthRegionService` permaneció fuera del nuevo módulo, según el alcance definido.
+* Se mantuvo `upgradeClubService` en `app_services.cpp`, conservando localmente su comprobación de cobertura de scouting.
+* Se agregó `app_services_scouting.cpp` a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+* Se agregó la prueba estructural `app_services_scouting_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+* La prueba `app_services_scouting_split` falló antes de crear `app_services_scouting.cpp`.
+* Resultado esperado: el nuevo módulo todavía no existía.
+
+**GREEN:**
+
+* Después de crear el módulo y trasladar los servicios, la suite completa volvió a pasar.
+* `FootballManagerTests`: 100% tests passed.
+* Tiempo de pruebas final: 1.18 segundos.
+
+### Compilación
+
+Compilación correcta de:
+
+* `FootballManager.exe`
+* `FootballManagerCLI.exe`
+* `FootballManagerTests.exe`
+
+Los targets compilan correctamente incluyendo:
+
+`src/career/app_services_scouting.cpp`
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: 5
+* Equipos revisados: 90
+* Jugadores crudos: 2200
+* Errores: 0
+* Advertencias: 0
+* Resultado: sin fallas
+
+### Verificación estructural
+
+Se comprobó que las definiciones de los servicios y helpers de scouting se encuentran en:
+
+`src/career/app_services_scouting.cpp`
+
+En `src/career/app_services.cpp` solo permanecen llamadas legítimas a los servicios públicos desde otros flujos del juego.
+
+### Verificación del diff
+
+Ejecutado:
+
+`git diff --check`
+
+Resultado:
+
+* Sin errores de espacios ni formato en el diff.
+* Solo aparecen advertencias de conversión LF/CRLF propias del entorno Windows.
+
+### Resultado
+
+La etapa de separación de scouting de `app_services.cpp` queda completada sin cambios funcionales en el juego.
+
+El módulo principal conserva su API pública y los servicios de scouting ahora tienen un archivo de implementación independiente.

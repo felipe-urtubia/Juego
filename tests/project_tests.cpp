@@ -3172,6 +3172,14 @@ void testAppServiceReportsAreSeparatedFromMainOrchestrator() {
            "Los wrappers de reportes de app_services deben vivir en app_services_reports.cpp.");
 }
 
+void testAppServiceScoutingIsSeparatedFromMainOrchestrator() {
+    const string scoutingPath =
+        resolveProjectPath("src/career/app_services_scouting.cpp");
+
+    expect(pathExists(scoutingPath),
+           "Los servicios de scouting de app_services deben vivir en app_services_scouting.cpp.");
+}
+
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -3718,6 +3726,7 @@ int main() {
         {"save_overwrite_structure", testSaveCareerOverwriteDoesNotKeepTrailingBlocks},
         {"save_nested_directory", testSaveCareerCreatesNestedDirectory},
         {"app_services_report_split", testAppServiceReportsAreSeparatedFromMainOrchestrator},
+        {"app_services_scouting_split", testAppServiceScoutingIsSeparatedFromMainOrchestrator},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},
