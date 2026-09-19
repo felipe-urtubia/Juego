@@ -7068,3 +7068,87 @@ En `src/career/app_services.cpp` solo permanecen llamadas legítimas a los servi
 La etapa de separación de transferencias de `app_services.cpp` queda completada sin cambios funcionales en el juego.
 
 El módulo principal conserva su API pública y las operaciones de transferencias, contratos y préstamos ahora tienen un archivo de implementación independiente.
+
+## ✅ Refactor de App Services - Separación de club y staff
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Reducir responsabilidades de `src/career/app_services.cpp` separando los servicios relacionados con mejoras de club y revisión de staff en un módulo independiente, sin modificar la API pública, los costos, los mensajes visibles ni el comportamiento del juego.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_club.cpp`.
+* Se movieron desde `app_services.cpp` los siguientes servicios públicos:
+
+  * `upgradeClubService`
+  * `reviewStaffStructureService`
+
+* Se movieron al nuevo módulo los helpers privados exclusivos de club y staff:
+
+  * `staffUpgradeForRole`
+  * `nextStaffHireName`
+  * `upgradeCost`
+  * `upgradeLabel`
+  * `isFacilityUpgrade`
+
+* Se mantuvieron las declaraciones públicas existentes en `include/career/app_services.h`.
+* El helper genérico `failure` permanece disponible en `app_services.cpp` y el nuevo módulo utiliza una copia privada mínima.
+* `syncInfrastructureFromTeam` continúa en `app_services.cpp` porque todavía es utilizado por otros flujos, y `app_services_club.cpp` mantiene una copia privada idéntica para sus operaciones.
+* `changeYouthRegionService` permaneció fuera de este módulo según el alcance definido.
+* No se modificaron reglas de deuda, costos, incrementos de staff, cobertura de scouting, infraestructura ni mensajes visibles.
+* Se agregó `app_services_club.cpp` a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+* Se agregó la prueba estructural `app_services_club_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+* La prueba `app_services_club_split` falló antes de crear `app_services_club.cpp`.
+* Resultado esperado: el nuevo módulo todavía no existía.
+* Todos los demás tests continuaron pasando.
+
+**GREEN:**
+
+* Después de crear e integrar `app_services_club.cpp`, la prueba estructural pasó.
+* Después de mover servicios y helpers, la suite completa continuó pasando.
+
+### Verificación de compilación
+
+Se verificaron correctamente los targets:
+
+* `FootballManagerTests`
+* `FootballManager`
+* `FootballManagerCLI`
+
+El nuevo módulo compila correctamente como parte de los tres targets.
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: `5`
+* Equipos revisados: `90`
+* Jugadores crudos: `2200`
+* Errores: `0`
+* Advertencias: `0`
+* Resultado: `sin fallas`
+
+### Verificación estructural
+
+Se comprobó que las definiciones de los servicios y helpers de club/staff se encuentran en:
+
+`src/career/app_services_club.cpp`
+
+En `src/career/app_services.cpp` solamente permanece la llamada legítima a `reviewStaffStructureService(...)` desde otros flujos, junto con la implementación compartida de `syncInfrastructureFromTeam(...)` necesaria fuera del módulo de club.
+
+### Resultado
+
+La etapa de separación de club y staff de `app_services.cpp` queda completada sin cambios funcionales en el juego.
+
+El módulo principal conserva su API pública y las operaciones de mejoras de club y revisión de staff ahora tienen un archivo de implementación independiente.
