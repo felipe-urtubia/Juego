@@ -1,4 +1,4 @@
-﻿# Lista de Tareas para Juego de Manager de Fútbol Carga de Equipos desde Archivo
+# Lista de Tareas para Juego de Manager de Fútbol Carga de Equipos desde Archivo
 
 ## Tareas Completadas
 - [x] Analizar la tarea del usuario: Hacer que el juego cargue equipos desde un archivo en lugar de codificados.
@@ -7253,3 +7253,242 @@ En `src/career/app_services.cpp` solo permanecen llamadas legítimas desde otros
 La etapa de separación de interacciones del manager de `app_services.cpp` queda completada sin cambios funcionales en el juego.
 
 El módulo principal conserva su API pública y las operaciones de desarrollo individual, vestuario, entrenamiento e instrucciones ahora tienen un archivo de implementación independiente.
+
+## ✅ Refactor de App Services - Separación del centro semanal
+
+**Estado:** Completado, validado e integrado en `main`
+
+### Objetivo
+
+Separar desde `src/career/app_services.cpp` la lógica del centro semanal, decisiones del manager, preparación de partido e inbox accionable, sin modificar la API pública ni el comportamiento del juego.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_weekly.cpp`.
+* Se movieron los servicios públicos:
+  * `consumeLatestWeeklyDigestService`
+  * `applyWeeklyDecisionService`
+  * `applyMatchPreparationPlanService`
+  * `buildWeeklyDecisionOptions`
+  * `resolveInboxDecisionService`
+* Se movieron los helpers privados:
+  * `consumeMatchingInboxEntry`
+  * `latestWeeklyDigestInboxEntry`
+  * `weeklyDecisionLabel`
+  * `countFatiguedPlayers`
+  * `countLowMoralePlayers`
+  * `countYouthCandidates`
+  * `decisionFromLastMatchCenter`
+  * `chooseAutomaticWeeklyDecision`
+* El módulo mantiene copias privadas de:
+  * `syncInfrastructureFromTeam`
+  * `syncTeamFromInfrastructure`
+* `recommendedWeeklyDecisionSummary` y `appendPostWeekActionDigest` permanecieron temporalmente en `app_services.cpp` porque todavía pertenecían al cierre de la simulación general de carrera.
+* Se agregó `src/career/app_services_weekly.cpp` a `FM_CAREER_SOURCES`.
+* Se agregó la prueba estructural `app_services_weekly_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+`app_services_weekly_split` falló antes de crear el nuevo módulo, mientras el resto de la suite continuó pasando.
+
+**GREEN:**
+
+Después de completar la separación:
+
+* `FootballManagerTests`: 100% tests passed.
+* `FootballManager`: compilación correcta.
+* `FootballManagerCLI`: compilación correcta.
+
+### Validación
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: `5`
+* Equipos revisados: `90`
+* Jugadores crudos: `2200`
+* Errores: `0`
+* Advertencias: `0`
+* Resultado: `sin fallas`
+
+### Calidad
+
+* Se verificó estructuralmente la ubicación de servicios y helpers.
+* `git diff --check` terminó sin errores.
+* Se evitó conservar una modificación accidental de codificación detectada durante el trabajo en `tests/project_tests.cpp`.
+
+### Commit e integración
+
+Commit de implementación:
+
+`84d3f5b refactor: separar weekly de app services`
+
+La rama `refactor/app-services-weekly` fue integrada mediante fast-forward a `main` y subida correctamente a GitHub.
+
+### Resultado
+
+El centro semanal quedó separado de `app_services.cpp` sin cambios funcionales en reglas, mensajes, decisiones automáticas ni API pública.
+## ✅ Refactor de App Services - Separación del ciclo de carrera
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Extraer desde `src/career/app_services.cpp` el ciclo principal de inicio, carga, guardado y avance temporal de la carrera hacia un módulo independiente, sin modificar el comportamiento, los mensajes visibles ni la API pública.
+
+### Documentación previa
+
+Diseño:
+
+`docs/superpowers/specs/2026-09-19-app-services-career-design.md`
+
+Commit:
+
+`f61cf0a docs: definir separacion de career en app services`
+
+Plan:
+
+`docs/superpowers/plans/2026-09-19-app-services-career-plan.md`
+
+Commit:
+
+`a051242 docs: agregar plan de refactor de career`
+
+### Nuevo módulo
+
+Se creó:
+
+`src/career/app_services_career.cpp`
+
+### Servicios públicos movidos
+
+* `startCareerService`
+* `loadCareerService`
+* `saveCareerService`
+* `simulateSeasonStepService`
+* `simulateCareerWeekService`
+
+Las declaraciones públicas continúan en:
+
+`include/career/app_services.h`
+
+### Helpers privados movidos
+
+* `autoOfferDecision`
+* `autoRenewDecision`
+* `autoManagerJobDecision`
+* `toServiceResult`
+* `syncInfrastructureFromTeam`
+* `syncTeamFromInfrastructure`
+* `recommendedWeeklyDecisionSummary`
+* `appendPostWeekActionDigest`
+
+### app_services.cpp después del refactor
+
+El archivo principal quedó reducido a:
+
+* `failure`
+* `changeYouthRegionService`
+* `takeManagerJobService`
+
+### Integración con CMake
+
+Se agregó:
+
+`src/career/app_services_career.cpp`
+
+a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+
+### Prueba estructural
+
+Se agregó:
+
+`app_services_career_split`
+
+La prueba comprueba la existencia de:
+
+`src/career/app_services_career.cpp`
+
+### Evidencia TDD
+
+**RED:**
+
+Antes de crear el nuevo módulo:
+
+`[FAIL] app_services_career_split: Los servicios del ciclo de carrera de app_services deben vivir en app_services_career.cpp.`
+
+Todos los demás tests continuaron pasando.
+
+**GREEN:**
+
+Después de crear e integrar el módulo:
+
+`100% tests passed, 0 tests failed out of 1`
+
+### Verificación de compilación
+
+Compilaron correctamente:
+
+* `FootballManagerTests`
+* `FootballManager`
+* `FootballManagerCLI`
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: `5`
+* Equipos revisados: `90`
+* Jugadores crudos: `2200`
+* Errores: `0`
+* Advertencias: `0`
+* Resultado: `sin fallas`
+
+### Verificación estructural
+
+Se confirmó que los siguientes servicios aparecen únicamente en `app_services_career.cpp`:
+
+* `startCareerService`
+* `loadCareerService`
+* `saveCareerService`
+* `simulateSeasonStepService`
+* `simulateCareerWeekService`
+
+También se verificó que los helpers privados movidos ya no permanecen en `app_services.cpp`.
+
+### Calidad del diff
+
+Ejecutado:
+
+`git diff --check`
+
+Resultado:
+
+* Sin errores.
+* Sin problemas de whitespace detectados.
+* Se utilizaron modificaciones por bytes en archivos sensibles para evitar alteraciones accidentales de codificación.
+
+### Archivos involucrados
+
+* `CMakeLists.txt`
+* `src/career/app_services.cpp`
+* `src/career/app_services_career.cpp`
+* `tests/project_tests.cpp`
+* `TODO.md`
+
+### Resultado
+
+El ciclo principal de carrera queda separado en `app_services_career.cpp`.
+
+La fase de división arquitectónica de `app_services.cpp` queda prácticamente cerrada, con el archivo principal reducido a los servicios de región juvenil y cambio de empleo del manager.
+
+Una vez realizado el commit e integrada esta rama, el siguiente paso recomendado es cerrar esta fase de refactor y volver al desarrollo de funcionalidades visibles de gameplay.
