@@ -3202,6 +3202,14 @@ void testAppServiceManagerIsSeparatedFromMainOrchestrator() {
     expect(pathExists(managerPath),
            "Los servicios de interaccion del manager de app_services deben vivir en app_services_manager.cpp.");
 }
+void testAppServiceWeeklyIsSeparatedFromMainOrchestrator() {
+    const string weeklyPath =
+        resolveProjectPath("src/career/app_services_weekly.cpp");
+
+    expect(pathExists(weeklyPath),
+           "Los servicios del centro semanal de app_services deben vivir en app_services_weekly.cpp.");
+}
+
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -3752,6 +3760,7 @@ int main() {
         {"app_services_transfers_split", testAppServiceTransfersAreSeparatedFromMainOrchestrator},
         {"app_services_club_split", testAppServiceClubIsSeparatedFromMainOrchestrator},
         {"app_services_manager_split", testAppServiceManagerIsSeparatedFromMainOrchestrator},
+        {"app_services_weekly_split", testAppServiceWeeklyIsSeparatedFromMainOrchestrator},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},

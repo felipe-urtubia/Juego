@@ -25,6 +25,7 @@ set(FM_CAREER_SOURCES
     src/career/app_services_scouting.cpp
     src/career/app_services_club.cpp
     src/career/app_services_manager.cpp
+    src/career/app_services_weekly.cpp
     src/career/app_services_transfers.cpp
     src/career/career_manager.cpp
     src/career/career_modules.cpp
@@ -322,4 +323,3 @@ if(BUILD_TESTING)
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
 endif()
-
