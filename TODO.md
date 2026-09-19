@@ -7152,3 +7152,104 @@ En `src/career/app_services.cpp` solamente permanece la llamada legítima a `rev
 La etapa de separación de club y staff de `app_services.cpp` queda completada sin cambios funcionales en el juego.
 
 El módulo principal conserva su API pública y las operaciones de mejoras de club y revisión de staff ahora tienen un archivo de implementación independiente.
+
+## ✅ Refactor de App Services - Separación de interacciones del manager
+
+**Estado:** Completado y validado
+
+### Objetivo
+
+Reducir responsabilidades de `src/career/app_services.cpp` separando las interacciones directas del manager, desarrollo individual, vestuario y ajustes de entrenamiento/instrucción en un módulo independiente, sin modificar la API pública ni el comportamiento del juego.
+
+### Cambios realizados
+
+* Se creó `src/career/app_services_manager.cpp`.
+* Se movieron desde `app_services.cpp` los siguientes servicios públicos:
+
+  * `cyclePlayerDevelopmentPlanService`
+  * `cyclePlayerInstructionService`
+  * `holdTeamMeetingService`
+  * `talkToPlayerService`
+  * `cycleTrainingFocusService`
+  * `cycleMatchInstructionService`
+
+* Se movieron al nuevo módulo los helpers privados exclusivos:
+
+  * `nextDevelopmentPlan`
+  * `nextInstructionForPlayer`
+  * `nextTrainingFocus`
+  * `nextMatchInstruction`
+
+* Se mantuvieron las declaraciones públicas existentes en `include/career/app_services.h`.
+* El helper genérico `failure` permanece disponible en `app_services.cpp` y el nuevo módulo utiliza una copia privada mínima.
+* Se reutilizan sin duplicar las dependencias compartidas existentes:
+  * `promiseAtRisk`
+  * `playerHasTrait`
+  * `defaultDutyForPosition`
+  * `normalizePosition`
+  * `ensureTeamIdentity`
+  * `clampInt`
+* Permanecieron fuera de este refactor:
+  * `applyWeeklyDecisionService`
+  * `applyMatchPreparationPlanService`
+  * `resolveInboxDecisionService`
+  * `changeYouthRegionService`
+  * `takeManagerJobService`
+* `applyWeeklyDecisionService(...)` y `resolveInboxDecisionService(...)` conservan llamadas legítimas hacia los servicios públicos movidos.
+* Se agregó `app_services_manager.cpp` a `FM_CAREER_SOURCES` en `CMakeLists.txt`.
+* Se agregó la prueba estructural `app_services_manager_split`.
+
+### Evidencia TDD
+
+**RED:**
+
+* La prueba `app_services_manager_split` falló antes de crear `app_services_manager.cpp`.
+* El fallo fue únicamente por ausencia del nuevo módulo.
+* Todos los demás tests continuaron pasando.
+
+**GREEN:**
+
+* Después de crear e integrar `app_services_manager.cpp`, la prueba estructural pasó.
+* Después de mover los servicios y helpers, la suite completa continuó pasando.
+
+### Verificación de compilación
+
+Se verificaron correctamente los targets:
+
+* `FootballManagerTests`
+* `FootballManager`
+* `FootballManagerCLI`
+
+El nuevo módulo compila correctamente como parte de los tres targets.
+
+### Validación del juego
+
+Ejecutado:
+
+`.\build-ci\bin\FootballManagerCLI.exe --validate`
+
+Resultado:
+
+* Divisiones: `5`
+* Equipos revisados: `90`
+* Jugadores crudos: `2200`
+* Errores: `0`
+* Advertencias: `0`
+* Resultado: `sin fallas`
+
+### Verificación estructural
+
+Se comprobó que las definiciones de los servicios y helpers movidos se encuentran en:
+
+`src/career/app_services_manager.cpp`
+
+En `src/career/app_services.cpp` solo permanecen llamadas legítimas desde otros flujos del juego hacia:
+
+* `holdTeamMeetingService(...)`
+* `cycleMatchInstructionService(...)`
+
+### Resultado
+
+La etapa de separación de interacciones del manager de `app_services.cpp` queda completada sin cambios funcionales en el juego.
+
+El módulo principal conserva su API pública y las operaciones de desarrollo individual, vestuario, entrenamiento e instrucciones ahora tienen un archivo de implementación independiente.
