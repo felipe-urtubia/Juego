@@ -432,6 +432,408 @@ void testMatchSimulationProducesStructuredPhases() {
            "El resumen del partido debe explicar el impacto disciplinario.");
 }
 
+void testInteractiveMatchInvokesManagerAtDecisionPoints() {
+    Team home = makeTeam("Interactivo Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Interactivo Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    vector<int> decisionMinutes;
+
+    const match_engine::MatchSimulationData data =
+        match_engine::simulateInteractive(
+            home,
+            away,
+            true,
+            [&](const match_engine::InteractiveMatchState& state) {
+                decisionMinutes.push_back(state.minute);
+                return match_engine::ManagerDecision{};
+            },
+            true,
+            false);
+
+    const vector<int> expectedMinutes = {15, 30, 45, 60, 75};
+
+    expect(decisionMinutes == expectedMinutes,
+           "El Match Center interactivo debe pedir decisiones en 15, 30, 45, 60 y 75.");
+    expect(data.result.timeline.phases.size() == 6,
+           "La simulacion interactiva debe conservar las seis fases del partido.");
+}
+
+void testInteractiveMatchAppliesHumanTacticalChange() {
+    Team home = makeTeam("Tactica Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Tactica Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    bool sawOffensiveAtMinute30 = false;
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::ChangeTactics;
+                decision.tactics = "Offensive";
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                sawOffensiveAtMinute30 =
+                    state.currentTactics == "Offensive";
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    expect(sawOffensiveAtMinute30,
+           "Un cambio tactico humano del minuto 15 debe estar activo en la fase siguiente.");
+}
+
+void testInteractiveMatchAppliesHumanInstructionChange() {
+    Team home = makeTeam("Instruccion Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Instruccion Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    bool sawDirectPlayAtMinute30 = false;
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::ChangeInstruction;
+                decision.instruction = "Juego directo";
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                sawDirectPlayAtMinute30 =
+                    state.currentInstruction == "Juego directo";
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    expect(sawDirectPlayAtMinute30,
+           "Una instruccion humana del minuto 15 debe estar activa en la fase siguiente.");
+}
+
+void testInteractiveMatchRecentEventsAreChronological() {
+    Team home = makeTeam("Eventos Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Eventos Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    bool sawPreviousHumanDecision = false;
+    bool eventsAreChronological = true;
+
+    setRandomSeed(424242);
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            int previousMinute = -1;
+
+            for (const string& event : state.recentEvents) {
+                const size_t separator = event.find('\'');
+                if (separator == string::npos) {
+                    eventsAreChronological = false;
+                    continue;
+                }
+
+                const int eventMinute =
+                    stoi(event.substr(0, separator));
+
+                if (eventMinute < previousMinute) {
+                    eventsAreChronological = false;
+                }
+
+                previousMinute = eventMinute;
+            }
+
+            if (state.minute == 15) {
+                match_engine::ManagerDecision decision;
+                decision.type =
+                    match_engine::ManagerDecisionType::ChangeTactics;
+                decision.tactics = "Offensive";
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                for (const string& event : state.recentEvents) {
+                    if (event.find(
+                            "cambia la mentalidad a Offensive") !=
+                        string::npos) {
+                        sawPreviousHumanDecision = true;
+                    }
+                }
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    expect(sawPreviousHumanDecision,
+           "Los eventos recientes deben conservar la decision humana del corte anterior.");
+    expect(eventsAreChronological,
+           "Los eventos recientes del Match Center deben estar ordenados por minuto.");
+}
+void testInteractiveMatchAppliesManualSubstitution() {
+    Team home = makeTeam("Cambio Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Cambio Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    int playerOut = -1;
+    int playerIn = -1;
+    bool substitutionApplied = false;
+
+    setRandomSeed(424242);
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                expect(!state.activeXi.empty(),
+                       "La simulacion interactiva debe exponer el XI activo.");
+                expect(!state.availableBench.empty(),
+                       "La simulacion interactiva debe exponer jugadores disponibles en el banco.");
+
+                playerOut = state.activeXi.front();
+                playerIn = state.availableBench.front();
+
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::Substitute;
+                decision.playerOutIndex = playerOut;
+                decision.playerInIndex = playerIn;
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                const bool outgoingStillActive =
+                    find(state.activeXi.begin(),
+                         state.activeXi.end(),
+                         playerOut) != state.activeXi.end();
+
+                const bool incomingIsActive =
+                    find(state.activeXi.begin(),
+                         state.activeXi.end(),
+                         playerIn) != state.activeXi.end();
+
+                substitutionApplied =
+                    !outgoingStillActive &&
+                    incomingIsActive &&
+                    state.substitutionsUsed == 1;
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    resetRandomSeed();
+
+    expect(substitutionApplied,
+           "Una sustitucion manual valida debe modificar el XI y contabilizarse.");
+}
+
+void testInteractiveMatchRejectsInvalidSubstitution() {
+    Team home = makeTeam("Cambio Invalido Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Cambio Invalido Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    vector<int> originalXi;
+    bool invalidSubstitutionRejected = false;
+
+    setRandomSeed(424242);
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                originalXi = state.activeXi;
+
+                expect(state.activeXi.size() >= 2,
+                       "El XI activo debe tener jugadores suficientes para probar un cambio invalido.");
+
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::Substitute;
+                decision.playerOutIndex = state.activeXi.front();
+                decision.playerInIndex = state.activeXi[1];
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                invalidSubstitutionRejected =
+                    state.activeXi == originalXi &&
+                    state.substitutionsUsed == 0;
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    resetRandomSeed();
+
+    expect(invalidSubstitutionRejected,
+           "Una sustitucion con un jugador que ya esta en cancha debe rechazarse.");
+}
+
+void testInteractiveMatchAllowsFiveManualSubstitutions() {
+    Team home = makeTeam("Cinco Cambios Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Cinco Cambios Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    setRandomSeed(424242);
+
+    const match_engine::MatchSimulationData data =
+        match_engine::simulateInteractive(
+            home,
+            away,
+            true,
+            [&](const match_engine::InteractiveMatchState& state) {
+                if (state.minute == 15 ||
+                    state.minute == 30 ||
+                    state.minute == 45 ||
+                    state.minute == 60 ||
+                    state.minute == 75) {
+
+                    expect(!state.activeXi.empty(),
+                           "Debe existir un jugador activo para realizar el cambio.");
+                    expect(!state.availableBench.empty(),
+                           "Debe existir un jugador disponible en el banco.");
+
+                    match_engine::ManagerDecision decision;
+                    decision.type = match_engine::ManagerDecisionType::Substitute;
+                    decision.playerOutIndex = state.activeXi.front();
+                    decision.playerInIndex = state.availableBench.front();
+                    return decision;
+                }
+
+                return match_engine::ManagerDecision{};
+            },
+            true,
+            false);
+
+    resetRandomSeed();
+
+    expect(data.result.homeSubstitutions == 5,
+           "El Match Center interactivo debe permitir cinco sustituciones manuales.");
+}
+
+void testInteractiveMatchRejectsPlayerReentry() {
+    Team home = makeTeam("Reingreso Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
+    Team away = makeTeam("Reingreso Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
+
+    int originalPlayer = -1;
+    int replacementPlayer = -1;
+    bool reentryRejected = false;
+
+    setRandomSeed(424242);
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                originalPlayer = state.activeXi.front();
+                replacementPlayer = state.availableBench.front();
+
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::Substitute;
+                decision.playerOutIndex = originalPlayer;
+                decision.playerInIndex = replacementPlayer;
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                const bool originalIsAvailable =
+                    find(state.availableBench.begin(),
+                         state.availableBench.end(),
+                         originalPlayer) != state.availableBench.end();
+
+                expect(!originalIsAvailable,
+                       "Un jugador que ya participo no debe volver a aparecer como disponible.");
+
+                match_engine::ManagerDecision decision;
+                decision.type = match_engine::ManagerDecisionType::Substitute;
+                decision.playerOutIndex = replacementPlayer;
+                decision.playerInIndex = originalPlayer;
+                return decision;
+            }
+
+            if (state.minute == 45) {
+                const bool originalIsActive =
+                    find(state.activeXi.begin(),
+                         state.activeXi.end(),
+                         originalPlayer) != state.activeXi.end();
+
+                reentryRejected = !originalIsActive;
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    resetRandomSeed();
+
+    expect(reentryRejected,
+           "Un jugador sustituido no debe poder volver a entrar al partido.");
+}
+
+void testInteractiveMatchSupportsCareerContext() {
+    Career career;
+    career.allTeams.push_back(
+        makeTeam("Career Interactivo", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 800000));
+    career.allTeams.push_back(
+        makeTeam("Career Rival", "primera division", 69, 4, 3, "Pressing", "Contra-presion", 760000));
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Career Interactivo");
+
+    expect(career.myTeam != nullptr,
+           "La prueba interactiva con carrera necesita un club controlado.");
+
+    Team* rival = career.findTeamByName("Career Rival");
+
+    expect(rival != nullptr,
+           "La prueba interactiva con carrera necesita un rival.");
+
+    vector<int> decisionMinutes;
+
+    setRandomSeed(424242);
+
+    const match_engine::MatchSimulationData data =
+        match_engine::simulateInteractive(
+            *career.myTeam,
+            *rival,
+            &career,
+            true,
+            [&](const match_engine::InteractiveMatchState& state) {
+                decisionMinutes.push_back(state.minute);
+                return match_engine::ManagerDecision{};
+            },
+            true,
+            false);
+
+    resetRandomSeed();
+
+    const vector<int> expectedMinutes = {15, 30, 45, 60, 75};
+
+    expect(decisionMinutes == expectedMinutes,
+           "La simulacion interactiva con Career debe conservar los cinco puntos de decision.");
+    expect(data.result.timeline.phases.size() == 6,
+           "La simulacion interactiva con Career debe conservar las seis fases.");
+}
+
 void testPlayerOfTheMatchMatchesHighestFinalRating() {
     Team home = makeTeam("Ratings Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
     Team away = makeTeam("Ratings Rival", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 650000);
@@ -3685,6 +4087,15 @@ int main() {
         {"validation_suite_concurrency", testValidationSuiteSupportsConcurrentRuns},
         {"loaded_player_profiles", testLoadedPlayersHaveBoundedProfileMetrics},
         {"match_engine_structure", testMatchSimulationProducesStructuredPhases},
+        {"interactive_match_decision_points", testInteractiveMatchInvokesManagerAtDecisionPoints},
+        {"interactive_match_tactical_change", testInteractiveMatchAppliesHumanTacticalChange},
+        {"interactive_match_instruction_change", testInteractiveMatchAppliesHumanInstructionChange},
+        {"interactive_match_recent_events_order", testInteractiveMatchRecentEventsAreChronological},
+        {"interactive_match_manual_substitution", testInteractiveMatchAppliesManualSubstitution},
+        {"interactive_match_invalid_substitution", testInteractiveMatchRejectsInvalidSubstitution},
+        {"interactive_match_five_substitutions", testInteractiveMatchAllowsFiveManualSubstitutions},
+        {"interactive_match_rejects_reentry", testInteractiveMatchRejectsPlayerReentry},
+        {"interactive_match_career_context", testInteractiveMatchSupportsCareerContext},
         {"match_player_ratings_potm", testPlayerOfTheMatchMatchesHighestFinalRating},
         {"tactical_fatigue", testHighPressRaisesPhaseFatigue},
         {"low_block_chance_quality", testLowBlockSuppressesChanceQuality},

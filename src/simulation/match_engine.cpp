@@ -15,6 +15,7 @@
 #include "utils/utils.h"
 #include "simulation/match_momentum.h"
 
+#include <algorithm>
 #include <cmath>
 #include <sstream>
 
@@ -76,7 +77,14 @@ int momentumScoreForTeam(
 
 namespace match_engine {
 
-MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, bool neutralVenue) {
+MatchSimulationData simulateCore(
+    const Team& home,
+    const Team& away,
+    bool keyMatch,
+    bool neutralVenue,
+    bool interactive,
+    bool userControlsHome,
+    const ManagerDecisionCallback* decisionCallback) {
     MatchSimulationData data;
     const MatchSetup setup = match_context::buildMatchSetup(home, away, keyMatch, neutralVenue);
 
@@ -93,6 +101,7 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
     int homePossAccumulator = 0;
     MatchMomentum momentum;
     momentum.reset();
+    size_t interactiveEventCursor = 0;
 
     for (size_t phaseIndex = 0; phaseIndex < kPhases.size(); ++phaseIndex) {
         momentum.decay();
@@ -109,28 +118,42 @@ MatchSimulationData simulate(const Team& home, const Team& away, bool keyMatch, 
         const int awayMomentumScore =
             momentumScoreForTeam(momentum, false);
 
-        const bool homeTacticalChange = ai_match_manager::applyInMatchManagement(homeState.team,
-                                                                                 awayState.team,
-                                                                                 homeState.xi,
-                                                                                 homeState.participants,
-                                                                                 homeState.cautionedPlayers,
-                                                                                 minuteEnd,
-                                                                                 stats.homeGoals,
-                                                                                 stats.awayGoals,
-                                                                                 static_cast<int>(awayState.xi.size()),
-                                                                                 homeMomentumScore,
-                                                                                 timeline);
-        const bool awayTacticalChange = ai_match_manager::applyInMatchManagement(awayState.team,
-                                                                                 homeState.team,
-                                                                                 awayState.xi,
-                                                                                 awayState.participants,
-                                                                                 awayState.cautionedPlayers,
-                                                                                 minuteEnd,
-                                                                                 stats.awayGoals,
-                                                                                 stats.homeGoals,
-                                                                                 static_cast<int>(homeState.xi.size()),
-                                                                                 awayMomentumScore,
-                                                                                 timeline);
+        const bool humanControlsHome =
+            interactive && userControlsHome;
+        const bool humanControlsAway =
+            interactive && !userControlsHome;
+
+        const bool homeTacticalChange =
+            humanControlsHome
+                ? false
+                : ai_match_manager::applyInMatchManagement(
+                      homeState.team,
+                      awayState.team,
+                      homeState.xi,
+                      homeState.participants,
+                      homeState.cautionedPlayers,
+                      minuteEnd,
+                      stats.homeGoals,
+                      stats.awayGoals,
+                      static_cast<int>(awayState.xi.size()),
+                      homeMomentumScore,
+                      timeline);
+
+        const bool awayTacticalChange =
+            humanControlsAway
+                ? false
+                : ai_match_manager::applyInMatchManagement(
+                      awayState.team,
+                      homeState.team,
+                      awayState.xi,
+                      awayState.participants,
+                      awayState.cautionedPlayers,
+                      minuteEnd,
+                      stats.awayGoals,
+                      stats.homeGoals,
+                      static_cast<int>(homeState.xi.size()),
+                      awayMomentumScore,
+                      timeline);
 
         const TeamMatchSnapshot homeSnapshot = match_context::rebuildSnapshot(homeState.team, awayState.team, homeState.xi, keyMatch);
         const TeamMatchSnapshot awaySnapshot = match_context::rebuildSnapshot(awayState.team, homeState.team, awayState.xi, keyMatch);
@@ -260,6 +283,252 @@ if (stats.awayGoals > awayGoalsBefore) {
                                            data.awayInjuredPlayers);
         fatigue_engine::applyPhaseFatigue(homeState.team, homeState.xi, static_cast<int>(phaseIndex));
         fatigue_engine::applyPhaseFatigue(awayState.team, awayState.xi, static_cast<int>(phaseIndex));
+
+        if (interactive &&
+            decisionCallback &&
+            *decisionCallback &&
+            minuteEnd < 90) {
+
+            TeamRuntimeState& userState =
+                userControlsHome ? homeState : awayState;
+
+            InteractiveMatchState interactiveState;
+            interactiveState.minute = minuteEnd;
+            interactiveState.userIsHome = userControlsHome;
+            interactiveState.homeGoals = stats.homeGoals;
+            interactiveState.awayGoals = stats.awayGoals;
+            interactiveState.homeShots = stats.homeShots;
+            interactiveState.awayShots = stats.awayShots;
+
+            const int phasesPlayed =
+                static_cast<int>(phaseIndex) + 1;
+
+            interactiveState.homePossession =
+                phasesPlayed > 0
+                    ? clampInt(
+                          static_cast<int>(round(
+                              homePossAccumulator /
+                              static_cast<double>(phasesPlayed))),
+                          0,
+                          100)
+                    : 50;
+
+            interactiveState.awayPossession =
+                100 - interactiveState.homePossession;
+
+            interactiveState.currentTactics =
+                userState.team.tactics;
+
+            interactiveState.currentInstruction =
+                userState.team.matchInstruction;
+
+            interactiveState.activeXi =
+                userState.xi;
+
+            interactiveState.substitutionsUsed =
+                match_stats::countSubstitutions(
+                    timeline,
+                    userState.team.name);
+
+            for (int i = 0;
+                 i < static_cast<int>(userState.team.players.size());
+                 ++i) {
+                if (find(
+                        userState.xi.begin(),
+                        userState.xi.end(),
+                        i) == userState.xi.end() &&
+                    find(
+                        userState.participants.begin(),
+                        userState.participants.end(),
+                        i) == userState.participants.end()) {
+                    interactiveState.availableBench.push_back(i);
+                }
+            }
+
+            vector<const MatchEvent*> recentImportantEvents;
+
+            for (size_t eventIndex = interactiveEventCursor;
+                 eventIndex < timeline.events.size();
+                 ++eventIndex) {
+                const MatchEvent& event = timeline.events[eventIndex];
+                const bool importantEvent =
+                    event.type == MatchEventType::Goal ||
+                    event.type == MatchEventType::YellowCard ||
+                    event.type == MatchEventType::RedCard ||
+                    event.type == MatchEventType::Injury ||
+                    event.type == MatchEventType::Substitution ||
+                    event.type == MatchEventType::TacticalChange;
+
+                if (importantEvent) {
+                    recentImportantEvents.push_back(&event);
+                }
+            }
+
+            stable_sort(
+                recentImportantEvents.begin(),
+                recentImportantEvents.end(),
+                [](const MatchEvent* left, const MatchEvent* right) {
+                    return left->minute < right->minute;
+                });
+
+            for (const MatchEvent* event : recentImportantEvents) {
+                interactiveState.recentEvents.push_back(
+                    to_string(event->minute) + "' " +
+                    event->teamName + ": " +
+                    event->description);
+            }
+
+            interactiveEventCursor = timeline.events.size();
+
+            const ManagerDecision decision =
+                (*decisionCallback)(interactiveState);
+
+            if (decision.type ==
+                    ManagerDecisionType::ChangeTactics) {
+
+                static const vector<string> validTactics = {
+                    "Defensive",
+                    "Balanced",
+                    "Offensive",
+                    "Pressing",
+                    "Counter"
+                };
+
+                if (find(
+                        validTactics.begin(),
+                        validTactics.end(),
+                        decision.tactics) !=
+                    validTactics.end()) {
+
+                    userState.team.tactics =
+                        decision.tactics;
+
+                    MatchEvent event;
+                    event.minute = minuteEnd;
+                    event.teamName = userState.team.name;
+                    event.type =
+                        MatchEventType::TacticalChange;
+                    event.description =
+                        userState.team.name +
+                        " cambia la mentalidad a " +
+                        decision.tactics;
+
+                    timeline.events.push_back(event);
+                }
+            } else if (decision.type ==
+                       ManagerDecisionType::ChangeInstruction) {
+
+                static const vector<string> validInstructions = {
+                    "Equilibrado",
+                    "Laterales altos",
+                    "Bloque bajo",
+                    "Balon parado",
+                    "Presion final",
+                    "Por bandas",
+                    "Juego directo",
+                    "Contra-presion",
+                    "Pausar juego"
+                };
+
+                if (find(
+                        validInstructions.begin(),
+                        validInstructions.end(),
+                        decision.instruction) !=
+                    validInstructions.end()) {
+
+                    userState.team.matchInstruction =
+                        decision.instruction;
+
+                    MatchEvent event;
+                    event.minute = minuteEnd;
+                    event.teamName = userState.team.name;
+                    event.type =
+                        MatchEventType::TacticalChange;
+                    event.description =
+                        userState.team.name +
+                        " cambia la instruccion a " +
+                        decision.instruction;
+
+                    timeline.events.push_back(event);
+                }
+            } else if (decision.type ==
+                       ManagerDecisionType::Substitute) {
+
+                const int substitutionsUsed =
+                    match_stats::countSubstitutions(
+                        timeline,
+                        userState.team.name);
+
+                const auto outIt =
+                    find(
+                        userState.xi.begin(),
+                        userState.xi.end(),
+                        decision.playerOutIndex);
+
+                const bool validIncomingIndex =
+                    decision.playerInIndex >= 0 &&
+                    decision.playerInIndex <
+                        static_cast<int>(
+                            userState.team.players.size());
+
+                const bool incomingAlreadyActive =
+                    validIncomingIndex &&
+                    find(
+                        userState.xi.begin(),
+                        userState.xi.end(),
+                        decision.playerInIndex) !=
+                        userState.xi.end();
+
+                const bool incomingAlreadyParticipated =
+                    validIncomingIndex &&
+                    find(
+                        userState.participants.begin(),
+                        userState.participants.end(),
+                        decision.playerInIndex) !=
+                        userState.participants.end();
+
+                if (substitutionsUsed < 5 &&
+                    outIt != userState.xi.end() &&
+                    validIncomingIndex &&
+                    !incomingAlreadyActive &&
+                    !incomingAlreadyParticipated) {
+
+                    const int outgoingIndex = *outIt;
+
+                    *outIt =
+                        decision.playerInIndex;
+
+                    userState.participants.push_back(
+                        decision.playerInIndex);
+
+                    const Player& outgoing =
+                        userState.team.players[
+                            static_cast<size_t>(
+                                outgoingIndex)];
+
+                    const Player& incoming =
+                        userState.team.players[
+                            static_cast<size_t>(
+                                decision.playerInIndex)];
+
+                    MatchEvent event;
+                    event.minute = minuteEnd;
+                    event.teamName =
+                        userState.team.name;
+                    event.playerName =
+                        incoming.name;
+                    event.type =
+                        MatchEventType::Substitution;
+                    event.description =
+                        outgoing.name +
+                        " sale; entra " +
+                        incoming.name;
+
+                    timeline.events.push_back(event);
+                }
+            }
+        }
+
         if (IdleCallback cb = idleCallback()) {
             cb();
         }
@@ -311,6 +580,202 @@ if (stats.awayGoals > awayGoalsBefore) {
                                                          : "Empate";
     data.result = std::move(result);
     return data;
+}
+
+
+MatchSimulationData simulate(
+    const Team& home,
+    const Team& away,
+    bool keyMatch,
+    bool neutralVenue) {
+
+    return simulateCore(
+        home,
+        away,
+        keyMatch,
+        neutralVenue,
+        false,
+        true,
+        nullptr);
+}
+
+MatchSimulationData simulateInteractive(
+    const Team& home,
+    const Team& away,
+    bool userControlsHome,
+    const ManagerDecisionCallback& decisionCallback,
+    bool keyMatch,
+    bool neutralVenue) {
+
+    return simulateCore(
+        home,
+        away,
+        keyMatch,
+        neutralVenue,
+        true,
+        userControlsHome,
+        &decisionCallback);
+}
+
+MatchSimulationData simulateInteractive(
+    const Team& home,
+    const Team& away,
+    const Career* career,
+    bool userControlsHome,
+    const ManagerDecisionCallback& decisionCallback,
+    bool keyMatch,
+    bool neutralVenue) {
+
+    if (!career) {
+        return simulateInteractive(
+            home,
+            away,
+            userControlsHome,
+            decisionCallback,
+            keyMatch,
+            neutralVenue);
+    }
+
+    Team homeModified = home;
+    Team awayModified = away;
+
+    const bool playerInHome =
+        career->myTeam &&
+        homeModified.name == career->myTeam->name;
+
+    const bool playerInAway =
+        career->myTeam &&
+        awayModified.name == career->myTeam->name;
+
+    if (playerInHome || playerInAway) {
+        Team& opponentModified =
+            playerInHome ? awayModified : homeModified;
+
+        const auto it =
+            career->rivalAIMap.find(opponentModified.name);
+
+        if (it != career->rivalAIMap.end()) {
+            const RivalAI& rivalAI = it->second;
+
+            const string playerFormation =
+                career->myTeam->formation.empty()
+                    ? "4-3-3"
+                    : career->myTeam->formation;
+
+            const string playerTactics =
+                career->myTeam->tactics.empty()
+                    ? "Balanced"
+                    : career->myTeam->tactics;
+
+            const string rivalTactics =
+                toLower(
+                    rivalAI.decideTactics(
+                        playerFormation,
+                        playerTactics));
+
+            if (rivalTactics.find("aggressive") != string::npos) {
+                opponentModified.tactics = "Pressing";
+                opponentModified.matchInstruction = "Contra-presion";
+                opponentModified.tempo =
+                    min(5, opponentModified.tempo + 1);
+                opponentModified.pressingIntensity =
+                    min(5, opponentModified.pressingIntensity + 1);
+                opponentModified.defensiveLine =
+                    min(5, opponentModified.defensiveLine + 1);
+
+            } else if (
+                rivalTactics.find("defensive") != string::npos) {
+
+                opponentModified.tactics = "Defensive";
+                opponentModified.matchInstruction = "Bloque bajo";
+                opponentModified.tempo =
+                    max(1, opponentModified.tempo - 1);
+                opponentModified.defensiveLine =
+                    max(1, opponentModified.defensiveLine - 1);
+
+            } else if (
+                rivalTactics.find("counter") != string::npos) {
+
+                opponentModified.tactics = "Counter";
+                opponentModified.matchInstruction = "Juego directo";
+                opponentModified.tempo =
+                    min(5, opponentModified.tempo + 1);
+                opponentModified.defensiveLine =
+                    max(1, opponentModified.defensiveLine - 1);
+
+            } else if (
+                rivalTactics.find("possession") != string::npos) {
+
+                opponentModified.tactics = "Balanced";
+                opponentModified.matchInstruction = "Equilibrado";
+                opponentModified.tempo =
+                    clampInt(opponentModified.tempo, 2, 3);
+                opponentModified.width =
+                    clampInt(opponentModified.width, 2, 4);
+                opponentModified.markingStyle = "Zonal";
+            }
+
+            if (rivalAI.personality.unpredictability > 65) {
+                opponentModified.width =
+                    clampInt(
+                        opponentModified.width +
+                            randInt(-1, 1),
+                        1,
+                        5);
+
+                opponentModified.defensiveLine =
+                    clampInt(
+                        opponentModified.defensiveLine +
+                            randInt(-1, 1),
+                        1,
+                        5);
+            }
+        }
+    }
+
+    Team* playerTeamModified = nullptr;
+
+    if (
+        career->myTeam &&
+        homeModified.name == career->myTeam->name) {
+
+        playerTeamModified = &homeModified;
+
+    } else if (
+        career->myTeam &&
+        awayModified.name == career->myTeam->name) {
+
+        playerTeamModified = &awayModified;
+    }
+
+    if (playerTeamModified) {
+        if (career->managerStress.stressLevel > 75) {
+            playerTeamModified->defensiveLine =
+                max(
+                    1,
+                    playerTeamModified->defensiveLine - 1);
+
+            playerTeamModified->pressingIntensity =
+                max(
+                    1,
+                    playerTeamModified->pressingIntensity - 1);
+
+        } else if (career->managerStress.stressLevel < 30) {
+            playerTeamModified->pressingIntensity =
+                min(
+                    5,
+                    playerTeamModified->pressingIntensity + 1);
+        }
+    }
+
+    return simulateCore(
+        homeModified,
+        awayModified,
+        keyMatch,
+        neutralVenue,
+        true,
+        userControlsHome,
+        &decisionCallback);
 }
 
 // Overload that integrates rival AI tactics

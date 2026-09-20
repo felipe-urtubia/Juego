@@ -46,12 +46,14 @@ vector<string> splitOutputLines(const string& text) {
 
 class StdoutCapture {
 public:
-    StdoutCapture()
-        : original_(cout.rdbuf(buffer_.rdbuf())) {
+    explicit StdoutCapture(bool enabled)
+        : original_(enabled ? cout.rdbuf(buffer_.rdbuf()) : nullptr) {
     }
 
     ~StdoutCapture() {
-        cout.rdbuf(original_);
+        if (original_) {
+            cout.rdbuf(original_);
+        }
     }
 
     string str() const {
@@ -82,9 +84,10 @@ SeasonStepResult SeasonService::simulateWeek(Career& career,
 
     g_seasonMessages = &messages;
 
-    StdoutCapture stdoutCapture;
-
     CareerRuntimeContext runtimeContext = currentCareerRuntimeContext();
+
+    StdoutCapture stdoutCapture(
+        runtimeContext.presentation != WeekSimulationPresentation::MatchCenter);
 
     g_forwardSeasonMessage = runtimeContext.uiMessage;
 

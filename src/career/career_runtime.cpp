@@ -25,7 +25,8 @@ ScopedCareerRuntimeContext::ScopedCareerRuntimeContext(CareerRuntimeContext cont
       previous_(g_currentRuntimeContext),
       active_(true) {
     if (context_.presentation != WeekSimulationPresentation::Compact &&
-        context_.presentation != WeekSimulationPresentation::Detailed) {
+        context_.presentation != WeekSimulationPresentation::Detailed &&
+        context_.presentation != WeekSimulationPresentation::MatchCenter) {
         context_.presentation = WeekSimulationPresentation::Detailed;
     }
     g_currentRuntimeContext = &context_;

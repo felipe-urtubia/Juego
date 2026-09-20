@@ -524,7 +524,10 @@ void simulateSeasonCupRound(Career& career) {
         Team* away = alive[i + 1];
         TeamTableSnapshot homeSnap = captureTableState(*home);
         TeamTableSnapshot awaySnap = captureTableState(*away);
-        bool verbose = (home == career.myTeam || away == career.myTeam);
+        bool verbose =
+            (home == career.myTeam || away == career.myTeam) &&
+            weekSimulationPresentation() ==
+                WeekSimulationPresentation::Detailed;
         emitUiMessage(home->name + " vs " + away->name);
         MatchResult result = verbose ? playMatch(&career, *home, *away, true, true, true)
                                      : playMatch(*home, *away, false, true, true);
@@ -1228,22 +1231,46 @@ void processWeekMatches(Career& career, const vector<pair<int, int>>& matches,
         }
         if (verbose && key) emitUiMessage("[Aviso] Partido clave de la semana.");
 
-        MatchResult result =
-            userControlledMatch
-                ? playMatch(&career, *home, *away, verbose, key)
-                : playMatch(*home, *away, verbose, key);
+        MatchResult result;
 
         if (useMatchCenter) {
-            match_center::PlaybackOptions options;
-            options.speed = match_center::PlaybackSpeed::Normal;
-            options.clearScreenBetweenEvents = true;
-            options.showAllEvents = false;
+            const bool userControlsHome =
+                fixture.home.id == managedTeamId;
 
-            match_center::showMatchCenter(
+            Team& controlledTeam =
+                userControlsHome ? *home : *away;
+
+            result = simulateInteractiveMatch(
+                &career,
                 *home,
                 *away,
-                result,
-                options);
+                userControlsHome,
+                [&](const match_engine::InteractiveMatchState& state) {
+                    return match_center::askManagerDecision(
+                        controlledTeam,
+                        state);
+                },
+                key,
+                false);
+
+            match_center::showInteractiveFinalSummary(
+                *home,
+                *away,
+                result);
+        } else {
+            result =
+                userControlledMatch
+                    ? playMatch(
+                          &career,
+                          *home,
+                          *away,
+                          verbose,
+                          key)
+                    : playMatch(
+                          *home,
+                          *away,
+                          verbose,
+                          key);
         }
 
         storeMatchAnalysis(career, *home, *away, result, false);

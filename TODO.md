@@ -7492,3 +7492,59 @@ El ciclo principal de carrera queda separado en `app_services_career.cpp`.
 La fase de división arquitectónica de `app_services.cpp` queda prácticamente cerrada, con el archivo principal reducido a los servicios de región juvenil y cambio de empleo del manager.
 
 Una vez realizado el commit e integrada esta rama, el siguiente paso recomendado es cerrar esta fase de refactor y volver al desarrollo de funcionalidades visibles de gameplay.
+---
+
+# Match Center interactivo - cerrado (2026-09-20)
+
+## Implementacion
+
+- Se agrego simulacion interactiva por fases con decisiones del manager en los minutos 15, 30, 45, 60 y 75.
+- El usuario puede continuar, cambiar tactica, cambiar instruccion o realizar sustituciones manuales.
+- Las decisiones humanas modifican el estado real del partido y afectan las fases siguientes.
+- Se mantienen los ajustes automaticos para el equipo CPU.
+- Las sustituciones manuales respetan limite de 5 cambios, validacion de indices y bloqueo de reingreso.
+- Los eventos recientes persisten entre cortes y se muestran ordenados cronologicamente.
+- Se agrego resumen final del Match Center con marcador, tiros, posesion, cambios y eventos entre 76 y 90.
+- El modo MatchCenter ya no se degrada a Detailed dentro del contexto de carrera.
+- La captura de stdout se desactiva durante MatchCenter para permitir interaccion visible.
+- En modo MatchCenter se evita imprimir el informe detallado completo del partido de Copa.
+- El postprocesado del partido interactivo se ejecuta una sola vez.
+
+## Pruebas
+
+Se agregaron pruebas para:
+
+- puntos de decision interactivos;
+- cambio tactico;
+- cambio de instruccion;
+- persistencia y orden de eventos recientes;
+- sustitucion manual;
+- sustitucion invalida;
+- cinco sustituciones;
+- bloqueo de reingreso;
+- contexto de carrera.
+
+Resultado final:
+
+`100% tests passed, 0 tests failed out of 1`
+
+## Compilacion y validacion
+
+Compilaron correctamente:
+
+- `FootballManagerTests`
+- `FootballManagerCLI`
+- `FootballManager`
+
+Validacion de datos:
+
+- Divisiones: 5
+- Equipos revisados: 90
+- Jugadores crudos: 2200
+- Errores: 0
+- Advertencias: 0
+- Resultado: sin fallas
+
+## Limitacion conocida
+
+Las sustituciones obligadas por lesion siguen siendo automaticas en esta primera version y consumen uno de los cinco cambios permitidos. El evento queda visible para el usuario en el Match Center.
