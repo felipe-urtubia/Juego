@@ -6725,7 +6725,7 @@ Implementado:
 
 ## Próximas mejoras del Match Center
 
-- [ ] Sistema de ataques peligrosos.
+- [x] Sistema de ataques peligrosos.
 - [ ] Comentarios dinámicos del partido.
 - [ ] Sustituciones automáticas de la IA durante el encuentro.
 - [ ] Cambios tácticos en tiempo real.

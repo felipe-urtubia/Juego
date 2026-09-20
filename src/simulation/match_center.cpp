@@ -86,6 +86,9 @@ match_engine::ManagerDecision askManagerDecision(
     std::cout << "Tiros: "
               << state.homeShots << " - "
               << state.awayShots << "\n";
+    std::cout << "Ataques peligrosos: "
+              << state.homeDangerousAttacks << " - "
+              << state.awayDangerousAttacks << "\n";
     std::cout << "Posesion: "
               << state.homePossession << "% - "
               << state.awayPossession << "%\n";
@@ -286,6 +289,9 @@ void showInteractiveFinalSummary(
     std::cout << "Tiros: "
               << result.homeShots << " - "
               << result.awayShots << "\n";
+    std::cout << "Ataques peligrosos: "
+              << result.stats.homeDangerousAttacks << " - "
+              << result.stats.awayDangerousAttacks << "\n";
     std::cout << "Posesion: "
               << result.homePossession << "% - "
               << result.awayPossession << "%\n";

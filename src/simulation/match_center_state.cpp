@@ -59,6 +59,12 @@ void applyEventImpact(
     state.awayCorners +=
         event.impact.awayCornersDelta;
 
+    state.homeDangerousAttacks +=
+        event.impact.homeDangerousAttacksDelta;
+
+    state.awayDangerousAttacks +=
+        event.impact.awayDangerousAttacksDelta;
+
     state.homeFouls +=
         event.impact.homeFoulsDelta;
 
@@ -342,6 +348,12 @@ LiveState makeFinalState(
 
     state.awayCorners =
         result.stats.awayCorners;
+
+    state.homeDangerousAttacks =
+        result.stats.homeDangerousAttacks;
+
+    state.awayDangerousAttacks =
+        result.stats.awayDangerousAttacks;
 
     state.homeFouls =
         result.stats.homeFouls;

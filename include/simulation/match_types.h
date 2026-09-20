@@ -55,6 +55,8 @@ struct MatchEventImpact {
     int awayShotsOnTargetDelta = 0;
     int homeCornersDelta = 0;
     int awayCornersDelta = 0;
+    int homeDangerousAttacksDelta = 0;
+    int awayDangerousAttacksDelta = 0;
     int homeFoulsDelta = 0;
     int awayFoulsDelta = 0;
     int homeYellowCardsDelta = 0;
@@ -126,6 +128,8 @@ struct MatchStats {
     int awayRedCards = 0;
     int homeCorners = 0;
     int awayCorners = 0;
+    int homeDangerousAttacks = 0;
+    int awayDangerousAttacks = 0;
     int homeBigChances = 0;
     int awayBigChances = 0;
     double homeExpectedGoals = 0.0;

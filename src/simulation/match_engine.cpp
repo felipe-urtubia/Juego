@@ -299,6 +299,8 @@ if (stats.awayGoals > awayGoalsBefore) {
             interactiveState.awayGoals = stats.awayGoals;
             interactiveState.homeShots = stats.homeShots;
             interactiveState.awayShots = stats.awayShots;
+            interactiveState.homeDangerousAttacks = stats.homeDangerousAttacks;
+            interactiveState.awayDangerousAttacks = stats.awayDangerousAttacks;
 
             const int phasesPlayed =
                 static_cast<int>(phaseIndex) + 1;

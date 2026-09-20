@@ -45,6 +45,8 @@ struct InteractiveMatchState {
     int awayGoals = 0;
     int homeShots = 0;
     int awayShots = 0;
+    int homeDangerousAttacks = 0;
+    int awayDangerousAttacks = 0;
     int homePossession = 50;
     int awayPossession = 50;
 

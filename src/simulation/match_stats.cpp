@@ -16,6 +16,8 @@ void applyImpact(MatchStats& stats, const MatchEventImpact& impact) {
     stats.awayShotsOnTarget += impact.awayShotsOnTargetDelta;
     stats.homeCorners += impact.homeCornersDelta;
     stats.awayCorners += impact.awayCornersDelta;
+    stats.homeDangerousAttacks += impact.homeDangerousAttacksDelta;
+    stats.awayDangerousAttacks += impact.awayDangerousAttacksDelta;
     stats.homeFouls += impact.homeFoulsDelta;
     stats.awayFouls += impact.awayFoulsDelta;
     stats.homeYellowCards += impact.homeYellowCardsDelta;

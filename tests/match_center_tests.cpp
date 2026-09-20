@@ -78,6 +78,7 @@ void testStatisticsImpact() {
     event.impact.homeShotsDelta = 4;
     event.impact.homeShotsOnTargetDelta = 2;
     event.impact.homeCornersDelta = 3;
+    event.impact.homeDangerousAttacksDelta = 2;
     event.impact.homeExpectedGoalsDelta = 0.65;
 
 
@@ -106,6 +107,11 @@ void testStatisticsImpact() {
     );
 
     assertTest(
+        state.homeDangerousAttacks == 2,
+        "Actualiza ataques peligrosos"
+    );
+
+    assertTest(
         std::abs(state.homeExpectedGoals - 0.65) < 0.001,
         "Actualiza xG"
     );
@@ -121,6 +127,9 @@ void testFinalState() {
 
     result.stats.homeShots = 12;
     result.stats.awayShots = 7;
+
+    result.stats.homeDangerousAttacks = 6;
+    result.stats.awayDangerousAttacks = 4;
 
     result.stats.homeExpectedGoals = 1.9;
     result.stats.awayExpectedGoals = 0.8;
@@ -143,6 +152,12 @@ void testFinalState() {
         "Estado final conserva tiros"
     );
 
+
+    assertTest(
+        state.homeDangerousAttacks == 6 &&
+        state.awayDangerousAttacks == 4,
+        "Estado final conserva ataques peligrosos"
+    );
 
     assertTest(
         std::abs(state.homeExpectedGoals - 1.9) < 0.001,

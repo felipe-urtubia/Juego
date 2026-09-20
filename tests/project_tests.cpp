@@ -432,11 +432,67 @@ void testMatchSimulationProducesStructuredPhases() {
            "El resumen del partido debe explicar el impacto disciplinario.");
 }
 
+void testDangerousAttacksAreCountedOncePerThreateningSequence() {
+    Team home = makeTeam("Peligro Local", "primera division", 72, 4, 4, "Offensive", "Por bandas", 700000);
+    Team away = makeTeam("Peligro Rival", "primera division", 68, 2, 2, "Defensive", "Bloque bajo", 650000);
+
+    setRandomSeed(20260920);
+    const MatchSetup setup = match_context::buildMatchSetup(home, away, false, false);
+
+    MatchTimeline timeline;
+    MatchStats stats;
+    vector<GoalContribution> goals;
+
+    match_event_generator::playPhaseSequences(
+        home,
+        away,
+        setup.home.xi,
+        setup.away.xi,
+        setup.home,
+        setup.away,
+        true,
+        1,
+        15,
+        4,
+        3,
+        3,
+        2,
+        0.0,
+        0.0,
+        timeline,
+        stats,
+        goals);
+
+    resetRandomSeed();
+
+    expect(stats.homeDangerousAttacks == 2,
+           "Dos secuencias amenazantes deben registrar exactamente dos ataques peligrosos.");
+    expect(stats.awayDangerousAttacks == 0,
+           "El defensor no debe recibir ataques peligrosos propios.");
+
+    int markedEvents = 0;
+    for (const MatchEvent& event : timeline.events) {
+        if (event.impact.homeDangerousAttacksDelta <= 0) continue;
+
+        expect(event.type == MatchEventType::AttackBuildUp ||
+                   event.type == MatchEventType::Counterattack,
+               "Un ataque peligroso debe marcarse una sola vez en la construccion ofensiva.");
+
+        markedEvents += event.impact.homeDangerousAttacksDelta;
+    }
+
+    expect(markedEvents == 2,
+           "La linea de tiempo debe contener exactamente dos marcas de ataque peligroso.");
+}
+
 void testInteractiveMatchInvokesManagerAtDecisionPoints() {
     Team home = makeTeam("Interactivo Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
     Team away = makeTeam("Interactivo Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
 
     vector<int> decisionMinutes;
+    vector<pair<int, int>> dangerousAttacksAtDecision;
+
+    setRandomSeed(424242);
 
     const match_engine::MatchSimulationData data =
         match_engine::simulateInteractive(
@@ -445,10 +501,16 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
             true,
             [&](const match_engine::InteractiveMatchState& state) {
                 decisionMinutes.push_back(state.minute);
+                dangerousAttacksAtDecision.push_back({
+                    state.homeDangerousAttacks,
+                    state.awayDangerousAttacks
+                });
                 return match_engine::ManagerDecision{};
             },
             true,
             false);
+
+    resetRandomSeed();
 
     const vector<int> expectedMinutes = {15, 30, 45, 60, 75};
 
@@ -456,6 +518,28 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
            "El Match Center interactivo debe pedir decisiones en 15, 30, 45, 60 y 75.");
     expect(data.result.timeline.phases.size() == 6,
            "La simulacion interactiva debe conservar las seis fases del partido.");
+    expect(dangerousAttacksAtDecision.size() == expectedMinutes.size(),
+           "Cada punto de decision debe incluir los ataques peligrosos acumulados.");
+
+    for (size_t i = 0; i < expectedMinutes.size(); ++i) {
+        int expectedHomeDangerousAttacks = 0;
+        int expectedAwayDangerousAttacks = 0;
+
+        for (const MatchEvent& event : data.result.timeline.events) {
+            if (event.minute > expectedMinutes[i]) continue;
+
+            expectedHomeDangerousAttacks +=
+                event.impact.homeDangerousAttacksDelta;
+
+            expectedAwayDangerousAttacks +=
+                event.impact.awayDangerousAttacksDelta;
+        }
+
+        expect(
+            dangerousAttacksAtDecision[i].first == expectedHomeDangerousAttacks &&
+            dangerousAttacksAtDecision[i].second == expectedAwayDangerousAttacks,
+            "El Match Center debe mostrar los ataques peligrosos acumulados hasta cada corte.");
+    }
 }
 
 void testInteractiveMatchAppliesHumanTacticalChange() {
@@ -4087,6 +4171,7 @@ int main() {
         {"validation_suite_concurrency", testValidationSuiteSupportsConcurrentRuns},
         {"loaded_player_profiles", testLoadedPlayersHaveBoundedProfileMetrics},
         {"match_engine_structure", testMatchSimulationProducesStructuredPhases},
+        {"dangerous_attacks_counting", testDangerousAttacksAreCountedOncePerThreateningSequence},
         {"interactive_match_decision_points", testInteractiveMatchInvokesManagerAtDecisionPoints},
         {"interactive_match_tactical_change", testInteractiveMatchAppliesHumanTacticalChange},
         {"interactive_match_instruction_change", testInteractiveMatchAppliesHumanInstructionChange},

@@ -125,6 +125,9 @@ void drawMatchCenter(const Team& home,
               << state.awayShotsOnTarget << '\n';
     std::cout << std::left << std::setw(22) << "Corners"
               << state.homeCorners << " - " << state.awayCorners << '\n';
+    std::cout << std::left << std::setw(22) << "Ataques peligrosos"
+              << state.homeDangerousAttacks << " - "
+              << state.awayDangerousAttacks << '\n';
     std::cout << std::left << std::setw(22) << "Faltas"
               << state.homeFouls << " - " << state.awayFouls << '\n';
     std::cout << std::left << std::setw(22) << "Tarjetas amarillas"

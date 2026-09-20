@@ -29,6 +29,9 @@ struct LiveState {
     int homeCorners = 0;
     int awayCorners = 0;
 
+    int homeDangerousAttacks = 0;
+    int awayDangerousAttacks = 0;
+
     int homeFouls = 0;
     int awayFouls = 0;
 

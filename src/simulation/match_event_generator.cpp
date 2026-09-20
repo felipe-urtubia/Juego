@@ -173,6 +173,10 @@ void playPhaseSequences(Team& attacking,
         buildUp.teamName = attacking.name;
         buildUp.type = directTransition ? MatchEventType::Counterattack : MatchEventType::AttackBuildUp;
         buildUp.description = buildUpDescription(attacking, directTransition);
+        if (i < chanceCount) {
+            if (attackingIsHome) buildUp.impact.homeDangerousAttacksDelta = 1;
+            else buildUp.impact.awayDangerousAttacksDelta = 1;
+        }
         match_stats::pushEvent(timeline, stats, buildUp);
 
         if (rand01() > sequenceChanceReachProbability) {
