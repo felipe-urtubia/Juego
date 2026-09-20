@@ -6736,10 +6736,10 @@ Implementado:
   - FootballManager.exe recompilado correctamente en build-ci\bin\FootballManager.exe.
   - FootballManagerCLI.exe recompilado y validacion general sin fallas: 0 errores, 0 advertencias.
   - Commit final: bd75b1d - feat: agregar ataques peligrosos al Match Center.
-- [ ] Comentarios dinámicos del partido.
-- [ ] Sustituciones automáticas de la IA durante el encuentro.
-- [ ] Cambios tácticos en tiempo real.
-- [ ] Valoraciones dinámicas de los jugadores.
+- [x] Comentarios dinámicos del partido.
+- [x] Sustituciones automáticas de la IA durante el encuentro.
+- [x] Cambios tácticos en tiempo real.
+- [x] Valoraciones dinámicas de los jugadores.
 - [ ] Mapa de calor por zonas del campo.
 - [ ] Estadísticas avanzadas por jugador.
 - [ ] Línea temporal interactiva del partido.
