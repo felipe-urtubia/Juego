@@ -6726,6 +6726,16 @@ Implementado:
 ## Próximas mejoras del Match Center
 
 - [x] Sistema de ataques peligrosos.
+  - Implementado en Match Engine y MatchStats.
+  - Cada secuencia amenazante se contabiliza una sola vez.
+  - Integrado con Match Center normal.
+  - Integrado con Match Center interactivo en los cortes 15, 30, 45, 60 y 75.
+  - Visible tambien en el resumen final del partido.
+  - Pruebas automaticas agregadas para generacion, acumulacion y estado interactivo.
+  - Suite de pruebas: 100% aprobada.
+  - FootballManager.exe recompilado correctamente en build-ci\bin\FootballManager.exe.
+  - FootballManagerCLI.exe recompilado y validacion general sin fallas: 0 errores, 0 advertencias.
+  - Commit final: bd75b1d - feat: agregar ataques peligrosos al Match Center.
 - [ ] Comentarios dinámicos del partido.
 - [ ] Sustituciones automáticas de la IA durante el encuentro.
 - [ ] Cambios tácticos en tiempo real.
