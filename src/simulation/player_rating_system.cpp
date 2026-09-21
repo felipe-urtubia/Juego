@@ -76,6 +76,35 @@ void LiveRatings::applyEvent(const MatchEvent& event) {
         player.rating = 6.5;
     }
 
+    switch (event.type) {
+        case MatchEventType::Shot:
+        case MatchEventType::BigChance:
+            player.shots++;
+            if (event.type == MatchEventType::BigChance) player.bigChances++;
+            if (event.impact.homeShotsOnTargetDelta > 0 || event.impact.awayShotsOnTargetDelta > 0) player.shotsOnTarget++;
+            player.expectedGoals += event.impact.homeExpectedGoalsDelta + event.impact.awayExpectedGoalsDelta;
+            break;
+
+        case MatchEventType::Goal:
+            player.goals++;
+            break;
+
+        case MatchEventType::Save:
+            player.saves++;
+            break;
+
+        case MatchEventType::YellowCard:
+            player.yellowCards++;
+            break;
+
+        case MatchEventType::RedCard:
+            player.redCards++;
+            break;
+
+        default:
+            break;
+    }
+
     player.rating = clampRating(
         player.rating + eventDelta(event.type));
 

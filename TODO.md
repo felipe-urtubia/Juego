@@ -6747,7 +6747,14 @@ Implementado:
   - Integrado con Match Center normal y Match Center interactivo.
   - Pruebas automaticas agregadas para acumulacion por zonas y estado interactivo en los cortes 15, 30, 45, 60 y 75.
   - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
-- [ ] Estadísticas avanzadas por jugador.
+- [x] Estadísticas avanzadas por jugador.
+  - Tiros, tiros al arco, goles, grandes ocasiones, xG, atajadas y tarjetas amarillas/rojas acumulados desde MatchEvent estructurados.
+  - LiveRatings conserva el sistema de notas existente y el comportamiento del Jugador del Partido.
+  - Las atajadas se atribuyen al equipo defensor y al arquero correspondiente.
+  - Integrado con Match Center normal y Match Center interactivo en los cortes 15, 30, 45, 60 y 75.
+  - Asistencias no agregadas todavia: no existe un campo estructurado de asistente en MatchEvent y no se parsean descripciones.
+  - Pruebas automaticas agregadas para acumulacion individual y estado interactivo.
+  - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
 - [ ] Línea temporal interactiva del partido.
 - [ ] Integración completa con el análisis postpartido.
 - [ ] Cobertura de pruebas unitarias para todos los módulos del Match Center.

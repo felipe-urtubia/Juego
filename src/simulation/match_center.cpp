@@ -5,6 +5,7 @@
 #include "utils/utils.h"
 
 #include <iostream>
+#include <iomanip>
 #include <algorithm>
 
 #include <chrono>
@@ -77,6 +78,37 @@ void drawInteractiveHeatMap(const std::string& teamName, const std::array<int, 9
     std::cout << "Ultimo tercio " << heatMap[6] << "    " << heatMap[7] << "       " << heatMap[8] << "\n";
 }
 
+void drawInteractivePlayerStats(
+    const std::vector<player_rating_system::PlayerLiveRating>& players) {
+
+    if (players.empty()) {
+        return;
+    }
+
+    std::cout << "\nEstadisticas individuales destacadas\n";
+
+    const std::size_t limit = std::min<std::size_t>(3, players.size());
+
+    for (std::size_t i = 0; i < limit; ++i) {
+        const auto& player = players[i];
+
+        std::cout << std::left
+                  << std::setw(24)
+                  << player.playerName
+                  << std::fixed
+                  << std::setprecision(1)
+                  << player.rating
+                  << " | Tiros " << player.shots
+                  << " | Al arco " << player.shotsOnTarget
+                  << " | Goles " << player.goals
+                  << " | xG " << std::setprecision(2) << player.expectedGoals
+                  << " | Atajadas " << player.saves
+                  << " | TA " << player.yellowCards
+                  << " | TR " << player.redCards
+                  << '\n';
+    }
+}
+
 }  // namespace
 
 match_engine::ManagerDecision askManagerDecision(
@@ -104,6 +136,7 @@ match_engine::ManagerDecision askManagerDecision(
     drawInteractiveHeatMap("LOCAL", state.homeHeatMap);
     std::cout << "\n";
     drawInteractiveHeatMap("VISITA", state.awayHeatMap);
+    drawInteractivePlayerStats(state.playerStats);
     std::cout << "Tactica actual: "
               << state.currentTactics << "\n";
     std::cout << "Instruccion actual: "

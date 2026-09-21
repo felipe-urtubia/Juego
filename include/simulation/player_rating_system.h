@@ -13,6 +13,14 @@ struct PlayerLiveRating {
     std::string teamName;
     double rating = 6.5;
     int events = 0;
+    int shots = 0;
+    int shotsOnTarget = 0;
+    int goals = 0;
+    int bigChances = 0;
+    double expectedGoals = 0.0;
+    int saves = 0;
+    int yellowCards = 0;
+    int redCards = 0;
 };
 
 class LiveRatings {

@@ -143,6 +143,7 @@ ChanceResolutionOutput resolveChance(const Team& attacking,
         else resolution.impact.awayGoalsDelta = 1;
     } else if (output.onTarget) {
         resolution.type = MatchEventType::Save;
+        resolution.teamName = defending.name;
         resolution.playerName = keeper ? keeper->name : attackerName;
         resolution.description = keeper ? keeper->name + " responde y evita el gol" : "el portero contiene el remate";
     } else {

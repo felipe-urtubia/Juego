@@ -106,6 +106,18 @@ void buildHeatMaps(
     }
 }
 
+vector<player_rating_system::PlayerLiveRating> buildPlayerStats(
+    const MatchTimeline& timeline) {
+
+    player_rating_system::LiveRatings ratings;
+
+    for (const MatchEvent& event : timeline.events) {
+        ratings.applyEvent(event);
+    }
+
+    return ratings.topPlayers(100);
+}
+
 }  // namespace
 
 namespace match_engine {
@@ -362,6 +374,9 @@ if (stats.awayGoals > awayGoalsBefore) {
                 awayState.team,
                 interactiveState.homeHeatMap,
                 interactiveState.awayHeatMap);
+
+            interactiveState.playerStats =
+                buildPlayerStats(timeline);
 
             interactiveState.currentTactics =
                 userState.team.tactics;

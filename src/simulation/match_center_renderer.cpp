@@ -78,7 +78,14 @@ void drawPlayerRatings(
             std::cout << "  (" << player.teamName << ')';
         }
 
-        std::cout << '\n';
+        std::cout << " | Tiros " << player.shots
+                  << " | Al arco " << player.shotsOnTarget
+                  << " | Goles " << player.goals
+                  << " | xG " << std::setprecision(2) << player.expectedGoals
+                  << " | Atajadas " << player.saves
+                  << " | TA " << player.yellowCards
+                  << " | TR " << player.redCards
+                  << '\n';
     }
 }
 

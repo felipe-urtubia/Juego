@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/models.h"
+#include "simulation/player_rating_system.h"
 
 #include <array>
 #include <functional>
@@ -62,6 +63,7 @@ struct InteractiveMatchState {
     std::vector<int> activeXi;
     std::vector<int> availableBench;
     std::vector<std::string> recentEvents;
+    std::vector<player_rating_system::PlayerLiveRating> playerStats;
 };
 
 using ManagerDecisionCallback =

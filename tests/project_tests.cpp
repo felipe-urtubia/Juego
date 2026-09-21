@@ -41,6 +41,7 @@
 #include "simulation/match_phase.h"
 #include "simulation/match_report.h"
 #include "simulation/player_condition.h"
+#include "simulation/player_rating_system.h"
 #include "simulation/simulation.h"
 #include "transfers/negotiation_system.h"
 #include "transfers/transfer_market.h"
@@ -494,6 +495,7 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
     vector<pair<int, int>> dangerousAttacksAtDecision;
     vector<array<int, 9>> homeHeatMapsAtDecision;
     vector<array<int, 9>> awayHeatMapsAtDecision;
+    vector<vector<player_rating_system::PlayerLiveRating>> playerStatsAtDecision;
 
     setRandomSeed(424242);
 
@@ -510,6 +512,7 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
                 });
                 homeHeatMapsAtDecision.push_back(state.homeHeatMap);
                 awayHeatMapsAtDecision.push_back(state.awayHeatMap);
+                playerStatsAtDecision.push_back(state.playerStats);
                 return match_engine::ManagerDecision{};
             },
             true,
@@ -528,15 +531,20 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
     expect(homeHeatMapsAtDecision.size() == expectedMinutes.size() &&
            awayHeatMapsAtDecision.size() == expectedMinutes.size(),
            "Cada punto de decision debe incluir los mapas de calor acumulados.");
+    expect(playerStatsAtDecision.size() == expectedMinutes.size(),
+           "Cada punto de decision debe incluir las estadisticas individuales acumuladas.");
 
     for (size_t i = 0; i < expectedMinutes.size(); ++i) {
         int expectedHomeDangerousAttacks = 0;
         int expectedAwayDangerousAttacks = 0;
         array<int, 9> expectedHomeHeatMap{};
         array<int, 9> expectedAwayHeatMap{};
+        player_rating_system::LiveRatings expectedPlayerRatings;
 
         for (const MatchEvent& event : data.result.timeline.events) {
             if (event.minute > expectedMinutes[i]) continue;
+
+            expectedPlayerRatings.applyEvent(event);
 
             expectedHomeDangerousAttacks +=
                 event.impact.homeDangerousAttacksDelta;
@@ -561,6 +569,8 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
             }
         }
 
+        const auto expectedPlayerStats = expectedPlayerRatings.topPlayers(100);
+
         expect(
             dangerousAttacksAtDecision[i].first == expectedHomeDangerousAttacks &&
             dangerousAttacksAtDecision[i].second == expectedAwayDangerousAttacks,
@@ -570,6 +580,29 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
             homeHeatMapsAtDecision[i] == expectedHomeHeatMap &&
             awayHeatMapsAtDecision[i] == expectedAwayHeatMap,
             "El Match Center interactivo debe mostrar el mapa de calor acumulado hasta cada corte.");
+
+        expect(playerStatsAtDecision[i].size() == expectedPlayerStats.size(),
+               "El Match Center interactivo debe incluir todos los jugadores acumulados hasta cada corte.");
+
+        for (size_t j = 0; j < expectedPlayerStats.size(); ++j) {
+            const auto& actual = playerStatsAtDecision[i][j];
+            const auto& expected = expectedPlayerStats[j];
+
+            expect(
+                actual.playerName == expected.playerName &&
+                actual.teamName == expected.teamName &&
+                actual.rating == expected.rating &&
+                actual.events == expected.events &&
+                actual.shots == expected.shots &&
+                actual.shotsOnTarget == expected.shotsOnTarget &&
+                actual.goals == expected.goals &&
+                actual.bigChances == expected.bigChances &&
+                actual.expectedGoals == expected.expectedGoals &&
+                actual.saves == expected.saves &&
+                actual.yellowCards == expected.yellowCards &&
+                actual.redCards == expected.redCards,
+                "Las estadisticas individuales interactivas deben coincidir con los eventos acumulados hasta cada corte.");
+        }
     }
 }
 
@@ -947,6 +980,72 @@ void testInteractiveMatchSupportsCareerContext() {
            "La simulacion interactiva con Career debe conservar los cinco puntos de decision.");
     expect(data.result.timeline.phases.size() == 6,
            "La simulacion interactiva con Career debe conservar las seis fases.");
+}
+
+void testPlayerAdvancedStatsAreAccumulated() {
+    player_rating_system::LiveRatings ratings;
+
+    MatchEvent shot;
+    shot.minute = 10;
+    shot.teamName = "Stats Local";
+    shot.playerName = "Delantero Stats";
+    shot.type = MatchEventType::Shot;
+    shot.impact.homeShotsDelta = 1;
+    shot.impact.homeShotsOnTargetDelta = 1;
+    shot.impact.homeExpectedGoalsDelta = 0.32;
+    ratings.applyEvent(shot);
+
+    MatchEvent bigChance;
+    bigChance.minute = 20;
+    bigChance.teamName = "Stats Local";
+    bigChance.playerName = "Delantero Stats";
+    bigChance.type = MatchEventType::BigChance;
+    bigChance.impact.homeShotsDelta = 1;
+    bigChance.impact.homeExpectedGoalsDelta = 0.45;
+    ratings.applyEvent(bigChance);
+
+    MatchEvent goal;
+    goal.minute = 21;
+    goal.teamName = "Stats Local";
+    goal.playerName = "Delantero Stats";
+    goal.type = MatchEventType::Goal;
+    ratings.applyEvent(goal);
+
+    MatchEvent yellow;
+    yellow.minute = 35;
+    yellow.teamName = "Stats Local";
+    yellow.playerName = "Delantero Stats";
+    yellow.type = MatchEventType::YellowCard;
+    ratings.applyEvent(yellow);
+
+    MatchEvent red;
+    red.minute = 70;
+    red.teamName = "Stats Local";
+    red.playerName = "Delantero Stats";
+    red.type = MatchEventType::RedCard;
+    ratings.applyEvent(red);
+
+    MatchEvent save;
+    save.minute = 50;
+    save.teamName = "Stats Rival";
+    save.playerName = "Arquero Stats";
+    save.type = MatchEventType::Save;
+    ratings.applyEvent(save);
+
+    const auto players = ratings.topPlayers(10);
+    const auto attacker = std::find_if(players.begin(), players.end(), [](const auto& player) { return player.playerName == "Delantero Stats"; });
+    const auto keeper = std::find_if(players.begin(), players.end(), [](const auto& player) { return player.playerName == "Arquero Stats"; });
+
+    expect(attacker != players.end(), "Las estadisticas deben conservar al jugador atacante.");
+    expect(keeper != players.end(), "Las estadisticas deben conservar al arquero.");
+    expect(attacker->shots == 2, "El atacante debe acumular dos tiros.");
+    expect(attacker->shotsOnTarget == 1, "El atacante debe acumular un tiro al arco.");
+    expect(attacker->bigChances == 1, "El atacante debe acumular una gran ocasion.");
+    expect(attacker->goals == 1, "El atacante debe acumular un gol.");
+    expect(attacker->expectedGoals > 0.76 && attacker->expectedGoals < 0.78, "El atacante debe acumular el xG de sus intentos.");
+    expect(attacker->yellowCards == 1 && attacker->redCards == 1, "El atacante debe acumular sus tarjetas.");
+    expect(keeper->saves == 1, "El arquero debe acumular una atajada.");
+    expect(keeper->teamName == "Stats Rival", "La atajada debe pertenecer al equipo del arquero.");
 }
 
 void testPlayerOfTheMatchMatchesHighestFinalRating() {
@@ -4212,6 +4311,7 @@ int main() {
         {"interactive_match_five_substitutions", testInteractiveMatchAllowsFiveManualSubstitutions},
         {"interactive_match_rejects_reentry", testInteractiveMatchRejectsPlayerReentry},
         {"interactive_match_career_context", testInteractiveMatchSupportsCareerContext},
+        {"match_player_advanced_stats", testPlayerAdvancedStatsAreAccumulated},
         {"match_player_ratings_potm", testPlayerOfTheMatchMatchesHighestFinalRating},
         {"tactical_fatigue", testHighPressRaisesPhaseFatigue},
         {"low_block_chance_quality", testLowBlockSuppressesChanceQuality},
