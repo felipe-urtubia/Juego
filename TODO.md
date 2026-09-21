@@ -6740,7 +6740,13 @@ Implementado:
 - [x] Sustituciones automáticas de la IA durante el encuentro.
 - [x] Cambios tácticos en tiempo real.
 - [x] Valoraciones dinámicas de los jugadores.
-- [ ] Mapa de calor por zonas del campo.
+- [x] Mapa de calor por zonas del campo.
+  - Campo dividido en 9 zonas: tercio propio, mediocampo y ultimo tercio por izquierda, centro y derecha.
+  - Ubicacion derivada de tactica, instruccion, width y secuencia existente, sin agregar RNG ni cambiar el balance del partido.
+  - PossessionPhase, Progression, AttackBuildUp y Counterattack alimentan el mapa sin duplicar tiros, goles, atajadas ni corners.
+  - Integrado con Match Center normal y Match Center interactivo.
+  - Pruebas automaticas agregadas para acumulacion por zonas y estado interactivo en los cortes 15, 30, 45, 60 y 75.
+  - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
 - [ ] Estadísticas avanzadas por jugador.
 - [ ] Línea temporal interactiva del partido.
 - [ ] Integración completa con el análisis postpartido.

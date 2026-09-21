@@ -7,6 +7,7 @@
 #include "simulation/fatigue_engine.h"
 #include "simulation/match_context.h"
 #include "simulation/match_event_generator.h"
+#include "simulation/match_field_zone.h"
 #include "simulation/match_phase.h"
 #include "simulation/match_report.h"
 #include "simulation/match_resolution.h"
@@ -71,6 +72,38 @@ int momentumScoreForTeam(
         static_cast<int>(std::round(combined)),
         -100,
         100);
+}
+
+void buildHeatMaps(
+    const MatchTimeline& timeline,
+    const Team& home,
+    const Team& away,
+    array<int, 9>& homeHeatMap,
+    array<int, 9>& awayHeatMap) {
+
+    for (const MatchEvent& event : timeline.events) {
+        if (event.type != MatchEventType::PossessionPhase &&
+            event.type != MatchEventType::Progression &&
+            event.type != MatchEventType::AttackBuildUp &&
+            event.type != MatchEventType::Counterattack) {
+            continue;
+        }
+
+        if (event.zone == MatchFieldZone::Unknown) {
+            continue;
+        }
+
+        const int zoneIndex = static_cast<int>(event.zone) - 1;
+        if (zoneIndex < 0 || zoneIndex >= 9) {
+            continue;
+        }
+
+        if (event.teamName == home.name) {
+            homeHeatMap[zoneIndex]++;
+        } else if (event.teamName == away.name) {
+            awayHeatMap[zoneIndex]++;
+        }
+    }
 }
 
 }  // namespace
@@ -178,6 +211,11 @@ MatchSimulationData simulateCore(
         controlEvent.minute = minuteStart;
         controlEvent.teamName = phase.dominantTeam;
         controlEvent.type = MatchEventType::PossessionPhase;
+        if (phase.dominantTeam == homeState.team.name) {
+            controlEvent.zone = match_field_zone::ownThird(homeState.team, static_cast<int>(phaseIndex));
+        } else if (phase.dominantTeam == awayState.team.name) {
+            controlEvent.zone = match_field_zone::ownThird(awayState.team, static_cast<int>(phaseIndex));
+        }
         controlEvent.description = phase.dominantTeam + " domina el tramo " + to_string(minuteStart) + "-" + to_string(minuteEnd);
         match_stats::pushEvent(timeline, stats, controlEvent);
 
@@ -317,6 +355,13 @@ if (stats.awayGoals > awayGoalsBefore) {
 
             interactiveState.awayPossession =
                 100 - interactiveState.homePossession;
+
+            buildHeatMaps(
+                timeline,
+                homeState.team,
+                awayState.team,
+                interactiveState.homeHeatMap,
+                interactiveState.awayHeatMap);
 
             interactiveState.currentTactics =
                 userState.team.tactics;

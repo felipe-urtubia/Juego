@@ -3,6 +3,7 @@
 #include "career/career_runtime.h"
 #include "simulation/match_engine_internal.h"
 #include "simulation/match_event_resolver.h"
+#include "simulation/match_field_zone.h"
 #include "simulation/player_condition.h"
 #include "simulation/match_resolution.h"
 #include "simulation/tactics_engine.h"
@@ -159,11 +160,15 @@ void playPhaseSequences(Team& attacking,
                                       attacking.matchInstruction == "Juego directo" ||
                                       rand01() <= clampValue(0.18 + transitionThreat * 0.45, 0.10, 0.62);
 
+        const MatchFieldZone middleZone = match_field_zone::middleThird(attacking, i);
+        const MatchFieldZone finalZone = match_field_zone::finalThird(attacking, i);
+
         if (i < progressionCount && rand01() <= progressionSuccess) {
             MatchEvent progression;
             progression.minute = max(minuteStart, minute - 2);
             progression.teamName = attacking.name;
             progression.type = MatchEventType::Progression;
+            progression.zone = middleZone;
             progression.description = progressionDescription(attacking, directTransition);
             match_stats::pushEvent(timeline, stats, progression);
         }
@@ -172,6 +177,7 @@ void playPhaseSequences(Team& attacking,
         buildUp.minute = max(minuteStart, minute - 1);
         buildUp.teamName = attacking.name;
         buildUp.type = directTransition ? MatchEventType::Counterattack : MatchEventType::AttackBuildUp;
+        buildUp.zone = finalZone;
         buildUp.description = buildUpDescription(attacking, directTransition);
         if (i < chanceCount) {
             if (attackingIsHome) buildUp.impact.homeDangerousAttacksDelta = 1;
@@ -208,6 +214,7 @@ void playPhaseSequences(Team& attacking,
                 setPiece.minute = clampInt(minute + 1, minuteStart, minuteEnd);
                 setPiece.teamName = attacking.name;
                 setPiece.type = MatchEventType::Corner;
+                setPiece.zone = finalZone;
                 setPiece.description = attacking.matchInstruction == "Balon parado"
                                            ? attacking.name + " activa una rutina preparada a balon parado"
                                            : attacking.name + " aprovecha la accion para cargar el area a balon parado";
@@ -219,6 +226,7 @@ void playPhaseSequences(Team& attacking,
                 setPieceInput.minute = clampInt(setPiece.minute + 1, minuteStart, minuteEnd);
                 setPieceInput.bigChance = false;
                 setPieceInput.attackingTeamIsHome = attackingIsHome;
+                setPieceInput.zone = finalZone;
                 setPieceInput.chanceQuality =
                     clampValue(0.07 + attackingSnapshot.setPieceThreat / 520.0 +
                                    setPieceBoost * 0.45 +
@@ -263,6 +271,7 @@ void playPhaseSequences(Team& attacking,
         input.minute = minute;
         input.bigChance = bigChance;
         input.attackingTeamIsHome = attackingIsHome;
+        input.zone = finalZone;
         input.chanceQuality = clampValue(0.06 + attackingEdge * 0.010 + bigChance * 0.18 +
                                              transitionThreat * 0.12 -
                                              tactics_engine::defensiveSecurityWeight(defendingSnapshot.tacticalProfile) * 0.05 +

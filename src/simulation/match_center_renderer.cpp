@@ -46,6 +46,14 @@ std::string momentumBar(int score, int width = 41) {
 }
 
 
+void drawHeatMapTeam(const Team& team, const std::array<int, 9>& heatMap) {
+    std::cout << team.name << "\n";
+    std::cout << "              Izq  Centro  Der\n";
+    std::cout << "Propio       " << std::setw(4) << heatMap[0] << std::setw(8) << heatMap[1] << std::setw(5) << heatMap[2] << "\n";
+    std::cout << "Mediocampo   " << std::setw(4) << heatMap[3] << std::setw(8) << heatMap[4] << std::setw(5) << heatMap[5] << "\n";
+    std::cout << "Ultimo tercio" << std::setw(4) << heatMap[6] << std::setw(8) << heatMap[7] << std::setw(5) << heatMap[8] << "\n";
+}
+
 void drawPlayerRatings(
     const player_rating_system::LiveRatings& ratings) {
 
@@ -116,6 +124,11 @@ void drawMatchCenter(const Team& home,
               << "] VISITA\n";
     std::cout << momentumLabel(state.momentumScore)
               << " (" << state.momentumScore << ")\n";
+
+    std::cout << "\nMapa de calor por zonas\n";
+    drawHeatMapTeam(home, state.homeHeatMap);
+    std::cout << '\n';
+    drawHeatMapTeam(away, state.awayHeatMap);
 
     std::cout << "\nEstadisticas\n";
     std::cout << std::left << std::setw(22) << "Tiros"

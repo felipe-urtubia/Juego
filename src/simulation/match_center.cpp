@@ -69,6 +69,14 @@ void pauseAfterEvent(PlaybackSpeed speed, MatchEventType type) {
     }
 }
 
+void drawInteractiveHeatMap(const std::string& teamName, const std::array<int, 9>& heatMap) {
+    std::cout << teamName << "\n";
+    std::cout << "              Izq  Centro  Der\n";
+    std::cout << "Propio       " << heatMap[0] << "    " << heatMap[1] << "       " << heatMap[2] << "\n";
+    std::cout << "Mediocampo   " << heatMap[3] << "    " << heatMap[4] << "       " << heatMap[5] << "\n";
+    std::cout << "Ultimo tercio " << heatMap[6] << "    " << heatMap[7] << "       " << heatMap[8] << "\n";
+}
+
 }  // namespace
 
 match_engine::ManagerDecision askManagerDecision(
@@ -92,6 +100,10 @@ match_engine::ManagerDecision askManagerDecision(
     std::cout << "Posesion: "
               << state.homePossession << "% - "
               << state.awayPossession << "%\n";
+    std::cout << "\nMapa de calor por zonas\n";
+    drawInteractiveHeatMap("LOCAL", state.homeHeatMap);
+    std::cout << "\n";
+    drawInteractiveHeatMap("VISITA", state.awayHeatMap);
     std::cout << "Tactica actual: "
               << state.currentTactics << "\n";
     std::cout << "Instruccion actual: "
@@ -355,6 +367,7 @@ void showMatchCenter(const Team& home,
 
     for (const MatchEvent& event : result.timeline.events) {
         applyEventImpact(state, event);
+        updateHeatMap(state, event, home, away);
         updateLivePossession(state, result, state.minute);
         updateLiveMomentum(state, event, home, away);
         applyLiveManagementEvent(state, event, home, away);
@@ -377,7 +390,12 @@ void showMatchCenter(const Team& home,
         pauseAfterEvent(options.speed, event.type);
     }
 
+    const auto homeHeatMap = state.homeHeatMap;
+    const auto awayHeatMap = state.awayHeatMap;
+
     state = makeFinalState(result);
+    state.homeHeatMap = homeHeatMap;
+    state.awayHeatMap = awayHeatMap;
 
     if (options.clearScreenBetweenEvents) {
         clearConsole();

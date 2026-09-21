@@ -7,6 +7,7 @@ struct ChanceResolutionInput {
     int minute = 0;
     bool bigChance = false;
     bool attackingTeamIsHome = true;
+    MatchFieldZone zone = MatchFieldZone::Unknown;
     double chanceQuality = 0.0;
     double attackingEdge = 0.0;
     double defensivePressure = 0.0;

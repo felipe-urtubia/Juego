@@ -52,6 +52,7 @@ void runMatchCenterTests();
 
 void runTeamAiMomentumTests();
 
+#include <array>
 #include <algorithm>
 #include <cstddef>
 #include <exception>
@@ -491,6 +492,8 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
 
     vector<int> decisionMinutes;
     vector<pair<int, int>> dangerousAttacksAtDecision;
+    vector<array<int, 9>> homeHeatMapsAtDecision;
+    vector<array<int, 9>> awayHeatMapsAtDecision;
 
     setRandomSeed(424242);
 
@@ -505,6 +508,8 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
                     state.homeDangerousAttacks,
                     state.awayDangerousAttacks
                 });
+                homeHeatMapsAtDecision.push_back(state.homeHeatMap);
+                awayHeatMapsAtDecision.push_back(state.awayHeatMap);
                 return match_engine::ManagerDecision{};
             },
             true,
@@ -520,10 +525,15 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
            "La simulacion interactiva debe conservar las seis fases del partido.");
     expect(dangerousAttacksAtDecision.size() == expectedMinutes.size(),
            "Cada punto de decision debe incluir los ataques peligrosos acumulados.");
+    expect(homeHeatMapsAtDecision.size() == expectedMinutes.size() &&
+           awayHeatMapsAtDecision.size() == expectedMinutes.size(),
+           "Cada punto de decision debe incluir los mapas de calor acumulados.");
 
     for (size_t i = 0; i < expectedMinutes.size(); ++i) {
         int expectedHomeDangerousAttacks = 0;
         int expectedAwayDangerousAttacks = 0;
+        array<int, 9> expectedHomeHeatMap{};
+        array<int, 9> expectedAwayHeatMap{};
 
         for (const MatchEvent& event : data.result.timeline.events) {
             if (event.minute > expectedMinutes[i]) continue;
@@ -533,12 +543,33 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
 
             expectedAwayDangerousAttacks +=
                 event.impact.awayDangerousAttacksDelta;
+
+            if (event.type == MatchEventType::PossessionPhase ||
+                event.type == MatchEventType::Progression ||
+                event.type == MatchEventType::AttackBuildUp ||
+                event.type == MatchEventType::Counterattack) {
+                if (event.zone != MatchFieldZone::Unknown) {
+                    const int zoneIndex = static_cast<int>(event.zone) - 1;
+                    if (zoneIndex >= 0 && zoneIndex < 9) {
+                        if (event.teamName == home.name) {
+                            expectedHomeHeatMap[zoneIndex]++;
+                        } else if (event.teamName == away.name) {
+                            expectedAwayHeatMap[zoneIndex]++;
+                        }
+                    }
+                }
+            }
         }
 
         expect(
             dangerousAttacksAtDecision[i].first == expectedHomeDangerousAttacks &&
             dangerousAttacksAtDecision[i].second == expectedAwayDangerousAttacks,
             "El Match Center debe mostrar los ataques peligrosos acumulados hasta cada corte.");
+
+        expect(
+            homeHeatMapsAtDecision[i] == expectedHomeHeatMap &&
+            awayHeatMapsAtDecision[i] == expectedAwayHeatMap,
+            "El Match Center interactivo debe mostrar el mapa de calor acumulado hasta cada corte.");
     }
 }
 

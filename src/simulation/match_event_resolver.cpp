@@ -114,6 +114,7 @@ ChanceResolutionOutput resolveChance(const Team& attacking,
     output.attemptEvent.teamName = attacking.name;
     output.attemptEvent.playerName = attackerName;
     output.attemptEvent.type = input.bigChance ? MatchEventType::BigChance : MatchEventType::Shot;
+    output.attemptEvent.zone = input.zone;
     output.attemptEvent.description = attackerName +
                                       (input.bigChance ? " queda frente al arco." : " encuentra linea de tiro.");
     output.attemptEvent.impact.homeExpectedGoalsDelta = input.attackingTeamIsHome ? quality : 0.0;
@@ -131,6 +132,7 @@ ChanceResolutionOutput resolveChance(const Team& attacking,
     resolution.minute = input.minute;
     resolution.teamName = attacking.name;
     resolution.playerName = attackerName;
+    resolution.zone = input.zone;
 
     if (output.onTarget && rand01() <= goalProbability) {
         output.scored = true;
@@ -157,6 +159,7 @@ ChanceResolutionOutput resolveChance(const Team& attacking,
         corner.minute = input.minute + 1;
         corner.teamName = attacking.name;
         corner.type = MatchEventType::Corner;
+        corner.zone = input.zone;
         corner.description = attacking.name + " fuerza un corner";
         if (input.attackingTeamIsHome) corner.impact.homeCornersDelta = 1;
         else corner.impact.awayCornersDelta = 1;

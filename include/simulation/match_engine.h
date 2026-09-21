@@ -2,6 +2,7 @@
 
 #include "engine/models.h"
 
+#include <array>
 #include <functional>
 #include <string>
 #include <vector>
@@ -49,6 +50,9 @@ struct InteractiveMatchState {
     int awayDangerousAttacks = 0;
     int homePossession = 50;
     int awayPossession = 50;
+
+    std::array<int, 9> homeHeatMap{};
+    std::array<int, 9> awayHeatMap{};
 
     int substitutionsUsed = 0;
 

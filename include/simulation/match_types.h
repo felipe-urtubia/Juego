@@ -3,6 +3,18 @@
 #include <string>
 #include <vector>
 
+enum class MatchFieldZone {
+    Unknown,
+    OwnLeft,
+    OwnCenter,
+    OwnRight,
+    MiddleLeft,
+    MiddleCenter,
+    MiddleRight,
+    FinalLeft,
+    FinalCenter,
+    FinalRight
+};
 enum class MatchEventType {
     PossessionPhase,
     Progression,
@@ -74,6 +86,7 @@ struct MatchEvent {
     MatchEventType type = MatchEventType::PossessionPhase;
     std::string description;
     MatchEventImpact impact;
+    MatchFieldZone zone = MatchFieldZone::Unknown;
 };
 
 struct MatchPhaseReport {

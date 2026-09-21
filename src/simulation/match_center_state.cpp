@@ -92,6 +92,35 @@ void applyEventImpact(
     state.lastEvent = eventText(event);
 }
 
+void updateHeatMap(
+    LiveState& state,
+    const MatchEvent& event,
+    const Team& home,
+    const Team& away) {
+
+    if (event.type != MatchEventType::PossessionPhase &&
+        event.type != MatchEventType::Progression &&
+        event.type != MatchEventType::AttackBuildUp &&
+        event.type != MatchEventType::Counterattack) {
+        return;
+    }
+
+    if (event.zone == MatchFieldZone::Unknown) {
+        return;
+    }
+
+    const int zoneIndex = static_cast<int>(event.zone) - 1;
+    if (zoneIndex < 0 || zoneIndex >= 9) {
+        return;
+    }
+
+    if (event.teamName == home.name) {
+        state.homeHeatMap[zoneIndex]++;
+    } else if (event.teamName == away.name) {
+        state.awayHeatMap[zoneIndex]++;
+    }
+}
+
 void updateLivePossession(
     LiveState& state,
     const MatchResult& result,

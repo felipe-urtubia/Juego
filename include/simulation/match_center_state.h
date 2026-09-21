@@ -4,6 +4,7 @@
 #include "simulation/match_momentum.h"
 #include "simulation/player_rating_system.h"
 
+#include <array>
 #include <string>
 
 namespace match_center {
@@ -31,6 +32,9 @@ struct LiveState {
 
     int homeDangerousAttacks = 0;
     int awayDangerousAttacks = 0;
+
+    std::array<int, 9> homeHeatMap{};
+    std::array<int, 9> awayHeatMap{};
 
     int homeFouls = 0;
     int awayFouls = 0;
@@ -61,6 +65,12 @@ std::string eventText(const MatchEvent& event);
 void applyEventImpact(
     LiveState& state,
     const MatchEvent& event);
+
+void updateHeatMap(
+    LiveState& state,
+    const MatchEvent& event,
+    const Team& home,
+    const Team& away);
 
 void updateLivePossession(
     LiveState& state,

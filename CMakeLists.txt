@@ -100,6 +100,7 @@ set(FM_SIMULATION_SOURCES
     src/simulation/fatigue_engine.cpp
     src/simulation/match_event_generator.cpp
     src/simulation/match_event_resolver.cpp
+    src/simulation/match_field_zone.cpp
     src/simulation/match_events.cpp
     src/simulation/match_context.cpp
     src/simulation/match_engine.cpp

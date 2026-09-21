@@ -118,6 +118,45 @@ void testStatisticsImpact() {
 }
 
 
+void testHeatMapCounting() {
+
+    Team home;
+    Team away;
+    home.name = "Local";
+    away.name = "Visita";
+
+    match_center::LiveState state;
+
+    MatchEvent homeProgression;
+    homeProgression.teamName = home.name;
+    homeProgression.type = MatchEventType::Progression;
+    homeProgression.zone = MatchFieldZone::MiddleCenter;
+    match_center::updateHeatMap(state, homeProgression, home, away);
+
+    MatchEvent awayBuildUp;
+    awayBuildUp.teamName = away.name;
+    awayBuildUp.type = MatchEventType::AttackBuildUp;
+    awayBuildUp.zone = MatchFieldZone::FinalRight;
+    match_center::updateHeatMap(state, awayBuildUp, home, away);
+
+    MatchEvent goal;
+    goal.teamName = home.name;
+    goal.type = MatchEventType::Goal;
+    goal.zone = MatchFieldZone::MiddleCenter;
+    match_center::updateHeatMap(state, goal, home, away);
+
+    assertTest(
+        state.homeHeatMap[4] == 1,
+        "Mapa de calor cuenta progresion local una vez"
+    );
+
+    assertTest(
+        state.awayHeatMap[8] == 1,
+        "Mapa de calor cuenta ataque visitante en zona final derecha"
+    );
+}
+
+
 void testFinalState() {
 
     MatchResult result;
@@ -176,6 +215,7 @@ void runMatchCenterTests() {
     testInitialState();
     testApplyGoalEvent();
     testStatisticsImpact();
+    testHeatMapCounting();
     testFinalState();
 
 
