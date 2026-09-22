@@ -496,6 +496,7 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
     vector<array<int, 9>> homeHeatMapsAtDecision;
     vector<array<int, 9>> awayHeatMapsAtDecision;
     vector<vector<player_rating_system::PlayerLiveRating>> playerStatsAtDecision;
+    vector<vector<string>> timelineEventsAtDecision;
 
     setRandomSeed(424242);
 
@@ -513,6 +514,7 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
                 homeHeatMapsAtDecision.push_back(state.homeHeatMap);
                 awayHeatMapsAtDecision.push_back(state.awayHeatMap);
                 playerStatsAtDecision.push_back(state.playerStats);
+                timelineEventsAtDecision.push_back(state.timelineEvents);
                 return match_engine::ManagerDecision{};
             },
             true,
@@ -533,6 +535,8 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
            "Cada punto de decision debe incluir los mapas de calor acumulados.");
     expect(playerStatsAtDecision.size() == expectedMinutes.size(),
            "Cada punto de decision debe incluir las estadisticas individuales acumuladas.");
+    expect(timelineEventsAtDecision.size() == expectedMinutes.size(),
+           "Cada punto de decision debe incluir la linea temporal acumulada del partido.");
 
     for (size_t i = 0; i < expectedMinutes.size(); ++i) {
         int expectedHomeDangerousAttacks = 0;
@@ -540,11 +544,30 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
         array<int, 9> expectedHomeHeatMap{};
         array<int, 9> expectedAwayHeatMap{};
         player_rating_system::LiveRatings expectedPlayerRatings;
+        vector<const MatchEvent*> expectedTimelineEvents;
 
         for (const MatchEvent& event : data.result.timeline.events) {
             if (event.minute > expectedMinutes[i]) continue;
 
             expectedPlayerRatings.applyEvent(event);
+
+            const bool timelineEvent =
+                event.type == MatchEventType::Shot ||
+                event.type == MatchEventType::BigChance ||
+                event.type == MatchEventType::Goal ||
+                event.type == MatchEventType::Miss ||
+                event.type == MatchEventType::Save ||
+                event.type == MatchEventType::YellowCard ||
+                event.type == MatchEventType::RedCard ||
+                event.type == MatchEventType::Injury ||
+                event.type == MatchEventType::Corner ||
+                event.type == MatchEventType::Counterattack ||
+                event.type == MatchEventType::TacticalChange ||
+                event.type == MatchEventType::Substitution;
+
+            if (timelineEvent) {
+                expectedTimelineEvents.push_back(&event);
+            }
 
             expectedHomeDangerousAttacks +=
                 event.impact.homeDangerousAttacksDelta;
@@ -569,7 +592,24 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
             }
         }
 
+        stable_sort(
+            expectedTimelineEvents.begin(),
+            expectedTimelineEvents.end(),
+            [](const MatchEvent* left, const MatchEvent* right) {
+                return left->minute < right->minute;
+            });
+
         const auto expectedPlayerStats = expectedPlayerRatings.topPlayers(100);
+
+        vector<string> expectedTimelineLines;
+        expectedTimelineLines.reserve(expectedTimelineEvents.size());
+
+        for (const MatchEvent* event : expectedTimelineEvents) {
+            expectedTimelineLines.push_back(
+                to_string(event->minute) + "' " +
+                event->teamName + ": " +
+                event->description);
+        }
 
         expect(
             dangerousAttacksAtDecision[i].first == expectedHomeDangerousAttacks &&
@@ -580,6 +620,9 @@ void testInteractiveMatchInvokesManagerAtDecisionPoints() {
             homeHeatMapsAtDecision[i] == expectedHomeHeatMap &&
             awayHeatMapsAtDecision[i] == expectedAwayHeatMap,
             "El Match Center interactivo debe mostrar el mapa de calor acumulado hasta cada corte.");
+
+        expect(timelineEventsAtDecision[i] == expectedTimelineLines,
+               "La linea temporal interactiva debe incluir solo los eventos relevantes acumulados hasta cada corte y en orden cronologico.");
 
         expect(playerStatsAtDecision[i].size() == expectedPlayerStats.size(),
                "El Match Center interactivo debe incluir todos los jugadores acumulados hasta cada corte.");

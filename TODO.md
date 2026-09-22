@@ -6755,7 +6755,14 @@ Implementado:
   - Asistencias no agregadas todavia: no existe un campo estructurado de asistente en MatchEvent y no se parsean descripciones.
   - Pruebas automaticas agregadas para acumulacion individual y estado interactivo.
   - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
-- [ ] Línea temporal interactiva del partido.
+- [x] Línea temporal interactiva del partido.
+  - Linea temporal acumulada agregada al Match Center interactivo.
+  - Incluye tiros, grandes ocasiones, goles, fallos, atajadas, tarjetas, lesiones, corners, contraataques, cambios tacticos y sustituciones.
+  - Los eventos se ordenan cronologicamente por minuto.
+  - Cada corte muestra solo eventos ocurridos hasta el minuto visible, evitando eventos futuros generados dentro de la fase.
+  - Se conservan tambien los Eventos recientes del ultimo tramo.
+  - Pruebas automaticas agregadas para los cortes 15, 30, 45, 60 y 75.
+  - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
 - [ ] Integración completa con el análisis postpartido.
 - [ ] Cobertura de pruebas unitarias para todos los módulos del Match Center.
 

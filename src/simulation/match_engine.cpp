@@ -118,6 +118,55 @@ vector<player_rating_system::PlayerLiveRating> buildPlayerStats(
     return ratings.topPlayers(100);
 }
 
+vector<string> buildInteractiveTimeline(
+    const MatchTimeline& timeline,
+    int visibleMinute) {
+
+    vector<const MatchEvent*> displayEvents;
+
+    for (const MatchEvent& event : timeline.events) {
+        if (event.minute > visibleMinute) {
+            continue;
+        }
+        const bool displayEvent =
+            event.type == MatchEventType::Shot ||
+            event.type == MatchEventType::BigChance ||
+            event.type == MatchEventType::Goal ||
+            event.type == MatchEventType::Miss ||
+            event.type == MatchEventType::Save ||
+            event.type == MatchEventType::YellowCard ||
+            event.type == MatchEventType::RedCard ||
+            event.type == MatchEventType::Injury ||
+            event.type == MatchEventType::Corner ||
+            event.type == MatchEventType::Counterattack ||
+            event.type == MatchEventType::TacticalChange ||
+            event.type == MatchEventType::Substitution;
+
+        if (displayEvent) {
+            displayEvents.push_back(&event);
+        }
+    }
+
+    stable_sort(
+        displayEvents.begin(),
+        displayEvents.end(),
+        [](const MatchEvent* left, const MatchEvent* right) {
+            return left->minute < right->minute;
+        });
+
+    vector<string> timelineLines;
+    timelineLines.reserve(displayEvents.size());
+
+    for (const MatchEvent* event : displayEvents) {
+        timelineLines.push_back(
+            to_string(event->minute) + "' " +
+            event->teamName + ": " +
+            event->description);
+    }
+
+    return timelineLines;
+}
+
 }  // namespace
 
 namespace match_engine {
@@ -377,6 +426,9 @@ if (stats.awayGoals > awayGoalsBefore) {
 
             interactiveState.playerStats =
                 buildPlayerStats(timeline);
+
+            interactiveState.timelineEvents =
+                buildInteractiveTimeline(timeline, minuteEnd);
 
             interactiveState.currentTactics =
                 userState.team.tactics;

@@ -151,6 +151,13 @@ match_engine::ManagerDecision askManagerDecision(
         }
     }
 
+    if (!state.timelineEvents.empty()) {
+        std::cout << "\nLinea temporal del partido:\n";
+        for (const std::string& event : state.timelineEvents) {
+            std::cout << "- " << event << "\n";
+        }
+    }
+
     std::cout << "\n";
 
     std::cout << "1. Continuar\n";
