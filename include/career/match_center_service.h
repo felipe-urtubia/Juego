@@ -2,6 +2,7 @@
 
 #include "engine/models.h"
 
+#include <array>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -23,6 +24,10 @@ struct MatchCenterView {
     std::vector<MatchCenterMetric> metrics;
     std::vector<std::string> phaseLines;
     std::vector<std::string> eventLines;
+    std::array<int, 9> myHeatMap{};
+    std::array<int, 9> oppHeatMap{};
+    std::vector<std::string> playerStatLines;
+    std::vector<std::string> timelineLines;
     std::vector<std::string> recommendationLines;
 };
 

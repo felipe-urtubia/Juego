@@ -1,5 +1,8 @@
 #include "career/match_center_service.h"
 
+#include "simulation/match_center_state.h"
+#include "simulation/player_rating_system.h"
+
 #include <algorithm>
 #include <cmath>
 #include <sstream>
@@ -39,6 +42,80 @@ string matchControlLabel(const MatchCenterSnapshot& snapshot) {
     return "Partido equilibrado, decidido por detalles.";
 }
 
+vector<string> buildPlayerStatLines(const MatchTimeline& timeline) {
+    player_rating_system::LiveRatings ratings;
+    for (const MatchEvent& event : timeline.events) {
+        ratings.applyEvent(event);
+    }
+
+    const auto players = ratings.topPlayers(100);
+    vector<string> lines;
+    lines.reserve(players.size());
+
+    for (const auto& player : players) {
+        ostringstream line;
+        line.setf(ios::fixed);
+        line.precision(1);
+        line << player.playerName
+             << " | " << player.teamName
+             << " | Nota " << player.rating
+             << " | Tiros " << player.shots
+             << " | Al arco " << player.shotsOnTarget
+             << " | Goles " << player.goals
+             << " | Ocasiones claras " << player.bigChances;
+        line.precision(2);
+        line << " | xG " << player.expectedGoals
+             << " | Atajadas " << player.saves
+             << " | TA " << player.yellowCards
+             << " | TR " << player.redCards;
+        lines.push_back(line.str());
+    }
+
+    return lines;
+}
+
+vector<string> buildTimelineLines(const MatchTimeline& timeline) {
+    vector<const MatchEvent*> events;
+
+    for (const MatchEvent& event : timeline.events) {
+        const bool relevant =
+            event.type == MatchEventType::Shot ||
+            event.type == MatchEventType::BigChance ||
+            event.type == MatchEventType::Goal ||
+            event.type == MatchEventType::Miss ||
+            event.type == MatchEventType::Save ||
+            event.type == MatchEventType::YellowCard ||
+            event.type == MatchEventType::RedCard ||
+            event.type == MatchEventType::Injury ||
+            event.type == MatchEventType::Corner ||
+            event.type == MatchEventType::Counterattack ||
+            event.type == MatchEventType::TacticalChange ||
+            event.type == MatchEventType::Substitution;
+
+        if (relevant) {
+            events.push_back(&event);
+        }
+    }
+
+    stable_sort(
+        events.begin(),
+        events.end(),
+        [](const MatchEvent* left, const MatchEvent* right) {
+            return left->minute < right->minute;
+        });
+
+    vector<string> lines;
+    lines.reserve(events.size());
+
+    for (const MatchEvent* event : events) {
+        lines.push_back(
+            to_string(event->minute) + "' " +
+            event->teamName + ": " +
+            event->description);
+    }
+
+    return lines;
+}
 vector<string> buildRecommendationLines(const MatchCenterSnapshot& snapshot) {
     vector<string> lines;
     const int shotGap = snapshot.myShots - snapshot.oppShots;
@@ -120,6 +197,16 @@ void captureLastMatchCenter(Career& career,
     snapshot.postMatchImpact = result.report.postMatchImpact;
     snapshot.playerRatingLines = result.report.playerRatingLines;
     snapshot.phaseSummaries = result.report.phaseSummaries;
+
+    match_center::LiveState heatState;
+    for (const MatchEvent& event : result.timeline.events) {
+        match_center::updateHeatMap(heatState, event, home, away);
+    }
+    snapshot.myHeatMap = myHome ? heatState.homeHeatMap : heatState.awayHeatMap;
+    snapshot.oppHeatMap = myHome ? heatState.awayHeatMap : heatState.homeHeatMap;
+    snapshot.playerStatLines = buildPlayerStatLines(result.timeline);
+    snapshot.timelineLines = buildTimelineLines(result.timeline);
+
     career.lastMatchCenter = snapshot;
 }
 
@@ -144,6 +231,10 @@ MatchCenterView buildLastMatchCenter(const Career& career,
     view.fatigueSummary = snapshot.fatigueSummary;
     view.postMatchImpact = snapshot.postMatchImpact;
     view.playerOfTheMatch = career.lastMatchPlayerOfTheMatch;
+    view.myHeatMap = snapshot.myHeatMap;
+    view.oppHeatMap = snapshot.oppHeatMap;
+    view.playerStatLines = snapshot.playerStatLines;
+    view.timelineLines = snapshot.timelineLines;
     if (!snapshot.opponentName.empty()) {
         view.metrics.push_back({"Tiros", to_string(snapshot.myShots), to_string(snapshot.oppShots)});
         view.metrics.push_back({"Arco", to_string(snapshot.myShotsOnTarget), to_string(snapshot.oppShotsOnTarget)});
@@ -187,11 +278,31 @@ string formatLastMatchCenter(const Career& career,
             out << "- " << ratingLine << "\r\n";
         }
     }
+    if (!view.playerStatLines.empty()) {
+        out << "\r\nEstadisticas avanzadas:\r\n";
+        for (const string& line : view.playerStatLines) {
+            out << "- " << line << "\r\n";
+        }
+    }
     if (!view.metrics.empty()) {
         out << "\r\nIndicadores (tu equipo / rival)\r\n";
         for (const MatchCenterMetric& metric : view.metrics) {
             out << "- " << metric.label << ": " << metric.myValue << " / " << metric.oppValue << "\r\n";
         }
+    }
+    const bool hasHeatMap =
+        any_of(view.myHeatMap.begin(), view.myHeatMap.end(), [](int value) { return value > 0; }) ||
+        any_of(view.oppHeatMap.begin(), view.oppHeatMap.end(), [](int value) { return value > 0; });
+    if (hasHeatMap) {
+        out << "\r\nMapa de calor por zonas\r\n";
+        out << "Tu equipo\r\n";
+        out << "- Propio: " << view.myHeatMap[0] << " / " << view.myHeatMap[1] << " / " << view.myHeatMap[2] << "\r\n";
+        out << "- Mediocampo: " << view.myHeatMap[3] << " / " << view.myHeatMap[4] << " / " << view.myHeatMap[5] << "\r\n";
+        out << "- Ultimo tercio: " << view.myHeatMap[6] << " / " << view.myHeatMap[7] << " / " << view.myHeatMap[8] << "\r\n";
+        out << "Rival\r\n";
+        out << "- Propio: " << view.oppHeatMap[0] << " / " << view.oppHeatMap[1] << " / " << view.oppHeatMap[2] << "\r\n";
+        out << "- Mediocampo: " << view.oppHeatMap[3] << " / " << view.oppHeatMap[4] << " / " << view.oppHeatMap[5] << "\r\n";
+        out << "- Ultimo tercio: " << view.oppHeatMap[6] << " / " << view.oppHeatMap[7] << " / " << view.oppHeatMap[8] << "\r\n";
     }
     if (!view.tacticalSummary.empty() || !view.fatigueSummary.empty() || !view.postMatchImpact.empty()) {
         out << "\r\nDiagnostico\r\n";
@@ -208,6 +319,12 @@ string formatLastMatchCenter(const Career& career,
     if (!view.eventLines.empty()) {
         out << "\r\nEventos\r\n";
         for (const string& event : view.eventLines) out << "- " << event << "\r\n";
+    }
+    if (!view.timelineLines.empty()) {
+        out << "\r\nLinea temporal del partido\r\n";
+        for (const string& event : view.timelineLines) {
+            out << "- " << event << "\r\n";
+        }
     }
     if (!view.recommendationLines.empty()) {
         out << "\r\nPlan inmediato\r\n";

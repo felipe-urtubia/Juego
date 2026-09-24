@@ -12,7 +12,7 @@ using namespace std;
 
 namespace {
 
-static constexpr int kCareerSaveVersion = 15;
+static constexpr int kCareerSaveVersion = 16;
 static constexpr int kSaveSchemaVersion = 1;
 
 vector<string> splitEscapedFields(const string& encoded, char delimiter);
@@ -240,6 +240,24 @@ vector<string> decodeStringList(const string& encoded) {
     return splitEscapedFields(encoded, ';');
 }
 
+string encodeHeatMap(const array<int, 9>& heatMap) {
+    vector<string> values;
+    values.reserve(heatMap.size());
+    for (int value : heatMap) {
+        values.push_back(to_string(value));
+    }
+    return joinEscapedFields(values, ',');
+}
+
+array<int, 9> decodeHeatMap(const string& encoded) {
+    array<int, 9> heatMap{};
+    const vector<string> values = splitEscapedFields(encoded, ',');
+    const size_t count = min(heatMap.size(), values.size());
+    for (size_t i = 0; i < count; ++i) {
+        heatMap[i] = parseIntField(values[i]);
+    }
+    return heatMap;
+}
 string encodeMatchCenterSnapshot(const MatchCenterSnapshot& snapshot) {
     return encodeStringList({
         snapshot.competitionLabel,
@@ -774,6 +792,10 @@ bool serializeCareer(ostream& file, const Career& career) {
     file << "LASTMATCH_CENTER " << encodeMatchCenterSnapshot(lastMatchCenter) << "\n";
     file << "LASTMATCH_PHASES " << encodeStringList(lastMatchCenter.phaseSummaries) << "\n";
     file << "LASTMATCH_RATINGS " << encodeStringList(lastMatchCenter.playerRatingLines) << "\n";
+    file << "LASTMATCH_HEAT_MY " << encodeHeatMap(lastMatchCenter.myHeatMap) << "\n";
+    file << "LASTMATCH_HEAT_OPP " << encodeHeatMap(lastMatchCenter.oppHeatMap) << "\n";
+    file << "LASTMATCH_PLAYER_STATS " << encodeStringList(lastMatchCenter.playerStatLines) << "\n";
+    file << "LASTMATCH_TIMELINE " << encodeStringList(lastMatchCenter.timelineLines) << "\n";
     
     // Serialize new gameplay systems
     file << "GAMEPLAY_SYSTEMS " 
@@ -1166,6 +1188,24 @@ bool deserializeCareer(istream& file, Career& career) {
         }
         if (teamsLine.rfind("LASTMATCH_RATINGS ", 0) == 0) {
             lastMatchCenter.playerRatingLines = decodeStringList(teamsLine.substr(18));
+            if (!getline(file, teamsLine)) return false;
+        }
+        if (teamsLine.rfind("LASTMATCH_HEAT_MY ", 0) == 0) {
+            lastMatchCenter.myHeatMap = decodeHeatMap(teamsLine.substr(string("LASTMATCH_HEAT_MY ").size()));
+            if (!getline(file, teamsLine)) return false;
+        }
+        if (teamsLine.rfind("LASTMATCH_HEAT_OPP ", 0) == 0) {
+            lastMatchCenter.oppHeatMap = decodeHeatMap(teamsLine.substr(string("LASTMATCH_HEAT_OPP ").size()));
+            if (!getline(file, teamsLine)) return false;
+        }
+        if (teamsLine.rfind("LASTMATCH_PLAYER_STATS ", 0) == 0) {
+            lastMatchCenter.playerStatLines =
+                decodeStringList(teamsLine.substr(string("LASTMATCH_PLAYER_STATS ").size()));
+            if (!getline(file, teamsLine)) return false;
+        }
+        if (teamsLine.rfind("LASTMATCH_TIMELINE ", 0) == 0) {
+            lastMatchCenter.timelineLines =
+                decodeStringList(teamsLine.substr(string("LASTMATCH_TIMELINE ").size()));
             if (!getline(file, teamsLine)) return false;
         }
         

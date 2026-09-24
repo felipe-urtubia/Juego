@@ -6763,7 +6763,13 @@ Implementado:
   - Se conservan tambien los Eventos recientes del ultimo tramo.
   - Pruebas automaticas agregadas para los cortes 15, 30, 45, 60 y 75.
   - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
-- [ ] Integración completa con el análisis postpartido.
+- [x] Integración completa con el análisis postpartido.
+  - Mapa de calor final de 9 zonas integrado al resumen postpartido para equipo y rival.
+  - Estadisticas avanzadas por jugador: nota, tiros, tiros al arco, goles, ocasiones claras, xG, atajadas y tarjetas.
+  - Linea temporal postpartido construida desde eventos estructurados y ordenada cronologicamente.
+  - El resumen compacto usa ahora el xG real generado por el motor del partido.
+  - Los nuevos datos del Match Center se conservan en guardado/carga; version de carrera actualizada a 16.
+  - Pruebas de integracion y persistencia agregadas y aprobadas; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
 - [ ] Cobertura de pruebas unitarias para todos los módulos del Match Center.
 
 ## ✅ IA táctica basada en Momentum (Completado)

@@ -8,6 +8,7 @@
 #include "engine/facilities_system.h"
 #include "engine/debt_system.h"
 
+#include <array>
 #include <deque>
 #include <string>
 #include <utility>
@@ -165,6 +166,10 @@ struct MatchCenterSnapshot {
     std::string postMatchImpact;
     std::vector<std::string> playerRatingLines;
     std::vector<std::string> phaseSummaries;
+    std::array<int, 9> myHeatMap{};
+    std::array<int, 9> oppHeatMap{};
+    std::vector<std::string> playerStatLines;
+    std::vector<std::string> timelineLines;
 };
 
 class Team;

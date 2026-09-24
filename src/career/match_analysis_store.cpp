@@ -10,9 +10,12 @@ using namespace std;
 
 namespace {
 
-string buildCompactXgText(int shots, int corners, int possession) {
-    const double xg = max(0.2, shots * 0.11 + corners * 0.05 + max(0, possession - 50) * 0.015);
-    return to_string(static_cast<int>(xg * 10 + 0.5));
+string buildCompactXgText(double xg) {
+    ostringstream out;
+    out.setf(ios::fixed);
+    out.precision(1);
+    out << xg;
+    return out.str();
 }
 
 void appendSection(ostringstream& out,
@@ -94,8 +97,8 @@ void storeMatchAnalysis(Career& career,
         " | Tiros " + to_string(myShots) + "-" + to_string(oppShots) +
         " | Posesion " + to_string(myPoss) + "-" + to_string(oppPoss) +
         " | Corners " + to_string(myCorners) + "-" + to_string(oppCorners) +
-        " | xG " + buildCompactXgText(myShots, myCorners, myPoss) + "/" +
-        buildCompactXgText(oppShots, oppCorners, oppPoss) +
+        " | xG " + buildCompactXgText(myHome ? result.stats.homeExpectedGoals : result.stats.awayExpectedGoals) + "/" +
+        buildCompactXgText(myHome ? result.stats.awayExpectedGoals : result.stats.homeExpectedGoals) +
         " | Cambios " + to_string(mySubs) + "-" + to_string(oppSubs) +
         " | Clima " + result.weather +
         " | " + lineMap(myTeam) +

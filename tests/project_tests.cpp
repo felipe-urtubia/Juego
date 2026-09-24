@@ -1664,10 +1664,23 @@ void testMatchCenterServiceBuildsStructuredView() {
     expect(!center.phaseLines.empty(), "El match center debe conservar lectura por fases.");
     expect(!center.eventLines.empty(), "El match center debe conservar una timeline resumida.");
     expect(!career.lastMatchCenter.opponentName.empty(), "El snapshot persistente del ultimo partido debe llenarse.");
+    expect(any_of(center.myHeatMap.begin(), center.myHeatMap.end(), [](int value) { return value > 0; }) ||
+               any_of(center.oppHeatMap.begin(), center.oppHeatMap.end(), [](int value) { return value > 0; }),
+           "El analisis postpartido debe conservar el mapa de calor final.");
+    expect(!center.playerStatLines.empty(),
+           "El analisis postpartido debe conservar estadisticas avanzadas por jugador.");
+    expect(!center.timelineLines.empty(),
+           "El analisis postpartido debe conservar la linea temporal estructurada.");
 
     const string formattedCenter = match_center_service::formatLastMatchCenter(career, 3, 4);
     expect(formattedCenter.find("Valoraciones:") != string::npos,
            "El match center postpartido debe mostrar las valoraciones finales de los jugadores.");
+    expect(formattedCenter.find("Estadisticas avanzadas:") != string::npos,
+           "El match center postpartido debe mostrar estadisticas avanzadas.");
+    expect(formattedCenter.find("Mapa de calor por zonas") != string::npos,
+           "El match center postpartido debe mostrar el mapa de calor.");
+    expect(formattedCenter.find("Linea temporal del partido") != string::npos,
+           "El match center postpartido debe mostrar la linea temporal estructurada.");
 }
 
 void testDressingRoomServiceFlagsPromiseAndFatigueRisk() {
@@ -1846,6 +1859,17 @@ void testSaveLoadRoundTripPreservesCareerState() {
         "Jugador Persistente | Club Persistencia | 8.4",
         "Jugador Rival | Club Destino | 7.8"
     };
+    original.lastMatchCenter.myHeatMap = {1, 2, 3, 4, 5, 6, 7, 8, 9};
+    original.lastMatchCenter.oppHeatMap = {9, 8, 7, 6, 5, 4, 3, 2, 1};
+    original.lastMatchCenter.playerStatLines = {
+        "Jugador Persistente | Club Persistencia | Nota 8.4 | Tiros 4 | Al arco 3 | Goles 2 | xG 1.25 | Atajadas 0 | TA 1 | TR 0",
+        "Arquero Rival | Club Destino | Nota 7.7 | Tiros 0 | Al arco 0 | Goles 0 | xG 0.00 | Atajadas 5 | TA 0 | TR 0"
+    };
+    original.lastMatchCenter.timelineLines = {
+        "12' Club Persistencia: remate peligroso",
+        "45' Club Destino: tarjeta amarilla",
+        "78' Club Persistencia: gol decisivo"
+    };
     original.newsFeed.push_back("T8-F5: Noticia| de prueba;");
     original.managerInbox.push_back("[Resumen] T8-F5: Bandeja| de manager");
     original.scoutingAssignments.push_back({"Sur", "DEF", "Urgente", 2, 61});
@@ -1953,6 +1977,14 @@ void testSaveLoadRoundTripPreservesCareerState() {
            "La carga debe preservar las fases resumidas del match center.");
     expect(loaded.lastMatchCenter.playerRatingLines == original.lastMatchCenter.playerRatingLines,
            "La carga debe preservar las valoraciones finales del match center.");
+    expect(loaded.lastMatchCenter.myHeatMap == original.lastMatchCenter.myHeatMap,
+           "La carga debe preservar el mapa de calor del equipo.");
+    expect(loaded.lastMatchCenter.oppHeatMap == original.lastMatchCenter.oppHeatMap,
+           "La carga debe preservar el mapa de calor del rival.");
+    expect(loaded.lastMatchCenter.playerStatLines == original.lastMatchCenter.playerStatLines,
+           "La carga debe preservar las estadisticas avanzadas del match center.");
+    expect(loaded.lastMatchCenter.timelineLines == original.lastMatchCenter.timelineLines,
+           "La carga debe preservar la linea temporal estructurada del match center.");
     expect(loaded.history.size() == 1 && loaded.history.front().champion == "Club Persistencia",
            "La carga debe preservar historial de temporada.");
     expect(!loaded.managerInbox.empty() && loaded.managerInbox.front().find("Bandeja") != string::npos,
