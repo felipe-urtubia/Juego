@@ -6770,7 +6770,13 @@ Implementado:
   - El resumen compacto usa ahora el xG real generado por el motor del partido.
   - Los nuevos datos del Match Center se conservan en guardado/carga; version de carrera actualizada a 16.
   - Pruebas de integracion y persistencia agregadas y aprobadas; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
-- [ ] Cobertura de pruebas unitarias para todos los módulos del Match Center.
+- [x] Cobertura de pruebas unitarias para todos los módulos del Match Center.
+  - Cobertura directa para estado del Match Center: eventos, posesion, mapa de calor, momentum, gestion en vivo y estado final.
+  - Cobertura del renderer mediante captura de salida y validacion de marcador, minuto, posesion, momentum, mapa de calor, estadisticas y ultimo evento.
+  - Cobertura del flujo completo de showMatchCenter hasta el estado FINAL.
+  - Cobertura del resumen final interactivo con filtrado y orden cronologico de eventos importantes tardios.
+  - Cobertura de decisiones del manager: continuar, cambiar tactica, cambiar instruccion y realizar sustitucion.
+  - FootballManagerTests 100% aprobado; FootballManager y FootballManagerCLI compilados; validador general con 0 errores y 0 advertencias.
 
 ## ✅ IA táctica basada en Momentum (Completado)
 
