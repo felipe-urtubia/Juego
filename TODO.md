@@ -82,7 +82,7 @@ Resumen: Finanzas ahora muestra maximo salarial recomendado, uso de masa salaria
 - [x] Objetivo sugerido de junta directiva con razonamiento dinamico
 Resumen: Se agrego sugerencia de objetivo de directiva para UI de carrera y GUI, junto con la razon de la recomendacion basada en finanzas, lesiones, filosofia de cantera, riesgo de descenso y empuje de promocion.
 
-- [ ] Agregar pruebas unitarias para la sugerencia y razon de objetivo de directiva
+- [x] Agregar pruebas unitarias para la sugerencia y razon de objetivo de directiva
 Resumen: Añadir cobertura en `tests/project_tests.cpp` para validar el objetivo sugerido y la razon en escenarios de caja ajustada y lesiones.
 
 - [x] Validacion de objetivo sugerido y razon finalizada
