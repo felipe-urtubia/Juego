@@ -11,6 +11,7 @@ namespace career_events {
 enum class EventType {
     CriticalInjury,
     PlayerOffered,
+    TransferCompleted,
     ManagerAlert,
     FormAlert,
     AchievementUnlocked,

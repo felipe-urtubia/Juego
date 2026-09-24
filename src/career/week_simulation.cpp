@@ -841,6 +841,11 @@ void processIncomingOffers(Career& career) {
         bidder->addPlayer(moved);
         emitUiMessage("Transferencia aceptada. " + player.name + " vendido a " + bidder->name + ".");
         career.addNews(player.name + " es vendido a " + bidder->name + " por $" + to_string(offer) + ".");
+        career_events::EventNotificationSystem::recordEvent(
+            career_events::EventType::TransferCompleted,
+            "Transferencia completada",
+            player.name + " fue vendido a " + bidder->name + " por $" + to_string(offer) + "."
+        );
         team_mgmt::detachPlayerFromSelections(*career.myTeam, player.name);
         team_mgmt::applyDepartureShock(*career.myTeam, player);
         career.myTeam->players.erase(career.myTeam->players.begin() + index);
@@ -861,6 +866,12 @@ void processIncomingOffers(Career& career) {
                           to_string(counter));
             career.addNews(player.name + " es vendido a " + bidder->name + " tras contraoferta por $" +
                            to_string(counter) + ".");
+            career_events::EventNotificationSystem::recordEvent(
+                career_events::EventType::TransferCompleted,
+                "Transferencia completada",
+                player.name + " fue vendido a " + bidder->name + " tras contraoferta por $" +
+                    to_string(counter) + "."
+            );
             team_mgmt::detachPlayerFromSelections(*career.myTeam, player.name);
             team_mgmt::applyDepartureShock(*career.myTeam, player);
             career.myTeam->players.erase(career.myTeam->players.begin() + index);
@@ -1609,4 +1620,3 @@ void simulateCareerWeek(Career& career) {
     generateNewsPhase(career, matches, myTeamPointsDelta);
     advanceCalendarPhase(career);
 }
-

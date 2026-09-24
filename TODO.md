@@ -4087,7 +4087,7 @@ MoraleAlert           - Alerta de baja moral
 - Executable: C:\Users\moise\OneDrive\Escritorio\Juego\build-cmake\bin\FootballManager.exe
 
 ### Próximas etapas (Workflow planeado)
-- [ ] Integrar EventNotificationSystem en week_simulation.cpp (registrar eventos de transferencia)
+- [x] Integrar EventNotificationSystem en week_simulation.cpp (registrar eventos de transferencia)
 - [ ] Integrar EventNotificationSystem en gui_actions.cpp (registrar eventos críticos)
 - [ ] Crear atajos de teclado (Ctrl+F para búsqueda global, 'S' para scouting, 'V' para vender)
 - [ ] Implementar sistema de contexto de menú (clic derecho en lista de jugadores)

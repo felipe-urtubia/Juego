@@ -6,6 +6,7 @@
 #include "career/career_modules.h"
 #include "career/career_reports.h"
 #include "career/career_runtime.h"
+#include "career/game_events_system.h"
 #include "career/career_service.h"
 #include "career/career_state.h"
 #include "career/inbox_service.h"
@@ -17,6 +18,7 @@
 #include "career/match_analysis_store.h"
 #include "career/match_center_service.h"
 #include "career/weekly_focus_service.h"
+#include "career/week_simulation.h"
 #include "career/career_support.h"
 #include "career/season_service.h"
 #include "career/season_transition.h"
@@ -309,6 +311,12 @@ void collectRuntimeMessageB(const string& message) {
 }
 
 void idleRuntimeProbe() {}
+
+IncomingOfferDecision acceptIncomingOffer(const Career&, const Player&, long long, long long) {
+    IncomingOfferDecision decision;
+    decision.action = 1;
+    return decision;
+}
 
 #ifdef _WIN32
 struct ValidationThreadProbe {
@@ -4366,6 +4374,57 @@ void testLocalizationSupportsMultipleLanguages() {
     expect(loc.getText("unknown_key") == "unknown_key", "Debe retornar la clave si no existe traducciÃƒÂ³n.");
 }
 
+void testWeeklyTransferRecordsNotification() {
+    bool transferRecorded = false;
+
+    for (unsigned int seed = 1; seed <= 250 && !transferRecorded; ++seed) {
+        Career career;
+        career.allTeams.push_back(
+            makeTeam("Notificaciones FC", "primera division", 72, 3, 3, "Balanced", "Equilibrado", 2000000));
+        career.allTeams.push_back(
+            makeTeam("Comprador Eventos", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 50000000));
+        career.setActiveDivision("primera division");
+        career.schedule.assign(2, vector<pair<int, int>>{});
+        career.myTeam = career.findTeamByName("Notificaciones FC");
+        career.managerName = "Manager Eventos";
+        career.currentSeason = 1;
+        career.currentWeek = 1;
+
+        expect(career.myTeam != nullptr,
+               "La prueba de notificaciones de transferencia necesita club usuario.");
+
+        career.myTeam->addPlayer(
+            makePlayer("Transferible Test", "MED", 70, 80, 24, 74, 78));
+
+        for (auto& player : career.myTeam->players) {
+            player.wantsToLeave = true;
+            player.injured = false;
+            player.contractWeeks = 104;
+        }
+
+        CareerRuntimeContext runtime = currentCareerRuntimeContext();
+        runtime.incomingOfferDecision = acceptIncomingOffer;
+        runtime.presentation = WeekSimulationPresentation::Compact;
+
+        setRandomSeed(seed);
+        {
+            ScopedCareerRuntimeContext runtimeScope(runtime);
+            simulateCareerWeek(career);
+        }
+        resetRandomSeed();
+
+        const auto events = career_events::EventNotificationSystem::getAllEvents();
+        transferRecorded = any_of(events.begin(), events.end(), [](const career_events::GameEvent& event) {
+            return event.type == career_events::EventType::TransferCompleted &&
+                   event.title == "Transferencia completada" &&
+                   event.message.find("fue vendido a") != string::npos;
+        });
+    }
+
+    resetRandomSeed();
+    expect(transferRecorded,
+           "Una transferencia aceptada durante la semana debe registrar una notificacion TransferCompleted.");
+}
 }  // namespace
 
 int main() {
@@ -4437,6 +4496,7 @@ int main() {
         {"scouting_briefing_uncertainty", testScoutingBriefingMasksUncertainAttributes},
         {"transfer_window_rules", testTransferWindowBlocksImmediateDeals},
         {"transfer_buy_and_loans", testTransferServicesMoveBoughtAndLoanedPlayers},
+        {"weekly_transfer_notification", testWeeklyTransferRecordsNotification},
         {"market_pulse_window", testMarketPulseReflectsClosedWindow},
         {"career_runtime_scope", testCareerRuntimeScopeRestoresContext},
         {"season_service_runtime_forwarding", testSeasonServiceForwardsRuntimeMessages},
