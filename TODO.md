@@ -4088,7 +4088,7 @@ MoraleAlert           - Alerta de baja moral
 
 ### Próximas etapas (Workflow planeado)
 - [x] Integrar EventNotificationSystem en week_simulation.cpp (registrar eventos de transferencia)
-- [ ] Integrar EventNotificationSystem en gui_actions.cpp (registrar eventos críticos)
+- [x] Integrar EventNotificationSystem en gui_actions.cpp (registrar eventos críticos)
 - [ ] Crear atajos de teclado (Ctrl+F para búsqueda global, 'S' para scouting, 'V' para vender)
 - [ ] Implementar sistema de contexto de menú (clic derecho en lista de jugadores)
 - [ ] Mejorar dashboard con KPIs (edad promedio, forma promedio, presupuesto)

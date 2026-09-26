@@ -5,6 +5,7 @@
 
 #include "competition/competition.h"
 #include "career/career_runtime.h"
+#include "career/game_events_system.h"
 #include "engine/game_settings.h"
 #include "transfers/negotiation_system.h"
 #include "utils/utils.h"
@@ -120,10 +121,26 @@ void showLoadMessagesCompact(AppState& state, const ServiceResult& result, const
                 MB_OK | MB_ICONINFORMATION);
 }
 
+void recordCriticalGuiServiceEvent(const ServiceResult& result, const std::string& title) {
+    if (result.ok) return;
+
+    const std::string detail = result.messages.empty()
+        ? "La accion del frontend fallo sin detalle adicional."
+        : result.messages.back();
+
+    career_events::EventNotificationSystem::recordEvent(
+        career_events::EventType::ManagerAlert,
+        "Accion critica: " + title,
+        detail
+    );
+}
+
 void finalizeAction(AppState& state,
                     const ServiceResult& result,
                     const std::string& title,
                     bool forceDialog = false) {
+    recordCriticalGuiServiceEvent(result, title);
+
     if (result.ok) {
         syncCombosFromCareer(state);
         refreshAll(state);
@@ -789,6 +806,11 @@ void validateSystem(AppState& state) {
         MessageBoxW(state.window, dialogText.c_str(), L"Football Manager", MB_OK | MB_ICONINFORMATION);
         setStatus(state, "Auditoria completada sin fallas.");
     } else {
+        career_events::EventNotificationSystem::recordEvent(
+            career_events::EventType::ManagerAlert,
+            "Auditoria con fallas",
+            "La auditoria del sistema detecto errores o advertencias que requieren revision."
+        );
         MessageBoxW(state.window, dialogText.c_str(), L"Football Manager", MB_OK | MB_ICONWARNING);
         setStatus(state, "Auditoria completada con fallas.");
     }

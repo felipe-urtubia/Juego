@@ -3917,6 +3917,22 @@ void testAppServiceCareerIsSeparatedFromMainOrchestrator() {
            "Los servicios del ciclo de carrera de app_services deben vivir en app_services_career.cpp.");
 }
 
+void testGuiActionsRegisterCriticalEvents() {
+    const string guiActionsPath = resolveProjectPath("src/gui/gui_actions.cpp");
+    ifstream input(guiActionsPath, ios::binary);
+    expect(input.is_open(), "La prueba de eventos criticos necesita leer gui_actions.cpp.");
+
+    ostringstream buffer;
+    buffer << input.rdbuf();
+    const string source = buffer.str();
+
+    expect(source.find("EventNotificationSystem::recordEvent") != string::npos,
+           "gui_actions.cpp debe registrar eventos mediante EventNotificationSystem.");
+    expect(source.find("recordCriticalGuiServiceEvent(result, title)") != string::npos,
+           "Los ServiceResult fallidos de la GUI deben pasar por el registro de eventos criticos.");
+    expect(source.find("Auditoria con fallas") != string::npos,
+           "La auditoria fallida debe registrar una alerta critica desde la GUI.");
+}
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -4532,6 +4548,7 @@ int main() {
         {"app_services_manager_split", testAppServiceManagerIsSeparatedFromMainOrchestrator},
         {"app_services_weekly_split", testAppServiceWeeklyIsSeparatedFromMainOrchestrator},
         {"app_services_career_split", testAppServiceCareerIsSeparatedFromMainOrchestrator},
+        {"gui_critical_event_notifications", testGuiActionsRegisterCriticalEvents},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},
