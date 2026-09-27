@@ -7740,7 +7740,7 @@ Resultado del validador:
 
 ## 🚧 Rediseño del menú principal - 2026-09-27
 
-Rama actual:
+Rama de trabajo utilizada:
 
 `feature/main-menu-redesign`
 
@@ -7804,10 +7804,10 @@ Rama actual:
 - [x] Ejecutar `git diff --check`: sin errores de whitespace; solo advertencias normales LF/CRLF.
 - [x] Revisar diff final del rediseño.
 - [x] Actualizar esta sección con resultados finales.
-- [ ] Commit del rediseño.
-- [ ] Push de `feature/main-menu-redesign`.
-- [ ] Merge fast-forward a `main`.
-- [ ] Push de `main`.
-- [ ] Eliminar rama local y remota después de integrar.
+- [x] Commit del rediseño: `1ccc97d feat: redisenar menu principal`.
+- [x] Push de `feature/main-menu-redesign` a GitHub.
+- [x] Merge fast-forward a `main`.
+- [x] Push de `main` a GitHub.
+- [x] Rama `feature/main-menu-redesign` eliminada localmente y en GitHub después de integrar.
 
 > Nota: este rediseño fue realizado después de publicar `v0.1.1-alpha`; por lo tanto, estos cambios todavía no forman parte del ZIP público de esa release.
