@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.1.1-alpha - 2026-09-26
+
+### Match Center
+- Se agrego mapa de calor del partido.
+- Se incorporaron estadisticas avanzadas por jugador.
+- Se agrego linea temporal interactiva de eventos.
+- Se integro el Match Center con el analisis postpartido.
+- Se amplio la cobertura de pruebas unitarias del Match Center.
+
+### Notificaciones e interfaz
+- Las transferencias completadas ahora generan notificaciones.
+- Los eventos criticos de la interfaz quedan registrados en el sistema de eventos.
+- Se agregaron atajos de teclado: Ctrl+F para busqueda global, S para scouting y V para vender.
+- La busqueda global permite localizar jugadores y clubes desde la interfaz de fichajes.
+
+### Calidad y mantenimiento
+- Se cerro la cobertura pendiente de pruebas para objetivos sugeridos por la directiva.
+- Se ampliaron las pruebas automatizadas relacionadas con las nuevas funciones de interfaz y Match Center.
+
 ## 2026-04-04
 
 ### Mejoras Gameplay Mayores - Nuevos Sistemas
