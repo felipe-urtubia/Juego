@@ -3685,6 +3685,37 @@ void testTransferTargetsUseSelectablePrimaryList() {
            "El detalle de mercado debe mostrar una mesa de negociacion con perfiles de oferta.");
 }
 
+void testDashboardMetricsExposeSquadKpis() {
+    gui_win32::AppState state;
+    state.currentPage = gui_win32::GuiPage::Dashboard;
+    state.currentFilter = "Todo";
+    state.career.allTeams.push_back(makeTeam("KPI Club", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 750000));
+    state.career.setActiveDivision("primera division");
+    state.career.myTeam = state.career.findTeamByName("KPI Club");
+    expect(state.career.myTeam != nullptr, "La prueba de KPIs necesita un club usuario.");
+
+    Team& team = *state.career.myTeam;
+    for (size_t i = 0; i < team.players.size(); ++i) {
+        team.players[i].age = 20 + static_cast<int>(i % 7);
+        team.players[i].currentForm = 60 + static_cast<int>(i % 11);
+    }
+
+    const gui_win32::GuiPageModel model = gui_win32::buildDashboardModel(state);
+
+    auto metricValue = [&](const string& label) {
+        for (const auto& metric : model.metrics) {
+            if (metric.label == label) return metric.value;
+        }
+        return string();
+    };
+
+    expect(!metricValue("Presupuesto").empty(),
+           "El dashboard debe mantener el presupuesto como KPI visual.");
+    expect(!metricValue("Edad media").empty(),
+           "El dashboard debe exponer la edad media como KPI visual.");
+    expect(!metricValue("Forma media").empty(),
+           "El dashboard debe exponer la forma media como KPI visual.");
+}
 void testDashboardActionCueHighlightsHardRisks() {
     gui_win32::AppState state;
     state.currentPage = gui_win32::GuiPage::Dashboard;
@@ -4651,6 +4682,7 @@ int main() {
         {"player_profile_staff_report", testPlayerProfileShowsFmStyleStaffReport},
         {"transfer_feed_focus", testTransferFeedStaysMarketFocusedAcrossFilters},
         {"transfer_selection_source", testTransferTargetsUseSelectablePrimaryList},
+        {"dashboard_metrics_kpis", testDashboardMetricsExposeSquadKpis},
         {"dashboard_action_cue", testDashboardActionCueHighlightsHardRisks},
 #endif
     };

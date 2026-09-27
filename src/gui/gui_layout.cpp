@@ -421,6 +421,65 @@ void drawTopMetrics(AppState& state, HDC hdc, const RECT& client) {
     }
 }
 
+void drawCareerDashboardMetrics(AppState& state, HDC hdc, const RECT& client) {
+    const auto s = [&](int value) { return scaleByDpi(state, value); };
+    const int padding = s(24);
+    const int innerWidth = std::max(s(320), static_cast<int>(client.right) - padding * 2);
+    const int contentWidth = std::min(innerWidth, clampValue(innerWidth, s(720), s(1500)));
+    const int contentLeft = padding + std::max(0, (innerWidth - contentWidth) / 2);
+    const int contentTop = s(32);
+    const int titleHeight = s(40);
+    const int infoHeight = s(24);
+    const int metricGap = s(12);
+    const int metricHeight = s(58);
+    const int metricColumns = contentWidth < s(620) ? 2 : (contentWidth < s(1040) ? 3 : 5);
+    const int metricWidth = std::max(
+        s(120),
+        (contentWidth - metricGap * (metricColumns - 1)) / metricColumns);
+    const int metricsTop = contentTop + titleHeight + infoHeight + s(14);
+
+    const std::vector<DashboardMetric> metrics =
+        state.currentModel.metrics.empty() ? defaultMetrics() : state.currentModel.metrics;
+
+    for (size_t i = 0; i < metrics.size() && i < 5; ++i) {
+        const int row = static_cast<int>(i) / metricColumns;
+        const int column = static_cast<int>(i) % metricColumns;
+        RECT card{
+            contentLeft + column * (metricWidth + metricGap),
+            metricsTop + row * (metricHeight + metricGap),
+            contentLeft + column * (metricWidth + metricGap) + metricWidth,
+            metricsTop + row * (metricHeight + metricGap) + metricHeight
+        };
+
+        drawRoundedPanel(hdc, card, RGB(11, 24, 33), RGB(35, 58, 74), s(14));
+
+        RECT accent = card;
+        accent.bottom = accent.top + s(6);
+        HBRUSH accentBrush = CreateSolidBrush(metrics[i].accent);
+        FillRect(hdc, &accent, accentBrush);
+        DeleteObject(accentBrush);
+
+        RECT labelRect{card.left + s(14), card.top + s(10), card.right - s(14), card.top + s(28)};
+        RECT valueRect{card.left + s(14), card.top + s(28), card.right - s(14), card.bottom - s(10)};
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, kThemeMuted);
+        HGDIOBJ oldFont =
+            SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+        DrawTextW(hdc,
+                  utf8ToWide(metrics[i].label).c_str(),
+                  -1,
+                  &labelRect,
+                  DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
+        SetTextColor(hdc, kThemeText);
+        DrawTextW(hdc,
+                  utf8ToWide(metrics[i].value).c_str(),
+                  -1,
+                  &valueRect,
+                  DT_LEFT | DT_BOTTOM | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(hdc, oldFont);
+    }
+}
 std::vector<DashboardSpotlightCard> buildDashboardSpotlightCards(const AppState& state) {
     std::vector<DashboardSpotlightCard> cards;
 
@@ -1169,7 +1228,15 @@ void layoutCareerDashboard(AppState& state, const RECT& client) {
     setControlVisibility(state, state.infoLabel, true);
     MoveWindow(state.infoLabel, contentLeft, contentTop + titleHeight + s(2), contentWidth, infoHeight, TRUE);
 
-    const int buttonsTop = contentTop + titleHeight + infoHeight + s(14);
+    const int dashboardMetricColumns = contentWidth < s(620) ? 2 : (contentWidth < s(1040) ? 3 : 5);
+    const int dashboardMetricRows = (5 + dashboardMetricColumns - 1) / dashboardMetricColumns;
+    const int dashboardMetricHeight = s(58);
+    const int dashboardMetricGap = s(12);
+    const int dashboardMetricsTop = contentTop + titleHeight + infoHeight + s(14);
+    const int buttonsTop = dashboardMetricsTop +
+                           dashboardMetricRows * dashboardMetricHeight +
+                           (dashboardMetricRows - 1) * dashboardMetricGap +
+                           s(18);
     std::vector<std::pair<HWND, std::string> > dashboardButtons = {
         {state.simulateButton, state.actionInProgress ? "Simulando..." : "Simular semana"},
         {state.squadButton, "Plantilla"},
@@ -2588,6 +2655,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
     }
 
     if (state.layout.dashboardPage && !state.layout.dashboardEmptyState) {
+        drawCareerDashboardMetrics(state, hdc, client);
         if (rectHasArea(state.layout.statusBar)) {
             drawRoundedPanel(hdc, state.layout.statusBar, RGB(11, 23, 31), RGB(39, 65, 79), s(12));
         }

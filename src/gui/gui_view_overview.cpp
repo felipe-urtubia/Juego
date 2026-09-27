@@ -514,6 +514,14 @@ GuiPageModel buildDashboardModel(AppState& state) {
     const int avgSkill = totalSkill / safePlayerCount;
     const int availablePlayers = std::max(0, playerCount - injured - suspended);
 
+    model.metrics = {
+        {"Club", team.name, kThemeAccentBlue},
+        {"Presupuesto", formatMoneyValue(team.budget), team.budget >= 0 ? kThemeAccentGreen : kThemeDanger},
+        {"Edad media", std::to_string(avgAge), kThemeAccentBlue},
+        {"Forma media", std::to_string(avgForm), avgForm >= 60 ? kThemeAccentGreen : (avgForm >= 45 ? kThemeWarning : kThemeDanger)},
+        {"Alertas", std::to_string(alerts.size()), alerts.empty() ? kThemeAccentGreen : kThemeWarning}
+    };
+
     model.footer.title = "ActionCuePanel";
     model.footer.columns = {{L"Prioridad", 90}, {L"Destino", 110}, {L"Accion", 150}, {L"Motivo", 420}};
     model.footer.rows.clear();

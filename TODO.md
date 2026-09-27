@@ -4091,7 +4091,7 @@ MoraleAlert           - Alerta de baja moral
 - [x] Integrar EventNotificationSystem en gui_actions.cpp (registrar eventos críticos)
 - [x] Crear atajos de teclado (Ctrl+F para búsqueda global, 'S' para scouting, 'V' para vender)
 - [x] Implementar sistema de contexto de menú (clic derecho en lista de jugadores)
-- [ ] Mejorar dashboard con KPIs (edad promedio, forma promedio, presupuesto)
+- [x] Mejorar dashboard con KPIs (edad promedio, forma promedio, presupuesto)
 - [ ] Crear sistema de economía justa (salary cap relativo a ingresos)
 - [ ] Implementar mini-juego de penales
 - [ ] Documentación completa y validación de compilación final
