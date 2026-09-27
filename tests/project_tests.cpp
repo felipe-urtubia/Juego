@@ -31,6 +31,7 @@
 #include "engine/team_personality.h"
 #include "engine/debt_system.h"
 #include "engine/game_settings.h"
+#include "finance/finance_system.h"
 #ifdef _WIN32
 #include "gui/gui_view_builders.h"
 #endif
@@ -47,6 +48,7 @@
 #include "simulation/simulation.h"
 #include "transfers/negotiation_system.h"
 #include "transfers/transfer_market.h"
+#include "ui/economy_fairplay.h"
 #include "utils/utils.h"
 #include "validators/validators.h"
 #include "utils/localization.h"
@@ -3550,6 +3552,42 @@ void testFinancesModelShowsFairPlayPressure() {
            "El detalle financiero debe explicar las alertas de fair play.");
 }
 
+void testFairPlaySalaryCapFollowsRevenueLimit() {
+    Career career;
+    career.allTeams.push_back(makeTeam("Revenue Cap Club", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 850000));
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Revenue Cap Club");
+    expect(career.myTeam != nullptr, "La prueba de salary cap necesita club usuario.");
+
+    Team& team = *career.myTeam;
+    team.fanBase = 1;
+    team.stadiumLevel = 1;
+    for (Player& player : team.players) player.wage = 0;
+
+    economy_fairplay::EconomyFairPlaySystem::initialize(career);
+    const long long allowedSalary = economy_fairplay::EconomyFairPlaySystem::getMaxAllowedSalary(team, career);
+    const WeeklyFinanceReport finance = finance_system::projectWeeklyReport(team);
+    const auto rules = economy_fairplay::EconomyFairPlaySystem::getRulesForDivision(team.division);
+    const long long weeklyRevenue = finance.sponsorIncome + finance.matchdayIncome + finance.merchandisingIncome + finance.bonusIncome;
+    const long long expectedSalaryCap = std::min(rules.maxSalaryCap, static_cast<long long>(weeklyRevenue * rules.maxSalaryPercentage));
+    expect(allowedSalary == expectedSalaryCap,
+           "El salary cap debe derivarse de los ingresos semanales reales del sistema financiero.");
+    expect(allowedSalary > 0 && allowedSalary < 50000000LL,
+           "El escenario debe producir un limite por ingresos inferior al tope fijo de Primera.");
+
+    team.players.front().wage = allowedSalary + 1;
+    expect(!economy_fairplay::EconomyFairPlaySystem::checkSalaryCompliance(team, career),
+           "El fair play debe rechazar una masa salarial que excede el limite relativo a ingresos.");
+
+    const auto violations = economy_fairplay::EconomyFairPlaySystem::getTeamViolations(team, career);
+    const auto salaryViolation = std::find_if(violations.begin(), violations.end(), [](const economy_fairplay::FairPlayViolation& violation) {
+        return violation.type == "salary_cap";
+    });
+    expect(salaryViolation != violations.end(), "Superar el limite relativo debe generar una infraccion salarial.");
+    expect(salaryViolation->description.find("exceeded by $1") != string::npos,
+           "El exceso salarial debe calcularse contra el limite relativo a ingresos.");
+}
+
 void testPlayerProfileShowsFmStyleStaffReport() {
     Team team = makeTeam("Ficha Club", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 850000);
     Player& player = team.players.front();
@@ -4674,6 +4712,7 @@ int main() {
         {"external_json_mod_loader", testExternalJsonLoaderAddsModLeagueAndAdvancedPlayers},
         {"legacy_division_ids", testLegacyDivisionIdentifiersCanonicalizeOnLoad},
         {"loader_fallback", testLoadTeamFromDirectoryFallsBackAndResolvesRawPositions},
+        {"fair_play_revenue_salary_cap", testFairPlaySalaryCapFollowsRevenueLimit},
 #ifdef _WIN32
         {"management_view_filters", testManagementViewFiltersChangeVisibleContent},
         {"calendar_match_preview", testCalendarModelShowsMatchPreparationPreview},

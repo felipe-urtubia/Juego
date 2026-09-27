@@ -1,6 +1,7 @@
 #include "ui/economy_fairplay.h"
 
 #include "engine/models.h"
+#include "finance/finance_system.h"
 
 #include <algorithm>
 
@@ -40,15 +41,13 @@ void EconomyFairPlaySystem::initialize(Career& career) {
 }
 
 bool EconomyFairPlaySystem::checkSalaryCompliance(const Team& team, Career& career) {
-    (void)career;
-    FairPlayRules rules = getRulesForDivision(team.division);
     
     long long totalSalary = 0;
     for (const auto& player : team.players) {
         totalSalary += player.wage;
     }
     
-    return totalSalary <= rules.maxSalaryCap;
+    return totalSalary <= getMaxAllowedSalary(team, career);
 }
 
 bool EconomyFairPlaySystem::checkBudgetCompliance(const Team& team) {
@@ -104,17 +103,17 @@ std::vector<FairPlayViolation> EconomyFairPlaySystem::getTeamViolations(const Te
     
     // Check salary cap
     if (!checkSalaryCompliance(team, career)) {
-        FairPlayRules rules = getRulesForDivision(team.division);
+        const long long allowedSalary = getMaxAllowedSalary(team, career);
         long long totalSalary = 0;
         for (const auto& player : team.players) {
             totalSalary += player.wage;
         }
-        long long excess = totalSalary - rules.maxSalaryCap;
+        long long excess = totalSalary - allowedSalary;
         
         FairPlayViolation v;
         v.type = "salary_cap";
         v.description = "Salary cap exceeded by $" + std::to_string(excess);
-        v.severityLevel = (excess > rules.maxSalaryCap / 2) ? 3 : 2;
+        v.severityLevel = (excess > allowedSalary / 2) ? 3 : 2;
         v.penaltyAmount = excess / 10;  // 10% of excess as fine
         v.isActive = true;
         violations.push_back(v);
@@ -188,11 +187,10 @@ long long EconomyFairPlaySystem::getMaxAllowedSalary(const Team& team, Career& c
     (void)career;
     FairPlayRules rules = getRulesForDivision(team.division);
     
-    // Calculate based on revenue
-    long long weeklyIncome = team.fanBase * 2500LL + team.stadiumLevel * 7000LL;
-    long long estimatedAnnualRevenue = weeklyIncome * 30LL;  // ~30 weeks per season
-    
-    long long capByRevenue = static_cast<long long>(estimatedAnnualRevenue * rules.maxSalaryPercentage);
+    const WeeklyFinanceReport finance = finance_system::projectWeeklyReport(team);
+    const long long weeklyRevenue = finance.sponsorIncome + finance.matchdayIncome +
+                                    finance.merchandisingIncome + finance.bonusIncome;
+    long long capByRevenue = static_cast<long long>(weeklyRevenue * rules.maxSalaryPercentage);
     long long capByRule = rules.maxSalaryCap;
     
     return std::min(capByRevenue, capByRule);
