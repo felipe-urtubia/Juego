@@ -78,7 +78,7 @@ ListPanelModel buildSquadUnitModel(const Team& team);
 ListPanelModel buildPlayerTableModel(AppState& state, bool youthOnly);
 ListPanelModel buildComparisonModel(const Career& career, const Player* selected);
 ListPanelModel buildTransferPipelineModel(const Career& career);
-std::vector<TransferPreviewItem> buildTransferTargets(const Career& career, const std::string& filter);
+std::vector<TransferPreviewItem> buildTransferTargets(const Career& career, const std::string& filter, const std::string& searchQuery = std::string());
 
 GuiPageModel buildDashboardModel(AppState& state);
 GuiPageModel buildMainMenuModel(AppState& state);

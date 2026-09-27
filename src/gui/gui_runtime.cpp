@@ -1,4 +1,4 @@
-﻿#include "gui/gui_internal.h"
+#include "gui/gui_internal.h"
 
 #include "gui/gui_audio.h"
 #include "gui/gui_view_builders.h"
@@ -697,7 +697,8 @@ void refreshCurrentPage(AppState& state) {
     bool showSquadLabel = showSquad;
     bool showFooter = !frontMenuPage && !dashboardEmptyState;
     bool showFooterLabel = showFooter;
-    bool showFilter = !frontMenuPage && !dashboardEmptyState && state.currentPage != GuiPage::Dashboard;
+    bool showFilter = !frontMenuPage && !dashboardEmptyState && state.currentPage != GuiPage::Dashboard && !(state.currentPage == GuiPage::Transfers && state.globalSearchActive);
+    bool showGlobalSearch = !frontMenuPage && state.currentPage == GuiPage::Transfers && state.globalSearchActive;
     setControlVisibility(state, state.tableList, showTable);
     setControlVisibility(state, state.tableLabel, showTableLabel);
     setControlVisibility(state, state.squadList, showSquad);
@@ -706,6 +707,7 @@ void refreshCurrentPage(AppState& state) {
     setControlVisibility(state, state.transferLabel, showFooterLabel);
     setControlVisibility(state, state.filterLabel, showFilter);
     setControlVisibility(state, state.filterCombo, showFilter);
+    setControlVisibility(state, state.globalSearchEdit, showGlobalSearch);
 
     layoutWindow(state);
     autosizeVisibleLists(state);

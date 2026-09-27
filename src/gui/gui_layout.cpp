@@ -1352,8 +1352,8 @@ void applyInterfaceFonts(AppState& state) {
     setLabelFont(state.managerLabel, state.font);
     setLabelFont(state.managerHelpLabel, state.font);
 
-    const std::array<HWND, 5> inputs = {
-        state.divisionCombo, state.teamCombo, state.managerEdit, state.filterCombo, state.newsList
+    const std::array<HWND, 6> inputs = {
+        state.divisionCombo, state.teamCombo, state.managerEdit, state.filterCombo, state.globalSearchEdit, state.newsList
     };
     for (HWND hwnd : inputs) setControlFont(hwnd, state.font);
 
@@ -1821,11 +1821,13 @@ void layoutWindow(AppState& state) {
 
     RectCursor shellCursor{state.layout.shellInner};
     const bool filterVisible = state.filterCombo && IsWindowVisible(state.filterCombo);
-    const bool stackHeaderFilter = filterVisible && rectWidth(state.layout.shellInner) < s(1040);
-    const int pageHeaderHeight = s(kPageHeaderHeight) + (filterVisible && stackHeaderFilter ? s(kHeaderFieldHeight + 18) : 0);
+    const bool searchVisible = state.globalSearchEdit && IsWindowVisible(state.globalSearchEdit);
+    const bool headerFieldVisible = filterVisible || searchVisible;
+    const bool stackHeaderFilter = headerFieldVisible && rectWidth(state.layout.shellInner) < s(1040);
+    const int pageHeaderHeight = s(kPageHeaderHeight) + (headerFieldVisible && stackHeaderFilter ? s(kHeaderFieldHeight + 18) : 0);
     state.layout.pageHeader = takeTop(shellCursor, pageHeaderHeight, s(kPageSectionGap));
     state.layout.headerTextArea = state.layout.pageHeader;
-    if (filterVisible) {
+    if (headerFieldVisible) {
         if (stackHeaderFilter) {
             const int filterAreaHeight = s(kHeaderFieldHeight + 10);
             state.layout.headerFilterArea = makeRect(state.layout.pageHeader.left,
@@ -1887,6 +1889,14 @@ void layoutWindow(AppState& state) {
                          state.layout.filterField.top,
                          rectWidth(state.layout.filterField),
                          rectHeight(state.layout.filterField));
+    } else if (searchVisible) {
+        const int searchTop = state.layout.headerFilterArea.top +
+                              std::max(0, (rectHeight(state.layout.headerFilterArea) - fieldHeight) / 2);
+        placeFixedWindow(state.globalSearchEdit,
+                         state.layout.headerFilterArea.left,
+                         searchTop,
+                         rectWidth(state.layout.headerFilterArea),
+                         fieldHeight);
     }
 
     showActionButtonsForPage(state);
@@ -2142,6 +2152,9 @@ void initializeInterface(AppState& state) {
     state.teamCombo = createControl(state, 0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL, 360, 14, 224, 300, state.window, IDC_TEAM_COMBO);
     state.managerEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 676, 14, 188, 24, state.window, IDC_MANAGER_EDIT);
     state.filterCombo = createControl(state, 0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL, 0, 0, 180, 260, state.window, IDC_FILTER_COMBO);
+    state.globalSearchEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | ES_AUTOHSCROLL, 0, 0, 260, 28, state.window, IDC_GLOBAL_SEARCH_EDIT);
+    SendMessageW(state.globalSearchEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Buscar jugador o club..."));
+    SendMessageW(state.globalSearchEdit, EM_LIMITTEXT, 80, 0);
     SendMessageW(state.managerEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Ingresa nombre del manager"));
     SendMessageW(state.managerEdit, EM_LIMITTEXT, 48, 0);
 

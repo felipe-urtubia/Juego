@@ -245,6 +245,7 @@ set(FM_FOOTBALLMANAGER_TEST_SOURCES
     ${FM_CORE_SOURCES}
     ${FM_VALIDATOR_SOURCES}
     src/ui/economy_fairplay.cpp
+    src/ui/global_search.cpp
     ${FM_GUI_SOURCES}
 )
 list(REMOVE_DUPLICATES FM_FOOTBALLMANAGER_SOURCES)

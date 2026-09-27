@@ -283,7 +283,7 @@ GuiPageModel buildTransfersModel(AppState& state) {
     model.secondary.rows.push_back({"Politica", team.transferPolicy, "Define si el club compra valor, cantera o urgencia"});
     model.secondary.rows.push_back({"Venta IA", std::to_string(strategy.salePressure), "Presion para liberar suplentes marginales"});
 
-    std::vector<TransferPreviewItem> targets = buildTransferTargets(state.career, state.currentFilter);
+    std::vector<TransferPreviewItem> targets = buildTransferTargets(state.career, state.currentFilter, state.globalSearchActive ? state.globalSearchQuery : std::string());
     if (state.selectedTransferPlayer.empty() && !targets.empty()) {
         state.selectedTransferPlayer = targets.front().player;
         state.selectedTransferClub = targets.front().club;

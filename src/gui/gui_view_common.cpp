@@ -17,6 +17,7 @@
 #include "development/training_impact_system.h"
 #include "finance/finance_system.h"
 #include "transfers/negotiation_system.h"
+#include "ui/global_search.h"
 #include "utils/utils.h"
 
 #include <algorithm>
@@ -922,16 +923,25 @@ ListPanelModel buildTransferPipelineModel(const Career& career) {
     return model;
 }
 
-std::vector<TransferPreviewItem> buildTransferTargets(const Career& career, const std::string& filter) {
+std::vector<TransferPreviewItem> buildTransferTargets(const Career& career, const std::string& filter, const std::string& searchQuery) {
     std::vector<TransferPreviewItem> rows;
     if (!career.myTeam) return rows;
     const Team& buyer = *career.myTeam;
     const ClubTransferStrategy strategy = ai_transfer_manager::buildClubTransferStrategy(career, buyer);
+    const std::vector<SearchResult> searchResults = searchQuery.empty()
+        ? std::vector<SearchResult>{}
+        : global_search::PlayerSearchEngine::search(searchQuery);
 
     for (const auto& seller : career.allTeams) {
         if (&seller == career.myTeam) continue;
         for (const auto& player : seller.players) {
             std::string position = normalizePosition(player.position);
+            if (!searchQuery.empty()) {
+                const bool matchesSearch = std::any_of(searchResults.begin(), searchResults.end(), [&](const SearchResult& result) {
+                    return result.playerName == player.name && result.clubName == seller.name;
+                });
+                if (!matchesSearch) continue;
+            }
             if (filter == "Sub-23" && player.age > 23) continue;
             if (filter == "Potencial 75+" && player.potential < 75) continue;
             if (filter == "ARQ" || filter == "DEF" || filter == "MED" || filter == "DEL") {

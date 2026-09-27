@@ -1,6 +1,7 @@
 #include "gui/gui.h"
 #include "gui/gui_audio.h"
 #include "gui/gui_internal.h"
+#include "ui/global_search.h"
 #include <cstring>
 
 #ifdef _WIN32
@@ -512,6 +513,14 @@ bool handleFrontMenuKey(AppState& state, WPARAM key) {
 
 }  // namespace
 
+bool isEditControlFocused() {
+    HWND focused = GetFocus();
+    if (!focused) return false;
+    wchar_t className[32]{};
+    if (GetClassNameW(focused, className, static_cast<int>(sizeof(className) / sizeof(className[0]))) <= 0) return false;
+    return lstrcmpiW(className, L"Edit") == 0;
+}
+
 bool isCtrlKeyDown() {
     return (GetKeyState(VK_CONTROL) & 0x8000) != 0;
 }
@@ -532,7 +541,33 @@ bool handleCareerShortcut(AppState& state, const MSG& msg) {
         return true;
     }
 
-    if (!isCtrlKeyDown()) return false;
+    if (key == VK_ESCAPE && state.currentPage == GuiPage::Transfers && state.globalSearchActive) {
+        if (repeated) return true;
+        state.globalSearchActive = false;
+        state.globalSearchQuery.clear();
+        setWindowTextUtf8(state.globalSearchEdit, "");
+        refreshCurrentPage(state);
+        SetFocus(state.window);
+        setStatus(state, "Busqueda global cerrada. Filtros de mercado restaurados.");
+        return true;
+    }
+
+    if (!isCtrlKeyDown()) {
+        if (isEditControlFocused()) return false;
+        if (key == 'S') {
+            if (repeated) return true;
+            if (hasCareer) runScoutingAction(state);
+            else setStatus(state, "Inicia o carga una carrera para usar scouting.");
+            return true;
+        }
+        if (key == 'V') {
+            if (repeated) return true;
+            if (hasCareer) runSellAction(state);
+            else setStatus(state, "Inicia o carga una carrera para vender jugadores.");
+            return true;
+        }
+        return false;
+    }
 
     if (key == 'S') {
         if (repeated) return true;
@@ -545,12 +580,18 @@ bool handleCareerShortcut(AppState& state, const MSG& msg) {
     }
 
     if (key == 'F') {
+        if (repeated) return true;
         if (hasCareer) {
             setCurrentPage(state, GuiPage::Transfers);
-            setStatus(state, "Radar de mercado abierto.");
+            state.globalSearchActive = true;
+            state.globalSearchQuery.clear();
+            setWindowTextUtf8(state.globalSearchEdit, "");
+            refreshCurrentPage(state);
+            SetFocus(state.globalSearchEdit);
+            setStatus(state, "Busqueda global activa. Escribe un jugador o club.");
         } else {
             setCurrentPage(state, GuiPage::Dashboard);
-            setStatus(state, "Completa la carrera para habilitar el radar de mercado.");
+            setStatus(state, "Inicia o carga una carrera para usar la busqueda global.");
         }
         return true;
     }
@@ -863,6 +904,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                         handleFilterChange(*state);
                     }
                     return 0;
+                case IDC_GLOBAL_SEARCH_EDIT:
+                    if (HIWORD(wParam) == EN_CHANGE && state->globalSearchActive) {
+                        state->globalSearchQuery = getWindowTextUtf8(state->globalSearchEdit);
+                        refreshCurrentPage(*state);
+                    }
+                    return 0;
                 case IDC_NEWS_LIST:
                     if (HIWORD(wParam) == LBN_SELCHANGE) {
                         handleFeedSelectionChange(*state, IDC_NEWS_LIST);
@@ -1125,6 +1172,7 @@ int runGuiApp(GameSettings& settings) {
     state.instance = GetModuleHandleW(nullptr);
     state.settings = settings;
     state.savedSettings = settings;
+    global_search::PlayerSearchEngine::initialize(&state.career);
 
     WNDCLASSEXW windowClass{};
     windowClass.cbSize = sizeof(windowClass);

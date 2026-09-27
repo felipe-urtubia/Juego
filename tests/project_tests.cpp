@@ -3933,6 +3933,44 @@ void testGuiActionsRegisterCriticalEvents() {
     expect(source.find("Auditoria con fallas") != string::npos,
            "La auditoria fallida debe registrar una alerta critica desde la GUI.");
 }
+void testGuiKeyboardShortcutsAreIntegrated() {
+    const string guiPath = resolveProjectPath("src/gui/gui.cpp");
+    const string managementPath = resolveProjectPath("src/gui/gui_view_management.cpp");
+    const string commonPath = resolveProjectPath("src/gui/gui_view_common.cpp");
+
+    ifstream guiInput(guiPath, ios::binary);
+    ifstream managementInput(managementPath, ios::binary);
+    ifstream commonInput(commonPath, ios::binary);
+    expect(guiInput.is_open() && managementInput.is_open() && commonInput.is_open(),
+           "La prueba de atajos necesita leer los archivos principales de la GUI.");
+
+    ostringstream guiBuffer;
+    ostringstream managementBuffer;
+    ostringstream commonBuffer;
+    guiBuffer << guiInput.rdbuf();
+    managementBuffer << managementInput.rdbuf();
+    commonBuffer << commonInput.rdbuf();
+
+    const string guiSource = guiBuffer.str();
+    const string managementSource = managementBuffer.str();
+    const string commonSource = commonBuffer.str();
+
+    expect(guiSource.find("state.globalSearchActive = true") != string::npos &&
+               guiSource.find("SetFocus(state.globalSearchEdit)") != string::npos,
+           "Ctrl+F debe activar y enfocar la busqueda global.");
+    expect(guiSource.find("if (key == 'S')") != string::npos &&
+               guiSource.find("runScoutingAction(state)") != string::npos,
+           "El atajo S debe ejecutar scouting.");
+    expect(guiSource.find("if (key == 'V')") != string::npos &&
+               guiSource.find("runSellAction(state)") != string::npos,
+           "El atajo V debe ejecutar la venta.");
+    expect(guiSource.find("isEditControlFocused()") != string::npos,
+           "Los atajos simples deben respetar los controles de edicion.");
+    expect(managementSource.find("state.globalSearchActive ? state.globalSearchQuery") != string::npos,
+           "La vista de fichajes debe enviar la consulta global al buscador.");
+    expect(commonSource.find("PlayerSearchEngine::search(searchQuery)") != string::npos,
+           "La lista de fichajes debe usar PlayerSearchEngine para la busqueda global.");
+}
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -4549,6 +4587,7 @@ int main() {
         {"app_services_weekly_split", testAppServiceWeeklyIsSeparatedFromMainOrchestrator},
         {"app_services_career_split", testAppServiceCareerIsSeparatedFromMainOrchestrator},
         {"gui_critical_event_notifications", testGuiActionsRegisterCriticalEvents},
+        {"gui_keyboard_shortcuts", testGuiKeyboardShortcutsAreIntegrated},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},

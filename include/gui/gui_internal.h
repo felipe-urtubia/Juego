@@ -88,7 +88,8 @@ enum ControlId {
     IDC_MENU_RESET_SETTINGS_BUTTON,
     IDC_EMPTY_NEW_BUTTON,
     IDC_EMPTY_LOAD_BUTTON,
-    IDC_EMPTY_VALIDATE_BUTTON
+    IDC_EMPTY_VALIDATE_BUTTON,
+    IDC_GLOBAL_SEARCH_EDIT
 };
 
 enum class GuiPage {
@@ -257,6 +258,7 @@ struct AppState {
     bool settingsDirty = false;
     bool suppressComboEvents = false;
     bool suppressFilterEvents = false;
+    bool globalSearchActive = false;
     bool pageRefreshInProgress = false;
     bool pageChangeQueued = false;
     bool menuMusicOpened = false;
@@ -273,6 +275,7 @@ struct AppState {
     GuiPage queuedPage = GuiPage::MainMenu;
     GuiPage currentPage = GuiPage::Dashboard;
     std::string currentFilter = "Todo";
+    std::string globalSearchQuery;
     GameSetupState gameSetup;
     SortState squadSort;
     std::string selectedPlayerName;
@@ -302,6 +305,7 @@ struct AppState {
     HWND managerLabel = nullptr;
     HWND filterLabel = nullptr;
     HWND filterCombo = nullptr;
+    HWND globalSearchEdit = nullptr;
     HWND managerHelpLabel = nullptr;
     HWND newCareerButton = nullptr;
     HWND loadButton = nullptr;
