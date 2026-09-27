@@ -20,6 +20,7 @@
 - Better rival AI rotation, tactical adaptation and squad planning.
 - Richer transfer negotiation flow with clearer multi-step offers and promises.
 - Deeper dressing room dynamics and long-term player development systems.
+- Future option: interactive penalty shootout mini-game integrated into the Match Center; not planned for the current implementation cycle.
 
 ## Open Source Priorities
 

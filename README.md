@@ -1186,6 +1186,14 @@ Entre ellos:
 
 Cada decisión repercute en el rendimiento deportivo y económico del club.
 
+El Dashboard centraliza indicadores rápidos para apoyar la toma de decisiones semanales:
+
+- Estado físico del plantel.
+- Moral y tensión del vestuario.
+- Flujo de caja y deuda.
+- Necesidades de plantilla, rotación y contratos próximos a vencer.
+- Señales visuales para priorizar acciones deportivas, económicas y de mercado.
+
 ---
 
 # Calendario
@@ -1247,6 +1255,13 @@ El sistema financiero administra:
 - Situación económica.
 
 La gestión responsable de estos recursos resulta fundamental para garantizar la estabilidad del proyecto deportivo.
+
+El sistema incorpora además un mecanismo de **fair play salarial**:
+
+- El límite salarial se calcula en función de los ingresos semanales reales del club.
+- Cada división mantiene un tope máximo de referencia.
+- Si la masa salarial supera el límite permitido, se generan alertas e infracciones.
+- La pantalla de Finanzas muestra el máximo recomendado, el porcentaje de uso y los riesgos activos.
 
 ---
 
@@ -1463,9 +1478,9 @@ Antes de compilar el proyecto es necesario disponer de las siguientes herramient
 # Obtener el Proyecto
 
 ```bash
-git clone https://github.com/TU_USUARIO/FootballManagerGame.git
+git clone https://github.com/felipe-urtubia/Juego.git
 
-cd FootballManagerGame
+cd Juego
 ```
 
 ---

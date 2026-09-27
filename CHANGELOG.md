@@ -14,6 +14,12 @@
 - Los eventos criticos de la interfaz quedan registrados en el sistema de eventos.
 - Se agregaron atajos de teclado: Ctrl+F para busqueda global, S para scouting y V para vender.
 - La busqueda global permite localizar jugadores y clubes desde la interfaz de fichajes.
+- Se agregaron KPIs visuales y accionables al dashboard para facilitar la lectura del estado del club.
+
+### Gestion y finanzas
+- Se incorporo un salary cap relativo a los ingresos semanales reales del club.
+- Las infracciones salariales ahora calculan exceso y severidad contra el limite economico permitido.
+- La pantalla de Finanzas muestra el limite de fair play y el porcentaje de uso salarial.
 
 ### Calidad y mantenimiento
 - Se cerro la cobertura pendiente de pruebas para objetivos sugeridos por la directiva.

@@ -4093,8 +4093,8 @@ MoraleAlert           - Alerta de baja moral
 - [x] Implementar sistema de contexto de menú (clic derecho en lista de jugadores)
 - [x] Mejorar dashboard con KPIs (edad promedio, forma promedio, presupuesto)
 - [x] Crear sistema de economía justa (salary cap relativo a ingresos)
-- [ ] Implementar mini-juego de penales
-- [ ] Documentación completa y validación de compilación final
+- [ ] [FUTURO] Implementar mini-juego interactivo de penales
+- [x] Documentación completa y validación de compilación final
    - Facilitar testing unitario de operaciones complejas
 
 2. **Reemplazo de global state en season_service.cpp**:
