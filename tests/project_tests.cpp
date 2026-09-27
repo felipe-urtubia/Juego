@@ -3971,6 +3971,53 @@ void testGuiKeyboardShortcutsAreIntegrated() {
     expect(commonSource.find("PlayerSearchEngine::search(searchQuery)") != string::npos,
            "La lista de fichajes debe usar PlayerSearchEngine para la busqueda global.");
 }
+void testGuiPlayerContextMenuIsIntegrated() {
+    const string guiPath = resolveProjectPath("src/gui/gui.cpp");
+    const string runtimePath = resolveProjectPath("src/gui/gui_runtime.cpp");
+    const string actionsPath = resolveProjectPath("src/gui/gui_actions.cpp");
+
+    ifstream guiInput(guiPath, ios::binary);
+    ifstream runtimeInput(runtimePath, ios::binary);
+    ifstream actionsInput(actionsPath, ios::binary);
+    expect(guiInput.is_open() && runtimeInput.is_open() && actionsInput.is_open(),
+           "La prueba del menu contextual necesita leer los archivos principales de la GUI.");
+
+    ostringstream guiBuffer;
+    ostringstream runtimeBuffer;
+    ostringstream actionsBuffer;
+    guiBuffer << guiInput.rdbuf();
+    runtimeBuffer << runtimeInput.rdbuf();
+    actionsBuffer << actionsInput.rdbuf();
+
+    const string guiSource = guiBuffer.str();
+    const string runtimeSource = runtimeBuffer.str();
+    const string actionsSource = actionsBuffer.str();
+
+    expect(guiSource.find("NM_RCLICK") != string::npos &&
+               guiSource.find("handlePlayerContextMenu(*state") != string::npos,
+           "Las listas de jugadores deben manejar clic derecho mediante un handler dedicado.");
+    expect(runtimeSource.find("playerContextMenuProc") != string::npos &&
+               runtimeSource.find("CreateWindowExW") != string::npos &&
+               runtimeSource.find("drawRoundedPanel") != string::npos,
+           "El menu contextual debe usar un popup personalizado con el estilo visual del juego.");
+    expect(runtimeSource.find("CreatePopupMenu") == string::npos &&
+               runtimeSource.find("TrackPopupMenu") == string::npos,
+           "El menu contextual no debe depender del menu nativo clasico de Windows.");
+    expect(runtimeSource.find("ListView_SetItemState") != string::npos,
+           "El clic derecho debe seleccionar primero la fila sobre la que se hizo clic.");
+    expect(runtimeSource.find("runBuyAction(state)") != string::npos &&
+               runtimeSource.find("runSellAction(state)") != string::npos &&
+               runtimeSource.find("runRenewAction(state)") != string::npos &&
+               runtimeSource.find("runShortlistAction(state)") != string::npos,
+           "El menu contextual debe reutilizar las acciones reales ya existentes.");
+
+    const size_t shortlistStart = actionsSource.find("void runShortlistAction");
+    const size_t shortlistEnd = actionsSource.find("void runFollowShortlistAction", shortlistStart);
+    expect(shortlistStart != string::npos && shortlistEnd != string::npos &&
+               actionsSource.substr(shortlistStart, shortlistEnd - shortlistStart)
+                   .find("selectedListViewRow(state.tableList)") != string::npos,
+           "Shortlist debe operar sobre la lista real de jugadores del mercado.");
+}
 void testProjectPathsResolveFromNestedWorkingDirectory() {
     const string probeRoot = processScopedTestPath("saves/runtime_cwd_probe");
     const string probeDir = resolveProjectPath(joinPath(probeRoot, "nested"));
@@ -4588,6 +4635,7 @@ int main() {
         {"app_services_career_split", testAppServiceCareerIsSeparatedFromMainOrchestrator},
         {"gui_critical_event_notifications", testGuiActionsRegisterCriticalEvents},
         {"gui_keyboard_shortcuts", testGuiKeyboardShortcutsAreIntegrated},
+        {"gui_player_context_menu", testGuiPlayerContextMenuIsIntegrated},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
         {"save_load_roundtrip", testSaveLoadRoundTripPreservesCareerState},

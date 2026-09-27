@@ -231,6 +231,18 @@ struct LayoutSnapshot {
     bool dashboardEmptyState = false;
 };
 
+struct PlayerContextMenuEntry {
+    int commandId = 0;
+    std::wstring text;
+    bool separator = false;
+    bool enabled = true;
+};
+
+struct PlayerContextMenuState {
+    HWND window = nullptr;
+    int hoveredIndex = -1;
+    std::vector<PlayerContextMenuEntry> entries;
+};
 struct AppState {
     HINSTANCE instance = nullptr;
     HWND window = nullptr;
@@ -282,6 +294,7 @@ struct AppState {
     std::string selectedTransferPlayer;
     std::string selectedTransferClub;
     std::string selectedSavePath;
+    PlayerContextMenuState playerContextMenu;
     std::string simulationProgressPhase;
     std::string simulationProgressDetail;
     std::vector<std::string> simulationProgressEvents;
@@ -481,6 +494,7 @@ void handleFilterChange(AppState& state);
 void handleListSelectionChange(AppState& state, int controlId);
 void handleFeedSelectionChange(AppState& state, int controlId);
 void activateListAction(AppState& state, int controlId);
+void handlePlayerContextMenu(AppState& state, int controlId, const NMITEMACTIVATE& activation);
 void handleListColumnClick(AppState& state, const NMLISTVIEW& view);
 
 void startNewCareer(AppState& state);

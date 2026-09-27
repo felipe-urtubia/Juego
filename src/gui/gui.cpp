@@ -727,6 +727,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                     handleListSelectionChange(*state, static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->idFrom));
                     return 0;
                 }
+                if (reinterpret_cast<LPNMHDR>(lParam)->code == NM_RCLICK) {
+                    handlePlayerContextMenu(*state,
+                                            static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->idFrom),
+                                            *reinterpret_cast<NMITEMACTIVATE*>(lParam));
+                    return 0;
+                }
                 if (reinterpret_cast<LPNMHDR>(lParam)->code == NM_DBLCLK ||
                     reinterpret_cast<LPNMHDR>(lParam)->code == NM_RETURN) {
                     activateListAction(*state, static_cast<int>(reinterpret_cast<LPNMHDR>(lParam)->idFrom));

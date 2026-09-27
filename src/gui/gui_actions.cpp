@@ -989,14 +989,14 @@ void runInstructionAction(AppState& state) {
 
 void runShortlistAction(AppState& state) {
     if (state.currentPage != GuiPage::Transfers) return;
-    int row = selectedListViewRow(state.squadList);
+    int row = selectedListViewRow(state.tableList);
     if (row < 0) {
         MessageBoxW(state.window, L"Selecciona un objetivo del mercado.", L"Shortlist", MB_OK | MB_ICONINFORMATION);
         return;
     }
     ServiceResult result = shortlistPlayerService(state.career,
-                                                  listViewText(state.squadList, row, 10),
-                                                  listViewText(state.squadList, row, 0));
+                                                  listViewText(state.tableList, row, 10),
+                                                  listViewText(state.tableList, row, 0));
     finalizeAction(state, result, "Shortlist");
 }
 

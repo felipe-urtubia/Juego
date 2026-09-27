@@ -425,6 +425,370 @@ void syncSaveBrowserSelection(AppState& state) {
     SendMessageW(state.newsList, LB_SETCURSEL, selectedIndex, 0);
 }
 
+constexpr wchar_t kPlayerContextMenuClass[] = L"ChileanFootballitoPlayerContextMenu";
+
+int playerContextMenuHeaderHeight(const AppState& state) {
+    return scaleByDpi(state, 38);
+}
+
+int playerContextMenuOuterPadding(const AppState& state) {
+    return scaleByDpi(state, 8);
+}
+
+int playerContextMenuItemHeight(const AppState& state) {
+    return scaleByDpi(state, 38);
+}
+
+int playerContextMenuSeparatorHeight(const AppState& state) {
+    return scaleByDpi(state, 12);
+}
+
+RECT playerContextMenuItemRect(const AppState& state, int index, int width) {
+    int top = playerContextMenuHeaderHeight(state) + playerContextMenuOuterPadding(state);
+    for (int i = 0; i < index; ++i) {
+        top += state.playerContextMenu.entries[static_cast<size_t>(i)].separator
+            ? playerContextMenuSeparatorHeight(state)
+            : playerContextMenuItemHeight(state);
+    }
+
+    const int height = state.playerContextMenu.entries[static_cast<size_t>(index)].separator
+        ? playerContextMenuSeparatorHeight(state)
+        : playerContextMenuItemHeight(state);
+
+    return RECT{
+        playerContextMenuOuterPadding(state),
+        top,
+        width - playerContextMenuOuterPadding(state),
+        top + height
+    };
+}
+
+int playerContextMenuHeight(const AppState& state) {
+    int height = playerContextMenuHeaderHeight(state) + playerContextMenuOuterPadding(state) * 2;
+    for (const auto& entry : state.playerContextMenu.entries) {
+        height += entry.separator
+            ? playerContextMenuSeparatorHeight(state)
+            : playerContextMenuItemHeight(state);
+    }
+    return height;
+}
+
+int playerContextMenuHitTest(const AppState& state, POINT point) {
+    if (!state.playerContextMenu.window) return -1;
+
+    RECT client{};
+    GetClientRect(state.playerContextMenu.window, &client);
+    const int width = client.right - client.left;
+
+    for (int i = 0; i < static_cast<int>(state.playerContextMenu.entries.size()); ++i) {
+        const auto& entry = state.playerContextMenu.entries[static_cast<size_t>(i)];
+        if (entry.separator || !entry.enabled) continue;
+        RECT item = playerContextMenuItemRect(state, i, width);
+        if (PtInRect(&item, point)) return i;
+    }
+    return -1;
+}
+
+void executePlayerContextCommand(AppState& state, int commandId) {
+    switch (commandId) {
+        case IDC_SHORTLIST_BUTTON:
+            runShortlistAction(state);
+            break;
+        case IDC_BUY_BUTTON:
+            runBuyAction(state);
+            break;
+        case IDC_PRECONTRACT_BUTTON:
+            runPreContractAction(state);
+            break;
+        case IDC_LOAN_BUTTON:
+            runLoanAction(state);
+            break;
+        case IDC_RENEW_BUTTON:
+            runRenewAction(state);
+            break;
+        case IDC_SELL_BUTTON:
+            runSellAction(state);
+            break;
+        case IDC_PLAN_BUTTON:
+            runPlanAction(state);
+            break;
+        case IDC_INSTRUCTION_BUTTON:
+            runInstructionAction(state);
+            break;
+        default:
+            break;
+    }
+}
+
+LRESULT CALLBACK playerContextMenuProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    AppState* state = reinterpret_cast<AppState*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+
+    if (message == WM_NCCREATE) {
+        const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lParam);
+        state = reinterpret_cast<AppState*>(create->lpCreateParams);
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
+    }
+
+    switch (message) {
+        case WM_ERASEBKGND:
+            return 1;
+
+        case WM_PAINT:
+            if (state) {
+                PAINTSTRUCT paint{};
+                HDC hdc = BeginPaint(hwnd, &paint);
+
+                RECT client{};
+                GetClientRect(hwnd, &client);
+                const auto s = [&](int value) { return scaleByDpi(*state, value); };
+
+                drawRoundedPanel(hdc,
+                                 client,
+                                 RGB(7, 20, 28),
+                                 RGB(54, 96, 119),
+                                 s(18));
+
+                RECT accent{
+                    client.left + s(14),
+                    client.top + s(10),
+                    client.left + s(72),
+                    client.top + s(14)
+                };
+                HBRUSH accentBrush = CreateSolidBrush(kThemeAccent);
+                FillRect(hdc, &accent, accentBrush);
+                DeleteObject(accentBrush);
+
+                RECT heading{
+                    client.left + s(14),
+                    client.top + s(14),
+                    client.right - s(14),
+                    client.top + playerContextMenuHeaderHeight(*state)
+                };
+                SetBkMode(hdc, TRANSPARENT);
+                SetTextColor(hdc, RGB(193, 207, 216));
+                HGDIOBJ oldFont = SelectObject(hdc,
+                    state->sectionFont ? state->sectionFont :
+                    (state->font ? state->font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT))));
+                DrawTextW(hdc,
+                          L"ACCIONES DEL JUGADOR",
+                          -1,
+                          &heading,
+                          DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+                SelectObject(hdc,
+                    state->font ? state->font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+
+                const int width = client.right - client.left;
+                for (int i = 0; i < static_cast<int>(state->playerContextMenu.entries.size()); ++i) {
+                    const auto& entry = state->playerContextMenu.entries[static_cast<size_t>(i)];
+                    RECT item = playerContextMenuItemRect(*state, i, width);
+
+                    if (entry.separator) {
+                        const int y = (item.top + item.bottom) / 2;
+                        HPEN pen = CreatePen(PS_SOLID, 1, RGB(40, 63, 77));
+                        HGDIOBJ oldPen = SelectObject(hdc, pen);
+                        MoveToEx(hdc, item.left + s(8), y, nullptr);
+                        LineTo(hdc, item.right - s(8), y);
+                        SelectObject(hdc, oldPen);
+                        DeleteObject(pen);
+                        continue;
+                    }
+
+                    const bool hovered = i == state->playerContextMenu.hoveredIndex;
+                    if (hovered) {
+                        drawRoundedPanel(hdc,
+                                         item,
+                                         RGB(22, 58, 75),
+                                         RGB(68, 124, 153),
+                                         s(10));
+                    }
+
+                    RECT marker{
+                        item.left + s(9),
+                        item.top + s(13),
+                        item.left + s(14),
+                        item.bottom - s(13)
+                    };
+                    HBRUSH markerBrush = CreateSolidBrush(
+                        entry.commandId == IDC_SELL_BUTTON ? RGB(198, 96, 102) :
+                        (hovered ? kThemeAccent : RGB(71, 126, 161)));
+                    FillRect(hdc, &marker, markerBrush);
+                    DeleteObject(markerBrush);
+
+                    RECT textRect = item;
+                    textRect.left += s(26);
+                    textRect.right -= s(10);
+                    SetTextColor(hdc,
+                                 entry.enabled
+                                     ? (hovered ? RGB(255, 247, 219) : kThemeText)
+                                     : RGB(102, 117, 126));
+                    DrawTextW(hdc,
+                              entry.text.c_str(),
+                              -1,
+                              &textRect,
+                              DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                }
+
+                SelectObject(hdc, oldFont);
+                EndPaint(hwnd, &paint);
+                return 0;
+            }
+            break;
+
+        case WM_MOUSEMOVE:
+            if (state) {
+                POINT point{
+                    static_cast<LONG>(static_cast<short>(LOWORD(lParam))),
+                    static_cast<LONG>(static_cast<short>(HIWORD(lParam)))
+                };
+                const int hovered = playerContextMenuHitTest(*state, point);
+                if (hovered != state->playerContextMenu.hoveredIndex) {
+                    state->playerContextMenu.hoveredIndex = hovered;
+                    InvalidateRect(hwnd, nullptr, FALSE);
+                }
+                SetCursor(LoadCursorW(nullptr, hovered >= 0 ? MAKEINTRESOURCEW(32649) : MAKEINTRESOURCEW(32512)));
+                return 0;
+            }
+            break;
+
+        case WM_LBUTTONUP:
+            if (state) {
+                POINT point{
+                    static_cast<LONG>(static_cast<short>(LOWORD(lParam))),
+                    static_cast<LONG>(static_cast<short>(HIWORD(lParam)))
+                };
+                const int index = playerContextMenuHitTest(*state, point);
+                int commandId = 0;
+                if (index >= 0) {
+                    commandId = state->playerContextMenu.entries[static_cast<size_t>(index)].commandId;
+                }
+
+                if (GetCapture() == hwnd) ReleaseCapture();
+                DestroyWindow(hwnd);
+
+                if (commandId != 0) {
+                    executePlayerContextCommand(*state, commandId);
+                }
+                return 0;
+            }
+            break;
+
+        case WM_RBUTTONUP:
+            if (GetCapture() == hwnd) ReleaseCapture();
+            DestroyWindow(hwnd);
+            return 0;
+
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE) {
+                if (GetCapture() == hwnd) ReleaseCapture();
+                DestroyWindow(hwnd);
+                return 0;
+            }
+            break;
+
+        case WM_KILLFOCUS:
+            if (state && state->playerContextMenu.window == hwnd) {
+                if (GetCapture() == hwnd) ReleaseCapture();
+                DestroyWindow(hwnd);
+                return 0;
+            }
+            break;
+
+        case WM_NCDESTROY:
+            if (state && state->playerContextMenu.window == hwnd) {
+                state->playerContextMenu.window = nullptr;
+                state->playerContextMenu.hoveredIndex = -1;
+            }
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+            break;
+    }
+
+    return DefWindowProcW(hwnd, message, wParam, lParam);
+}
+
+bool ensurePlayerContextMenuClass(AppState& state) {
+    static bool registered = false;
+    if (registered) return true;
+
+    WNDCLASSEXW cls{};
+    cls.cbSize = sizeof(cls);
+    cls.style = CS_HREDRAW | CS_VREDRAW;
+    cls.lpfnWndProc = playerContextMenuProc;
+    cls.hInstance = state.instance;
+    cls.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
+    cls.hbrBackground = nullptr;
+    cls.lpszClassName = kPlayerContextMenuClass;
+
+    if (!RegisterClassExW(&cls) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+        return false;
+    }
+
+    registered = true;
+    return true;
+}
+
+void showPlayerContextMenuPopup(AppState& state, POINT cursor) {
+    if (state.playerContextMenu.window) {
+        DestroyWindow(state.playerContextMenu.window);
+        state.playerContextMenu.window = nullptr;
+    }
+    if (!ensurePlayerContextMenuClass(state) || state.playerContextMenu.entries.empty()) return;
+
+    const int width = scaleByDpi(state, 278);
+    const int height = playerContextMenuHeight(state);
+
+    HMONITOR monitor = MonitorFromPoint(cursor, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitorInfo{};
+    monitorInfo.cbSize = sizeof(monitorInfo);
+    GetMonitorInfoW(monitor, &monitorInfo);
+
+    int x = cursor.x + scaleByDpi(state, 8);
+    int y = cursor.y + scaleByDpi(state, 6);
+    x = std::max(static_cast<int>(monitorInfo.rcWork.left) + scaleByDpi(state, 6),
+                 std::min(x, static_cast<int>(monitorInfo.rcWork.right) - width - scaleByDpi(state, 6)));
+    y = std::max(static_cast<int>(monitorInfo.rcWork.top) + scaleByDpi(state, 6),
+                 std::min(y, static_cast<int>(monitorInfo.rcWork.bottom) - height - scaleByDpi(state, 6)));
+
+    HWND popup = CreateWindowExW(
+        WS_EX_TOOLWINDOW,
+        kPlayerContextMenuClass,
+        L"",
+        WS_POPUP,
+        x,
+        y,
+        width,
+        height,
+        state.window,
+        nullptr,
+        state.instance,
+        &state);
+
+    if (!popup) return;
+
+    state.playerContextMenu.window = popup;
+    state.playerContextMenu.hoveredIndex = -1;
+
+    HRGN region = CreateRoundRectRgn(0,
+                                     0,
+                                     width + 1,
+                                     height + 1,
+                                     scaleByDpi(state, 18),
+                                     scaleByDpi(state, 18));
+    if (region && SetWindowRgn(popup, region, FALSE) == 0) {
+        DeleteObject(region);
+    }
+
+    SetWindowPos(popup,
+                 HWND_TOP,
+                 x,
+                 y,
+                 width,
+                 height,
+                 SWP_SHOWWINDOW);
+    SetForegroundWindow(popup);
+    SetFocus(popup);
+    SetCapture(popup);
+}
 }  // namespace
 
 bool isFrontMenuPage(GuiPage page) {
@@ -842,6 +1206,68 @@ void activateListAction(AppState& state, int controlId) {
     }
 }
 
+void handlePlayerContextMenu(AppState& state, int controlId, const NMITEMACTIVATE& activation) {
+    if (state.pageRefreshInProgress || activation.iItem < 0) return;
+
+    const bool managedPlayer =
+        (state.currentPage == GuiPage::Squad || state.currentPage == GuiPage::Youth) &&
+        controlId == IDC_SQUAD_LIST;
+    const bool transferTarget =
+        state.currentPage == GuiPage::Transfers &&
+        controlId == IDC_TABLE_LIST;
+
+    if (!managedPlayer && !transferTarget) return;
+
+    HWND list = managedPlayer ? state.squadList : state.tableList;
+    if (!list) return;
+
+    POINT cursor{};
+    GetCursorPos(&cursor);
+
+    ListView_SetItemState(list, -1, 0, LVIS_SELECTED | LVIS_FOCUSED);
+    ListView_SetItemState(list,
+                          activation.iItem,
+                          LVIS_SELECTED | LVIS_FOCUSED,
+                          LVIS_SELECTED | LVIS_FOCUSED);
+    ListView_EnsureVisible(list, activation.iItem, FALSE);
+
+    if (managedPlayer) {
+        const std::string playerName = listViewText(list, activation.iItem, 0);
+        if (playerName.empty()) return;
+        state.selectedPlayerName = playerName;
+    } else {
+        const std::string playerName = listViewText(list, activation.iItem, 0);
+        const std::string clubName = listViewText(list, activation.iItem, 10);
+        if (playerName.empty() || clubName.empty()) return;
+        state.selectedTransferPlayer = playerName;
+        state.selectedTransferClub = clubName;
+    }
+
+    refreshCurrentPage(state);
+
+    state.playerContextMenu.entries.clear();
+    if (transferTarget) {
+        state.playerContextMenu.entries.push_back({IDC_SHORTLIST_BUTTON, L"Agregar a shortlist", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({0, L"", true, false});
+        state.playerContextMenu.entries.push_back({IDC_BUY_BUTTON, L"Comprar", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({IDC_PRECONTRACT_BUTTON, L"Precontrato", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({IDC_LOAN_BUTTON, L"Pedir cesion", false, !state.actionInProgress});
+    } else {
+        state.playerContextMenu.entries.push_back({IDC_LOAN_BUTTON, L"Ceder", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({IDC_RENEW_BUTTON, L"Renovar contrato", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({IDC_SELL_BUTTON, L"Vender", false, !state.actionInProgress});
+        state.playerContextMenu.entries.push_back({0, L"", true, false});
+        state.playerContextMenu.entries.push_back({
+            IDC_PLAN_BUTTON,
+            state.currentPage == GuiPage::Youth ? L"Cambiar plan de desarrollo" : L"Cambiar instruccion individual",
+            false,
+            !state.actionInProgress
+        });
+        state.playerContextMenu.entries.push_back({IDC_INSTRUCTION_BUTTON, L"Hablar con jugador", false, !state.actionInProgress});
+    }
+
+    showPlayerContextMenuPopup(state, cursor);
+}
 void handleListColumnClick(AppState& state, const NMLISTVIEW& view) {
     if (state.pageRefreshInProgress) return;
     if ((state.currentPage == GuiPage::Squad || state.currentPage == GuiPage::Youth) && view.hdr.idFrom == IDC_SQUAD_LIST) {
