@@ -7590,3 +7590,224 @@ Validacion de datos:
 ## Limitacion conocida
 
 Las sustituciones obligadas por lesion siguen siendo automaticas en esta primera version y consumen uno de los cinco cambios permitidos. El evento queda visible para el usuario en el Match Center.
+
+---
+
+# Registro de trabajo reciente - Septiembre 2026
+
+## ✅ Match Center - ampliaciones finales
+
+### Mapa de calor
+
+- [x] Implementado mapa de calor por 9 zonas del campo.
+- [x] Integrado en Match Center normal.
+- [x] Integrado en Match Center interactivo.
+- [x] Integrado en análisis postpartido.
+- [x] Cobertura automática agregada.
+- Commit: `70d0140 feat: agregar mapa de calor al Match Center`.
+
+### Estadísticas avanzadas por jugador
+
+- [x] Estadísticas individuales durante y después del partido.
+- [x] Tiros.
+- [x] Tiros al arco.
+- [x] Goles.
+- [x] Grandes ocasiones.
+- [x] xG.
+- [x] Atajadas.
+- [x] Tarjetas amarillas y rojas.
+- [x] Integración con valoraciones existentes.
+- Commit: `1189cc6 feat: agregar estadisticas avanzadas por jugador`.
+
+### Línea temporal interactiva
+
+- [x] Línea temporal cronológica integrada al Match Center.
+- [x] Filtrado para impedir mostrar eventos futuros.
+- [x] Soporte para tiros, goles, atajadas, tarjetas, lesiones, córners, contraataques, cambios tácticos y sustituciones.
+- [x] Integrada también en resumen postpartido.
+- Commit: `52739d2 feat: agregar linea temporal interactiva del partido`.
+
+### Análisis postpartido
+
+- [x] Integración completa del Match Center con el análisis postpartido.
+- [x] Mapa de calor final.
+- [x] Estadísticas avanzadas por jugador.
+- [x] Línea temporal.
+- [x] xG real del motor.
+- [x] Persistencia mediante guardado/carga.
+- Commit: `221defe feat: integrar Match Center con analisis postpartido`.
+
+### Pruebas completas del Match Center
+
+- [x] Estado en vivo.
+- [x] Eventos.
+- [x] Posesión.
+- [x] Momentum.
+- [x] Mapa de calor.
+- [x] Renderer.
+- [x] Reproducción completa.
+- [x] Estado final.
+- [x] Resumen interactivo.
+- [x] Cambios tácticos.
+- [x] Cambios de instrucción.
+- [x] Sustituciones.
+- [x] Cobertura de todas las rutas de decisión del manager.
+- Commit: `8179903 test: ampliar cobertura del Match Center`.
+
+## ✅ Objetivos sugeridos por la directiva
+
+- [x] Verificada cobertura existente para objetivos sugeridos por la directiva.
+- [x] Casos de situación financiera ajustada.
+- [x] Casos relacionados con lesiones.
+- [x] Cerrado TODO histórico que estaba pendiente.
+- Commit: `ee2fd66 docs: cerrar prueba de objetivo de directiva`.
+
+## ✅ Notificaciones de transferencias
+
+- [x] Agregado `EventType::TransferCompleted`.
+- [x] Las transferencias aceptadas directamente generan notificación.
+- [x] Las contraofertas aceptadas generan notificación.
+- [x] Integrado en simulación semanal.
+- [x] Prueba automática `testWeeklyTransferRecordsNotification`.
+- Commit: `7500013 feat: registrar transferencias en notificaciones`.
+
+## ✅ Eventos críticos de interfaz
+
+- [x] Integración de acciones críticas de la GUI con el sistema de eventos.
+- [x] Registro de fallos importantes mediante `ManagerAlert`.
+- [x] Integración en `finalizeAction`.
+- [x] Prueba automática `testGuiActionsRegisterCriticalEvents`.
+- Commit: `4f268d9 feat: registrar eventos criticos de la interfaz`.
+
+## ✅ Atajos de teclado y búsqueda global
+
+- [x] `Ctrl+F` abre la búsqueda global.
+- [x] La búsqueda utiliza `global_search::PlayerSearchEngine`.
+- [x] Búsqueda de jugadores desde la interfaz de fichajes.
+- [x] Integración de resultados con la lista del mercado.
+- [x] `S` ejecuta scouting.
+- [x] `V` ejecuta la acción de vender.
+- [x] Los atajos de letras no se activan cuando un campo Edit tiene el foco.
+- [x] `Esc` cierra la búsqueda global y restaura los filtros.
+- [x] Inicialización de `PlayerSearchEngine` al iniciar la GUI.
+- [x] Integración de `src/ui/global_search.cpp` en CMake.
+- [x] Prueba estructural `testGuiKeyboardShortcutsAreIntegrated`.
+- [x] Prueba manual de GUI realizada correctamente.
+- Commit: `176c62f feat: agregar atajos de teclado y busqueda global`.
+
+## ✅ Release v0.1.1-alpha
+
+### Preparación
+
+- [x] Versión visible actualizada a `v0.1.1-alpha`.
+- [x] `CHANGELOG.md` actualizado con las novedades.
+- [x] Build de `FootballManager` correcto.
+- [x] `FootballManagerTests`: 100% aprobado.
+- [x] Build de `FootballManagerCLI` correcto.
+- [x] Validación general ejecutada.
+
+Resultado del validador:
+
+- Divisiones: 5.
+- Equipos: 90.
+- Jugadores crudos: 2200.
+- Errores: 0.
+- Advertencias: 0.
+
+- [x] `git diff --check` sin errores.
+- Commit: `3fca19d release: preparar v0.1.1-alpha`.
+- [x] Release integrada mediante fast-forward a `main`.
+- [x] `main` subida correctamente a GitHub.
+- [x] Tag anotado `v0.1.1-alpha` creado y publicado.
+
+### Paquete distribuible
+
+- [x] Creado paquete limpio `FootballManager-v0.1.1-alpha`.
+- [x] Incluye `FootballManager.exe`.
+- [x] Incluye `assets`.
+- [x] Incluye `data`.
+- [x] Incluye carpeta `saves` vacía.
+- [x] No se incluyeron partidas personales ni archivos de pruebas.
+- [x] `LEEME.txt` actualizado para `v0.1.1-alpha`.
+- [x] Creado `FootballManager-v0.1.1-alpha.zip`.
+- Tamaño final: `28138948` bytes.
+- [x] Release publicada manualmente en GitHub como pre-release.
+- [x] ZIP agregado como asset descargable.
+- [x] Descarga pública verificada mediante HTTP `200`.
+- [x] Tamaño remoto coincide con el ZIP generado.
+- [x] Archivos temporales locales eliminados después de publicar.
+- [x] Repositorio quedó limpio después de cerrar la release.
+
+## 🚧 Rediseño del menú principal - 2026-09-27
+
+Rama actual:
+
+`feature/main-menu-redesign`
+
+### Diseño implementado hasta ahora
+
+- [x] Eliminado de la portada el texto `SIMULADOR DE GESTION FUTBOLISTICA CHILENA`.
+- [x] Se mantiene el título `Chilean Footballito`.
+- [x] Se mantiene el lema `Construye tu club. Define tu estilo. Deja tu legado.`.
+- [x] Se mantiene badge de versión `v0.1.1-alpha / EN DESARROLLO`.
+- [x] Eliminado el panel `CENTRO DEL MANAGER` de la portada.
+- [x] Eliminado el panel `CONFIGURACION ACTUAL` de la portada.
+- [x] Eliminado el panel `ATAJOS` de la portada.
+- [x] Eliminado el separador vertical del diseño anterior.
+- [x] Reemplazada la portada de dos columnas por una tarjeta central.
+- [x] Texto central cambiado a `BIENVENIDO, MANAGER`.
+- [x] Agregado subtítulo central `Elige una opcion para comenzar:`.
+- [x] Centrado horizontal de los seis botones principales.
+- [x] Aumentado el ancho útil de los botones.
+- [x] Menú adaptativo para ventanas de menor altura.
+- [x] Los botones reducen su altura cuando falta espacio vertical.
+- [x] `BIENVENIDO, MANAGER` permanece visible al reducir la ventana.
+- [x] Se conservan las acciones reales de:
+  - Nueva carrera.
+  - Continuar partida.
+  - Cargar partida.
+  - Opciones.
+  - Créditos.
+  - Salir.
+
+### Limpieza de mensajes de interfaz
+
+- [x] Eliminado mensaje técnico al entrar en fullscreen:
+  `Pantalla completa sin borde activa...`
+- [x] Eliminado mensaje técnico al restaurar la ventana:
+  `Ventana restaurada...`
+- [x] Ocultado el texto de estado inferior izquierdo en el menú principal.
+- [x] Eliminado visualmente `Todo listo. Crea una carrera o continua tu ultima partida.` de la portada.
+
+### Footer
+
+- [x] Se conserva:
+  `Chilean Footballito | Desarrollo activo | Temporada 2026`.
+- [x] Footer separado del panel central.
+- [x] Footer colocado en la franja inferior.
+- [x] Alineación comprobada en ventana normal.
+- [x] Alineación comprobada en pantalla completa.
+
+### Pruebas realizadas durante el rediseño
+
+- [x] `FootballManager` compilado correctamente después de los cambios.
+- [x] Apertura manual del juego correcta.
+- [x] Menú probado en ventana reducida.
+- [x] Menú probado en pantalla completa.
+- [x] Navegación visual funcional.
+
+### Pendiente antes de cerrar esta rama
+
+- [x] Ejecutar `FootballManagerTests`: 100% tests passed.
+- [x] Compilar `FootballManagerCLI`: compilación correcta.
+- [x] Ejecutar validación general `FootballManagerCLI.exe --validate`: 5 divisiones, 90 equipos, 2200 jugadores, 0 errores y 0 advertencias.
+- [x] Ejecutar `git diff --check`: sin errores de whitespace; solo advertencias normales LF/CRLF.
+- [x] Revisar diff final del rediseño.
+- [x] Actualizar esta sección con resultados finales.
+- [ ] Commit del rediseño.
+- [ ] Push de `feature/main-menu-redesign`.
+- [ ] Merge fast-forward a `main`.
+- [ ] Push de `main`.
+- [ ] Eliminar rama local y remota después de integrar.
+
+> Nota: este rediseño fue realizado después de publicar `v0.1.1-alpha`; por lo tanto, estos cambios todavía no forman parte del ZIP público de esa release.

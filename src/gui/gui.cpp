@@ -184,7 +184,6 @@ bool restoreWindowedPlacement(AppState& state) {
     ShowWindow(state.window, SW_RESTORE);
     state.isBorderlessFullscreen = false;
     syncDisplayModeButton(state);
-    setStatus(state, "Ventana restaurada. El siguiente paso del ciclo es maximizar y luego fullscreen.");
     return true;
 }
 
@@ -217,7 +216,6 @@ bool enterBorderlessFullscreen(AppState& state) {
                  SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
     state.isBorderlessFullscreen = true;
     syncDisplayModeButton(state);
-    setStatus(state, "Pantalla completa sin borde activa. El siguiente paso del ciclo devuelve la ventana restaurada.");
     return true;
 }
 

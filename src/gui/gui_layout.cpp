@@ -941,16 +941,17 @@ void layoutMainMenuPanel(AppState& state, const RECT& client) {
     const int outerPadding = clientWidth < s(1180) ? s(30) : s(54);
     const int bottomReserve = s(70);
     const int availableWidth = std::max(s(720), clientWidth - outerPadding * 2);
-    const int actionColumnWidth = std::min(s(540), std::max(s(390), availableWidth * 48 / 100));
-    const int buttonWidth = std::min(s(470), actionColumnWidth);
-    const int buttonHeight = clientHeight < s(760) ? s(58) : s(66);
-    const int buttonGap = clientHeight < s(760) ? s(8) : s(11);
+    const int menuPanelWidth = std::min(s(720), std::max(s(560), availableWidth * 58 / 100));
+    const int buttonWidth = std::min(s(620), menuPanelWidth - s(72));
+    const int menuTopReserve = clientHeight < s(760) ? s(280) : s(300);
+    const int buttonGap = clientHeight < s(760) ? s(6) : s(11);
+    const int usableButtonHeight = std::max(s(220), clientHeight - menuTopReserve - bottomReserve);
+    const int buttonHeight = clampValue((usableButtonHeight - 5 * buttonGap) / 6, s(36), s(66));
 
-    const int contentLeft = outerPadding;
-    const int actionLeft = contentLeft + std::max(0, (actionColumnWidth - buttonWidth) / 2);
-    const int headerBottom = s(190);
+    const int actionLeft = std::max(outerPadding, (clientWidth - buttonWidth) / 2);
+    const int headerBottom = menuTopReserve;
     const int buttonsBlockHeight = 6 * buttonHeight + 5 * buttonGap;
-    const int availableButtonArea = std::max(buttonsBlockHeight, clientHeight - headerBottom - bottomReserve);
+    const int availableButtonArea = std::max(buttonsBlockHeight, usableButtonHeight);
     const int buttonsTop = headerBottom + std::max(0, (availableButtonArea - buttonsBlockHeight) / 2);
 
     // El titulo principal ahora se dibuja en paintWindowChrome para evitar
@@ -1007,16 +1008,8 @@ void layoutMainMenuPanel(AppState& state, const RECT& client) {
     setControlVisibility(state, state.menuApplySettingsButton, false);
     setControlVisibility(state, state.menuResetSettingsButton, false);
 
-    // La barra inferior conserva un estado breve y limpio.
-    if (state.statusLabel) {
-        MoveWindow(state.statusLabel,
-                   outerPadding,
-                   std::max(s(20), static_cast<int>(client.bottom) - bottomReserve + s(18)),
-                   std::max(s(300), static_cast<int>(client.right) - outerPadding * 2),
-                   s(24),
-                   TRUE);
-        setControlVisibility(state, state.statusLabel, true);
-    }
+    // El menu principal no muestra texto de estado en la esquina inferior izquierda.
+    setControlVisibility(state, state.statusLabel, false);
 }
 
 // Layout helper para el dashboard del modo carrera: panel de gestión con botones en grilla e info del club.
@@ -2418,17 +2411,9 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         DeleteObject(accentBrush);
 
         SetBkMode(hdc, TRANSPARENT);
+        HGDIOBJ oldFont = SelectObject(hdc, state.heroFont ? state.heroFont : state.titleFont);
 
-        RECT kicker{header.left + s(28), header.top + s(36), header.right - s(28), header.top + s(58)};
-        SetTextColor(hdc, kThemeAccent);
-        HGDIOBJ oldFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-        DrawTextW(hdc,
-                  L"SIMULADOR DE GESTION FUTBOLISTICA CHILENA",
-                  -1,
-                  &kicker,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-        RECT title{header.left + s(28), header.top + s(60), header.right - s(28), header.top + s(112)};
+        RECT title{header.left + s(28), header.top + s(34), header.right - s(28), header.top + s(90)};
         SelectObject(hdc, state.heroFont ? state.heroFont : state.titleFont);
         SetTextColor(hdc, RGB(245, 248, 250));
         DrawTextW(hdc,
@@ -2437,7 +2422,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
                   &title,
                   DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
-        RECT tagline{header.left + s(28), header.top + s(114), header.right - s(28), header.bottom - s(18)};
+        RECT tagline{header.left + s(28), header.top + s(88), header.right - s(28), header.bottom - s(18)};
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
         SetTextColor(hdc, RGB(181, 204, 216));
         DrawTextW(hdc,
@@ -2459,138 +2444,43 @@ void paintWindowChrome(AppState& state, HDC hdc) {
 
         const int contentTop = header.bottom + s(18);
         const int contentBottom = shell.bottom - s(18);
-        const int splitX = shell.left + std::max(s(520), rectWidth(shell) * 57 / 100);
+        const int menuCardWidth = std::min(s(720), std::max(s(560), rectWidth(shell) * 58 / 100));
+        const int menuCardLeft = shell.left + std::max(0, (rectWidth(shell) - menuCardWidth) / 2);
 
-        RECT actionCard{shell.left + s(18), contentTop, splitX - s(9), contentBottom};
-        RECT infoCard{splitX + s(9), contentTop, shell.right - s(18), contentBottom};
+        RECT actionCard{
+            menuCardLeft,
+            contentTop,
+            menuCardLeft + menuCardWidth,
+            contentBottom
+        };
         drawRoundedPanel(hdc, actionCard, RGB(8, 22, 30), RGB(31, 63, 78), s(20));
-        drawRoundedPanel(hdc, infoCard, RGB(9, 24, 33), RGB(38, 72, 88), s(20));
 
-        RECT actionHeading{actionCard.left + s(26), actionCard.top + s(18), actionCard.right - s(20), actionCard.top + s(46)};
+        RECT actionHeading{
+            actionCard.left + s(26),
+            actionCard.top + s(18),
+            actionCard.right - s(26),
+            actionCard.top + s(48)
+        };
         SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
         SetTextColor(hdc, RGB(235, 240, 243));
-        DrawTextW(hdc, L"BIENVENIDO, ENTRENADOR", -1, &actionHeading, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        DrawTextW(hdc, L"BIENVENIDO, MANAGER", -1, &actionHeading, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
-        RECT actionHint{actionCard.left + s(26), actionCard.top + s(46), actionCard.right - s(20), actionCard.top + s(78)};
+        RECT actionHint{
+            actionCard.left + s(26),
+            actionCard.top + s(48),
+            actionCard.right - s(26),
+            actionCard.top + s(80)
+        };
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
         SetTextColor(hdc, kThemeMuted);
         DrawTextW(hdc,
-                  L"Elige como quieres comenzar tu historia.",
+                  L"Elige una opcion para comenzar:",
                   -1,
                   &actionHint,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-        RECT infoHeading{infoCard.left + s(24), infoCard.top + s(18), infoCard.right - s(20), infoCard.top + s(46)};
-        SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-        SetTextColor(hdc, kThemeAccent);
-        DrawTextW(hdc, L"CENTRO DEL MANAGER", -1, &infoHeading, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-        const bool hasCareer = state.career.myTeam != nullptr;
-        const bool canContinue = state.menuContinueButton && IsWindowEnabled(state.menuContinueButton);
-
-        std::wstring clubLine = L"Club: Sin carrera activa";
-        std::wstring managerLine = L"Manager: pendiente";
-        std::wstring seasonLine = L"Temporada: lista para comenzar";
-        std::wstring saveLine = canContinue ? L"Guardado: disponible" : L"Guardado: sin partida";
-        COLORREF saveAccent = canContinue ? RGB(73, 210, 145) : RGB(156, 169, 176);
-
-        if (hasCareer) {
-            clubLine = L"Club: " + utf8ToWide(state.career.myTeam->name);
-            std::string managerName = state.gameSetup.manager.empty() ? std::string("Manager") : state.gameSetup.manager;
-            managerLine = L"Manager: " + utf8ToWide(managerName);
-            seasonLine = L"Temporada " + std::to_wstring(state.career.currentSeason) +
-                         L"  |  Semana " + std::to_wstring(state.career.currentWeek);
-            saveLine = L"Estado: carrera activa";
-            saveAccent = RGB(73, 210, 145);
-        }
-
-        RECT profile{infoCard.left + s(24), infoCard.top + s(56), infoCard.right - s(24), infoCard.top + s(190)};
-        drawRoundedPanel(hdc, profile, RGB(11, 31, 41), RGB(44, 82, 99), s(15));
-
-        const int profileLeft = profile.left + s(18);
-        const int profileRight = profile.right - s(14);
-        RECT line1{profileLeft, profile.top + s(10), profileRight, profile.top + s(34)};
-        RECT line2{profileLeft, profile.top + s(38), profileRight, profile.top + s(62)};
-        RECT line3{profileLeft, profile.top + s(66), profileRight, profile.top + s(90)};
-        RECT line4{profileLeft, profile.top + s(96), profileRight, profile.bottom - s(8)};
-
-        SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
-        SetTextColor(hdc, RGB(233, 239, 242));
-        DrawTextW(hdc, clubLine.c_str(), -1, &line1, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        SetTextColor(hdc, RGB(181, 202, 212));
-        DrawTextW(hdc, managerLine.c_str(), -1, &line2, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        DrawTextW(hdc, seasonLine.c_str(), -1, &line3, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        SetTextColor(hdc, saveAccent);
-        DrawTextW(hdc, saveLine.c_str(), -1, &line4, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-        RECT settingsTitle{infoCard.left + s(24), infoCard.top + s(208), infoCard.right - s(20), infoCard.top + s(236)};
-        SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-        SetTextColor(hdc, RGB(235, 240, 243));
-        DrawTextW(hdc, L"CONFIGURACION ACTUAL", -1, &settingsTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-        RECT settingsCard{infoCard.left + s(24), infoCard.top + s(242), infoCard.right - s(24), infoCard.top + s(366)};
-        drawRoundedPanel(hdc, settingsCard, RGB(10, 29, 39), RGB(37, 73, 89), s(14));
-
-        const std::wstring difficulty =
-            L"Dificultad   " + utf8ToWide(game_settings::difficultyLabel(state.settings.difficulty));
-        const std::wstring simulation =
-            L"Simulacion   " + utf8ToWide(game_settings::simulationModeLabel(state.settings.simulationMode));
-        const std::wstring speed =
-            L"Velocidad    " + utf8ToWide(game_settings::simulationSpeedLabel(state.settings.simulationSpeed));
-        const std::wstring music =
-            L"Musica       " + utf8ToWide(game_settings::menuMusicModeLabel(state.settings.menuMusicMode));
-
-        RECT setting1{settingsCard.left + s(16), settingsCard.top + s(8), settingsCard.right - s(12), settingsCard.top + s(34)};
-        RECT setting2{settingsCard.left + s(16), settingsCard.top + s(36), settingsCard.right - s(12), settingsCard.top + s(62)};
-        RECT setting3{settingsCard.left + s(16), settingsCard.top + s(64), settingsCard.right - s(12), settingsCard.top + s(90)};
-        RECT setting4{settingsCard.left + s(16), settingsCard.top + s(92), settingsCard.right - s(12), settingsCard.bottom - s(6)};
-
-        SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
-        SetTextColor(hdc, RGB(167, 192, 203));
-        DrawTextW(hdc, difficulty.c_str(), -1, &setting1, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        DrawTextW(hdc, simulation.c_str(), -1, &setting2, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        DrawTextW(hdc, speed.c_str(), -1, &setting3, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-        DrawTextW(hdc, music.c_str(), -1, &setting4, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-
-        if (infoCard.bottom - infoCard.top >= s(500)) {
-            RECT shortcutTitle{infoCard.left + s(24), infoCard.top + s(386), infoCard.right - s(20), infoCard.top + s(414)};
-            SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-            SetTextColor(hdc, RGB(235, 240, 243));
-            DrawTextW(hdc, L"ATAJOS", -1, &shortcutTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-
-            RECT shortcutCard{
-                infoCard.left + s(24),
-                infoCard.top + s(420),
-                infoCard.right - s(24),
-                std::min(infoCard.bottom - s(20), infoCard.top + s(500))
-            };
-            drawRoundedPanel(hdc, shortcutCard, RGB(10, 28, 37), RGB(35, 69, 84), s(14));
-
-            RECT shortcutText{
-                shortcutCard.left + s(16),
-                shortcutCard.top + s(8),
-                shortcutCard.right - s(12),
-                shortcutCard.bottom - s(8)
-            };
-            SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
-            SetTextColor(hdc, RGB(154, 181, 193));
-            DrawTextW(hdc,
-                      L"1-6  Acciones del menu    Enter  Seleccionar\nF11  Pantalla              Esc    Volver",
-                      -1,
-                      &shortcutText,
-                      DT_LEFT | DT_VCENTER | DT_WORDBREAK);
-        }
-
-        // Separador vertical suave entre ambas zonas.
-        HPEN dividerPen = CreatePen(PS_SOLID, 1, RGB(28, 55, 68));
-        HGDIOBJ oldPen = SelectObject(hdc, dividerPen);
-        MoveToEx(hdc, splitX, contentTop + s(20), nullptr);
-        LineTo(hdc, splitX, contentBottom - s(20));
-        SelectObject(hdc, oldPen);
-        DeleteObject(dividerPen);
+                  DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
         // Barra inferior minimalista.
-        RECT footer{shell.left + s(22), shell.bottom - s(38), shell.right - s(22), shell.bottom - s(12)};
+        RECT footer{shell.left + s(22), shell.bottom + s(4), shell.right - s(22), client.bottom - s(8)};
         SetTextColor(hdc, RGB(128, 160, 175));
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
         DrawTextW(hdc,
