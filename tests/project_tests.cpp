@@ -1332,6 +1332,25 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
     expect(inbox.find("Contratos") != string::npos,
            "CareerService debe traducir renovaciones urgentes a alerta de directiva.");
     expect(!career.newsFeed.empty(), "CareerService debe generar narrativa semanal real.");
+
+    // Force an urgent medical recommendation to test weekly staff communications.
+    career.myTeam->players[1].injured = true;
+    career.myTeam->players[2].injured = true;
+    career.myTeam->players[3].injured = true;
+
+    const size_t inboxBeforeBriefing = career.managerInbox.size();
+    const size_t newsBeforeBriefing = career.newsFeed.size();
+
+    service.dispatchWeeklyStaffBriefing();
+
+    expect(career.managerInbox.size() == inboxBeforeBriefing + 3,
+           "El briefing semanal debe agregar dos mensajes Staff y un Resumen medico.");
+    expect(career.managerInbox[inboxBeforeBriefing].find("[Staff]") == 0 &&
+               career.managerInbox[inboxBeforeBriefing + 1].find("[Staff]") == 0 &&
+               career.managerInbox[inboxBeforeBriefing + 2].find("[Resumen]") == 0,
+           "El briefing semanal debe conservar los canales Staff y Resumen.");
+    expect(career.newsFeed.size() == newsBeforeBriefing + 1,
+           "El briefing semanal urgente debe generar una noticia del staff.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {
