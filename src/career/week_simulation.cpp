@@ -302,39 +302,6 @@ void updateShortlistAlerts(Career& career) {
     career.scoutingShortlist = active;
 }
 
-void handleManagerStatus(Career& career) {
-    if (!career.myTeam) return;
-    if (career.boardConfidence >= 20 && career.boardWarningWeeks < 6) return;
-    emitUiMessage("");
-    emitUiMessage("[Directiva] " + career.myTeam->name + " decide despedirte.");
-    career.addNews(career.managerName + " fue despedido de " + career.myTeam->name + ".");
-    career.managerReputation = clampInt(career.managerReputation - 8, 10, 100);
-
-    vector<Team*> jobs = buildJobMarket(career, true);
-    if (jobs.empty()) {
-        for (auto& team : career.allTeams) {
-            if (&team != career.myTeam) jobs.push_back(&team);
-        }
-    }
-    if (jobs.empty()) return;
-
-    emitUiMessage("Debes elegir nuevo club:");
-    for (size_t i = 0; i < jobs.size(); ++i) {
-        emitUiMessage(to_string(i + 1) + ". " + jobs[i]->name + " (" + divisionDisplay(jobs[i]->division) + ")");
-    }
-
-    int choice = 1;
-    if (managerJobSelectionCallback()) {
-        int selected = managerJobSelectionCallback()(career, jobs);
-        if (selected >= 0 && selected < static_cast<int>(jobs.size())) {
-            choice = selected + 1;
-        }
-    }
-    takeManagerJob(career, jobs[static_cast<size_t>(choice - 1)], "Llega tras un despido reciente.");
-}
-
-
-
 void emitSeasonTransitionSummary(const SeasonTransitionSummary& summary) {
     emitUiMessage("");
     emitUiMessage("--- Cierre de Temporada ---");
@@ -562,7 +529,7 @@ void generateNewsPhase(Career& career, const vector<pair<int, int>>& matches, in
 }
 
 void advanceCalendarPhase(Career& career) {
-    handleManagerStatus(career);
+    CareerService(career).handleWeeklyManagerStatus();
     career.currentWeek++;
     checkAchievements(career);
     career.syncActiveHumanManager();

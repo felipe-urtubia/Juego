@@ -1459,6 +1459,64 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
 
     expect(reputationCareer.managerReputation == 100,
            "La reputacion semanal no debe superar el maximo de 100.");
+
+    // Regression: weekly manager dismissal and club selection.
+    Career dismissalCareer;
+    dismissalCareer.managerName = "DT Prueba Despido";
+    dismissalCareer.managerReputation = 90;
+
+    dismissalCareer.allTeams.push_back(
+        makeTeam("Club Inicial Despido", "primera division", 66, 3, 3, "Balanced", "Equilibrado"));
+    dismissalCareer.allTeams.push_back(
+        makeTeam("Oferta Despido A", "primera division", 64, 3, 3, "Balanced", "Equilibrado"));
+    dismissalCareer.allTeams.push_back(
+        makeTeam("Oferta Despido B", "primera division", 62, 3, 3, "Balanced", "Equilibrado"));
+
+    dismissalCareer.refreshActiveDivisionTeamLinks("primera division");
+    dismissalCareer.myTeam = dismissalCareer.getActiveTeamAt(0);
+    dismissalCareer.boardConfidence = 45;
+    dismissalCareer.boardWarningWeeks = 0;
+
+    Team* originalDismissalClub = dismissalCareer.myTeam;
+    CareerService dismissalService(dismissalCareer);
+
+    dismissalService.handleWeeklyManagerStatus();
+
+    expect(dismissalCareer.myTeam == originalDismissalClub,
+           "No debe despedirse al entrenador cuando la directiva esta conforme.");
+    expect(dismissalCareer.newsFeed.empty(),
+           "No debe generarse noticia de despido sin motivo.");
+
+    dismissalCareer.boardConfidence = 19;
+
+    static Team* selectedDismissalOffer = nullptr;
+    selectedDismissalOffer = nullptr;
+
+    CareerRuntimeContext dismissalRuntime = currentCareerRuntimeContext();
+    dismissalRuntime.managerJobSelection =
+        +[](const Career&, const vector<Team*>& jobs) -> int {
+            if (jobs.size() < 2) return -1;
+            selectedDismissalOffer = jobs[1];
+            return 1;
+        };
+
+    {
+        ScopedCareerRuntimeContext dismissalScope(dismissalRuntime);
+        dismissalService.handleWeeklyManagerStatus();
+    }
+
+    expect(selectedDismissalOffer != nullptr,
+           "El despido debe ofrecer al menos dos clubes al entrenador.");
+    expect(dismissalCareer.myTeam == selectedDismissalOffer,
+           "El cambio de club debe respetar la seleccion del entrenador.");
+    expect(dismissalCareer.managerReputation == 82,
+           "El despido debe descontar ocho puntos de reputacion.");
+
+    const string dismissalNews = joinLines(dismissalCareer.newsFeed);
+    expect(dismissalNews.find("fue despedido") != string::npos,
+           "El despido debe registrarse en las noticias.");
+    expect(dismissalNews.find("Llega tras un despido reciente.") != string::npos,
+           "El nuevo club debe registrar el motivo del cambio.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {
