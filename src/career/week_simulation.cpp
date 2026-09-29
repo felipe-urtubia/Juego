@@ -302,40 +302,6 @@ void updateShortlistAlerts(Career& career) {
     career.scoutingShortlist = active;
 }
 
-void updateManagerReputation(Career& career) {
-    if (!career.myTeam) return;
-    int rank = career.currentCompetitiveRank();
-    if (rank > 0) {
-        if (rank <= max(1, career.boardExpectedFinish - 1)) {
-            career.managerReputation = clampInt(career.managerReputation + 2, 1, 100);
-        } else if (rank > career.boardExpectedFinish + 2) {
-            career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
-        }
-    }
-    if ((career.myTeam->tactics == "Pressing" || career.myTeam->matchInstruction == "Juego directo") &&
-        career.myTeam->goalsFor >= max(4, career.currentWeek * 2)) {
-        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
-    }
-    int promiseWarnings = 0;
-    int youthContributors = 0;
-    for (const auto& player : career.myTeam->players) {
-        if (promiseAtRisk(player, career.currentWeek)) promiseWarnings++;
-        if (player.age <= 21 && player.matchesPlayed >= 4) youthContributors++;
-    }
-    if (youthContributors >= 2) {
-        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
-    }
-    DressingRoomSnapshot dressing = dressing_room_service::buildSnapshot(*career.myTeam, career.currentWeek);
-    if (dressing.socialTension <= 2 && career.myTeam->morale >= 68) {
-        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
-    } else if (dressing.socialTension >= 5) {
-        career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
-    }
-    if (career.boardConfidence <= 25 && promiseWarnings >= 2) {
-        career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
-    }
-}
-
 void handleManagerStatus(Career& career) {
     if (!career.myTeam) return;
     if (career.boardConfidence >= 20 && career.boardWarningWeeks < 6) return;
@@ -445,7 +411,7 @@ void updateManagerGameState(Career& career, int myTeamPointsDelta) {
     maybeInvokeIdle();
     career.updateBoardConfidence();
     maybeInvokeIdle();
-    updateManagerReputation(career);
+    CareerService(career).updateWeeklyManagerReputation();
 }
 
 // Generate game narrative, events and communications for the week

@@ -84,6 +84,7 @@ public:
 
     // Weekly interviews, youth recognition and manager job rumors
     void generateWeeklyManagerCareerEvents();
+    void updateWeeklyManagerReputation();
     
     // Add squad-related alerts and notifications
     void addSquadAlerts();

@@ -2,6 +2,7 @@
 #include "career/career_runtime.h"
 #include "career/staff_service.h"
 #include "career/career_support.h"
+#include "career/dressing_room_service.h"
 #include "engine/models.h"
 #include "transfers/negotiation_system.h"
 #include "utils.h"
@@ -140,6 +141,41 @@ void CareerService::generateWeeklyNarratives(int myTeamPointsDelta) {
         }
     }
     addWeeklySquadNewsAlerts();
+}
+
+void CareerService::updateWeeklyManagerReputation() {
+    Career& career = career_;
+    if (!career.myTeam) return;
+    int rank = career.currentCompetitiveRank();
+    if (rank > 0) {
+        if (rank <= max(1, career.boardExpectedFinish - 1)) {
+            career.managerReputation = clampInt(career.managerReputation + 2, 1, 100);
+        } else if (rank > career.boardExpectedFinish + 2) {
+            career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
+        }
+    }
+    if ((career.myTeam->tactics == "Pressing" || career.myTeam->matchInstruction == "Juego directo") &&
+        career.myTeam->goalsFor >= max(4, career.currentWeek * 2)) {
+        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
+    }
+    int promiseWarnings = 0;
+    int youthContributors = 0;
+    for (const auto& player : career.myTeam->players) {
+        if (promiseAtRisk(player, career.currentWeek)) promiseWarnings++;
+        if (player.age <= 21 && player.matchesPlayed >= 4) youthContributors++;
+    }
+    if (youthContributors >= 2) {
+        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
+    }
+    DressingRoomSnapshot dressing = dressing_room_service::buildSnapshot(*career.myTeam, career.currentWeek);
+    if (dressing.socialTension <= 2 && career.myTeam->morale >= 68) {
+        career.managerReputation = clampInt(career.managerReputation + 1, 1, 100);
+    } else if (dressing.socialTension >= 5) {
+        career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
+    }
+    if (career.boardConfidence <= 25 && promiseWarnings >= 2) {
+        career.managerReputation = clampInt(career.managerReputation - 1, 1, 100);
+    }
 }
 
 void CareerService::generateWeeklyManagerCareerEvents() {

@@ -1423,6 +1423,42 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
     expect(sawInterview, "Los eventos del entrenador deben permitir entrevistas.");
     expect(sawYouthRecognition, "Los eventos deben reconocer el trabajo juvenil.");
     expect(sawJobRumor, "Los eventos deben generar rumores de otros clubes.");
+
+    // Regression: weekly manager reputation must respect club status and limits.
+    Career noClub;
+    noClub.managerReputation = 63;
+    CareerService(noClub).updateWeeklyManagerReputation();
+    expect(noClub.managerReputation == 63,
+           "La reputacion semanal no debe cambiar si el entrenador no tiene club.");
+
+    Career reputationCareer;
+    reputationCareer.currentWeek = 5;
+    reputationCareer.allTeams.push_back(
+        makeTeam("Reputacion Local", "primera division", 66, 3, 3, "Balanced", "Equilibrado"));
+    reputationCareer.allTeams.push_back(
+        makeTeam("Reputacion Rival", "primera division", 64, 3, 3, "Balanced", "Equilibrado"));
+    reputationCareer.refreshActiveDivisionTeamLinks("primera division");
+    reputationCareer.myTeam = reputationCareer.getActiveTeamAt(0);
+    reputationCareer.managerReputation = 50;
+    reputationCareer.boardExpectedFinish = 3;
+    reputationCareer.boardConfidence = 55;
+    reputationCareer.myTeam->morale = 50;
+    reputationCareer.myTeam->goalsFor = 0;
+
+    expect(reputationCareer.currentCompetitiveRank() > 0,
+           "El club debe tener una posicion competitiva valida.");
+
+    CareerService reputationService(reputationCareer);
+    reputationService.updateWeeklyManagerReputation();
+
+    expect(reputationCareer.managerReputation > 50,
+           "Cumplir las expectativas de la directiva debe mejorar la reputacion semanal.");
+
+    reputationCareer.managerReputation = 100;
+    reputationService.updateWeeklyManagerReputation();
+
+    expect(reputationCareer.managerReputation == 100,
+           "La reputacion semanal no debe superar el maximo de 100.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {
