@@ -4328,6 +4328,88 @@ void testWeeklyPhysicalStateRegressionBaseline() {
               << ", fitness " << rival->players[2].fitness
               << ", fatiga " << rival->players[2].fatigueLoad << '\n';
 }
+void testBackgroundDivisionWeekRegressionBaseline() {
+    Career career;
+    career.currentSeason = 2;
+    career.currentWeek = 4;
+    career.cupActive = false;
+
+    career.divisions.push_back({"primera division", "data/LigaChilena/primera division", "Primera Division"});
+    career.divisions.push_back({"primera b", "data/LigaChilena/primera b", "Primera B"});
+
+    for (int i = 0; i < 4; ++i) {
+        career.allTeams.push_back(makeTeam(
+            "Principal " + to_string(i), "primera division",
+            70 - i, 3, 3, "Balanced", "Equilibrado", 5000000));
+    }
+    for (int i = 0; i < 4; ++i) {
+        career.allTeams.push_back(makeTeam(
+            "Secundario " + to_string(i), "primera b",
+            65 - i, 3, 3, "Balanced", "Equilibrado", 4000000));
+    }
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Principal 0");
+
+    expect(career.myTeam != nullptr, "La prueba necesita un club de usuario.");
+    expect(career.schedule.size() >= 4, "La liga principal necesita al menos cuatro fechas.");
+    expect(career.getDivisionTeams("primera b").size() == 4,
+           "La division secundaria debe contener cuatro clubes.");
+
+    for (auto& team : career.allTeams) {
+        for (auto& player : team.players) {
+            player.contractWeeks = 104;
+            player.wantsToLeave = false;
+        }
+    }
+
+    setRandomSeed(31);
+    {
+        CareerRuntimeContext runtime = currentCareerRuntimeContext();
+        runtime.presentation = WeekSimulationPresentation::Compact;
+        ScopedCareerRuntimeContext scope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName("Secundario " + to_string(i));
+        expect(team != nullptr, "No debe desaparecer un club secundario.");
+
+        const int played = team->wins + team->draws + team->losses;
+        expect(played == 1,
+               "Cada club secundario debe disputar exactamente un partido semanal.");
+    }
+
+    bool hasBackgroundHeadline = false;
+    for (const auto& news : career.newsFeed) {
+        if (news.find("[Mundo]") != string::npos &&
+            news.find("Primera B") != string::npos &&
+            news.find(" pts") != string::npos) {
+            hasBackgroundHeadline = true;
+            break;
+        }
+    }
+    expect(hasBackgroundHeadline,
+           "La cuarta semana debe generar un titular de Primera B.");
+
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName("Secundario " + to_string(i));
+        expect(team->wins == 0 && team->draws == 1 &&
+                   team->losses == 0 && team->points == 1,
+               "Regresion secundaria: deben conservarse los resultados y puntos originales.");
+    }
+    std::cout << "[BACKGROUND_BASELINE]";
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName("Secundario " + to_string(i));
+        std::cout << " | " << team->name
+                  << ": " << team->wins << "V "
+                  << team->draws << "E "
+                  << team->losses << "D "
+                  << team->points << "pts";
+    }
+    std::cout << '\n';
+}
 void testWeeklyFinanceRegressionBaseline() {
     Career career;
     career.allTeams.push_back(makeTeam("Finanzas Base FC", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 5000000));
@@ -4878,6 +4960,7 @@ int main() {
         {"weekly_finance_regression", testWeeklyFinanceRegressionBaseline},
         {"weekly_contract_regression", testWeeklyContractRegressionBaseline},
         {"weekly_physical_regression", testWeeklyPhysicalStateRegressionBaseline},
+        {"background_division_regression", testBackgroundDivisionWeekRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},
         {"weekly_dashboard_report", testWeeklyDashboardReportHighlightsHumanManagersAndAgenda},

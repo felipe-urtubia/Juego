@@ -27,6 +27,9 @@ public:
     
     // Simulate all matches for current week
     void simulateWeekMatches();
+
+    // Simulate matches and world events in a background division
+    void simulateBackgroundDivisionWeek(const std::string& divisionId);
     
     // Update physical state of all players (injuries, fitness, training effects)
     void updatePlayerPhysicalState(const std::vector<TeamId>& activeTeamIds, const std::unordered_map<TeamId, std::vector<int>>& suspensionsBefore, bool cupWeek);
