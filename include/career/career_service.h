@@ -78,6 +78,9 @@ public:
 
     // Weekly physical, offensive and contractual squad news
     void addWeeklySquadNewsAlerts();
+
+    // Generate weekly league, squad and opponent news
+    void generateWeeklyNarratives(int myTeamPointsDelta);
     
     // Add squad-related alerts and notifications
     void addSquadAlerts();

@@ -326,77 +326,6 @@ void updateShortlistAlerts(Career& career) {
     career.scoutingShortlist = active;
 }
 
-void generateWeeklyNarratives(Career& career, int myTeamPointsDelta) {
-    if (!career.myTeam) return;
-    int rank = career.currentCompetitiveRank();
-    int field = max(1, career.currentCompetitiveFieldSize());
-    if (rank > 0 && rank <= max(2, field / 4)) {
-        career.addNews("La prensa destaca a " + career.myTeam->name + " por su presencia en la zona alta.");
-    } else if (rank >= max(2, field - field / 4)) {
-        career.addNews("La prensa pone a " + career.myTeam->name + " en la pelea por evitar el fondo.");
-    }
-
-    if (myTeamPointsDelta == 3 && career.myTeam->morale >= 65) {
-        career.addNews("El vestuario de " + career.myTeam->name + " atraviesa un momento de confianza.");
-    } else if (myTeamPointsDelta == 0 && career.boardConfidence <= 30) {
-        career.addNews("Crece la tension institucional alrededor de " + career.myTeam->name + ".");
-    }
-
-    int promiseAlerts = 0;
-    int leaders = 0;
-    for (const auto& player : career.myTeam->players) {
-        if (player.promisedRole == "Titular" && player.startsThisSeason + 2 < max(2, career.currentWeek * 2 / 3)) {
-            promiseAlerts++;
-        }
-        if (player.promisedRole == "Rotacion" && player.startsThisSeason + 1 < max(1, career.currentWeek / 3)) {
-            promiseAlerts++;
-        }
-        if ((player.leadership >= 72 || playerHasTrait(player, "Lider")) && player.happiness >= 55) {
-            leaders++;
-        }
-    }
-    if (promiseAlerts > 0) {
-        career.addNews("Se acumulan " + to_string(promiseAlerts) + " promesa(s) de rol bajo presion en el plantel.");
-    }
-    if (career.myTeam->fanBase >= 65 && myTeamPointsDelta == 3) {
-        career.addNews("La aficion responde con entusiasmo y empuja la recaudacion del club.");
-    } else if (career.myTeam->fanBase >= 45 && myTeamPointsDelta == 0) {
-        career.addNews("La prensa cuestiona la falta de resultados recientes de " + career.myTeam->name + ".");
-    }
-    if (leaders >= 3 && career.myTeam->morale >= 60) {
-        career.addNews("Los lideres del vestuario sostienen un ambiente competitivo en " + career.myTeam->name + ".");
-    }
-    if (career.myTeam->youthIdentity == "Cantera estructurada") {
-        int youthMinutes = 0;
-        for (const auto& player : career.myTeam->players) {
-            if (player.age <= 20 && player.matchesPlayed > 0) youthMinutes++;
-        }
-        if (youthMinutes >= 2) {
-            career.addNews("La identidad de cantera de " + career.myTeam->name + " gana peso esta semana.");
-        }
-    }
-
-    const Team* opponent = nextOpponent(career);
-    if (opponent) {
-        career.addNews("Informe previo: " + buildOpponentReport(career) + ".");
-        if (areRivalClubs(*career.myTeam, *opponent)) {
-            career.addNews("La semana queda marcada por un clasico ante " + opponent->name + ".");
-        }
-    }
-    if (teamPrestigeScore(*career.myTeam) >= 68 && myTeamPointsDelta == 0) {
-        career.addNews("La exigencia institucional aprieta: el entorno de " + career.myTeam->name + " esperaba mas.");
-    }
-
-    for (const auto& player : career.myTeam->players) {
-        if (player.contractWeeks > 0 && player.contractWeeks <= 4) {
-            career.addNews("Contrato al limite: " + player.name + " entra en sus ultimas " +
-                           to_string(player.contractWeeks) + " semana(s).");
-            break;
-        }
-    }
-    CareerService(career).addWeeklySquadNewsAlerts();
-}
-
 void updateManagerReputation(Career& career) {
     if (!career.myTeam) return;
     int rank = career.currentCompetitiveRank();
@@ -557,7 +486,7 @@ void generateWeeklyNarrative(Career& career, int myTeamPointsDelta) {
             career.addNews("La directiva aumenta la presion sobre " + career.myTeam->name + ".");
         }
         generateManagerCareerEvents(career);
-        generateWeeklyNarratives(career, myTeamPointsDelta);
+        CareerService(career).generateWeeklyNarratives(myTeamPointsDelta);
     }
 }
 

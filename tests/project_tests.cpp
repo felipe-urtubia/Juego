@@ -1375,6 +1375,23 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
            "Debe generarse una alerta ofensiva.");
     expect(career.newsFeed[newsBeforeSquadAlerts + 2].find("Alerta de vestuario:") != string::npos,
            "Debe generarse una alerta de promesas contractuales.");
+
+    // Verify weekly narratives after a win, including squad and contract news.
+    career.myTeam->morale = 70;
+    career.myTeam->fanBase = 70;
+
+    const size_t newsBeforeNarratives = career.newsFeed.size();
+    service.generateWeeklyNarratives(3);
+
+    const string weeklyNarratives = joinLines(career.newsFeed);
+    expect(career.newsFeed.size() > newsBeforeNarratives,
+           "Las narrativas semanales deben agregar noticias.");
+    expect(weeklyNarratives.find("atraviesa un momento de confianza") != string::npos,
+           "Una victoria con moral alta debe generar una noticia de confianza.");
+    expect(weeklyNarratives.find("La aficion responde con entusiasmo") != string::npos,
+           "Una victoria con aficion alta debe generar una noticia de apoyo.");
+    expect(weeklyNarratives.find("Contrato al limite:") != string::npos,
+           "Las narrativas deben informar sobre contratos proximos a vencer.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {
