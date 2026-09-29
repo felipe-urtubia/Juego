@@ -7811,3 +7811,102 @@ Rama de trabajo utilizada:
 - [x] Rama `feature/main-menu-redesign` eliminada localmente y en GitHub después de integrar.
 
 > Nota: este rediseño fue realizado después de publicar `v0.1.1-alpha`; por lo tanto, estos cambios todavía no forman parte del ZIP público de esa release.
+
+## Modularización de CareerService - 2026-09-29
+
+Rama de trabajo utilizada: `feature/career-week-services`.
+
+### Objetivo
+- [x] Reducir responsabilidades de `src/career/week_simulation.cpp`.
+- [x] Trasladar lógica de carrera a métodos de `CareerService`.
+- [x] Mantener el comportamiento original del juego.
+- [x] Incorporar pruebas de regresión antes de integrar a `main`.
+
+### Organización del código
+- [x] Se incorporó `src/career/career_service_cup.cpp` para la lógica de copa de temporada.
+- [x] Se incorporó `src/career/career_service_communications.cpp` para comunicaciones y eventos de carrera.
+- [x] Se actualizaron las declaraciones de `include/career/career_service.h`.
+- [x] Se actualizaron las referencias desde `src/career/week_simulation.cpp`.
+- [x] Se registraron los módulos nuevos en `CMakeLists.txt`.
+- [x] Se eliminaron implementaciones antiguas después de verificar las nuevas.
+
+### Funcionalidades trasladadas
+- [x] Gestión de copa de temporada.
+- [x] Comunicaciones semanales del cuerpo técnico: `dispatchWeeklyStaffBriefing()`.
+- [x] Alertas semanales del plantel: `addWeeklySquadNewsAlerts()`.
+- [x] Narrativas semanales: `generateWeeklyNarratives(int myTeamPointsDelta)`.
+- [x] Eventos semanales del entrenador: `generateWeeklyManagerCareerEvents()`.
+  - Entrevistas de prensa.
+  - Reconocimiento por utilización de juveniles.
+  - Rumores de contratación por otros clubes.
+- [x] Reputación semanal del entrenador: `updateWeeklyManagerReputation()`.
+  - Rendimiento respecto de los objetivos de la directiva.
+  - Estilo de juego y rendimiento ofensivo.
+  - Participación de jugadores juveniles.
+  - Estado del vestuario y promesas contractuales.
+  - Límites de reputación.
+- [x] Gestión semanal de despidos: `handleWeeklyManagerStatus()`.
+  - Evaluación de confianza y advertencias de la directiva.
+  - Registro de noticias de despido.
+  - Penalización de reputación.
+  - Generación de ofertas de otros clubes.
+  - Selección de nuevo club mediante callback.
+  - Cambio efectivo de equipo.
+
+### Compatibilidad y comportamiento original
+- [x] Se mantuvo independiente `updateManagerReputation(int matchResult)`.
+- [x] Se conservó el mercado original `::buildJobMarket(career, true)` para los despidos.
+- [x] Se mantuvieron los filtros, el orden y los límites de ofertas del mercado original.
+- [x] Se conservaron los callbacks de selección de nuevo club.
+- [x] Se utilizaron contextos de runtime aislados en las pruebas de despido.
+- [x] Se eliminaron las advertencias de funciones antiguas sin utilizar.
+
+### Pruebas de regresión
+- [x] Se ampliaron las pruebas en `tests/project_tests.cpp`.
+- [x] Se verificaron comunicaciones del staff y alertas del plantel.
+- [x] Se verificaron narrativas semanales.
+- [x] Se probaron entrevistas, reconocimientos juveniles y rumores de contratación con semilla aleatoria controlada.
+- [x] Se comprobó que la reputación no cambia cuando el entrenador no tiene club.
+- [x] Se comprobó la mejora de reputación al cumplir los objetivos.
+- [x] Se comprobó el límite máximo de reputación.
+- [x] Se comprobó que no exista despido cuando la directiva está conforme.
+- [x] Se comprobó el despido y la selección del nuevo club.
+- [x] Se comprobó la penalización de reputación por despido.
+- [x] Se comprobó el registro de noticias de despido y cambio de club.
+
+### Compilación y validación final
+- [x] `cmake --build .\build-ci --target FootballManagerTests`: correcto.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: 100% de pruebas superadas.
+- [x] `cmake --build .\build-ci`: compilación completa correcta.
+- [x] `FootballManager`: compilado.
+- [x] `FootballManagerCLI`: compilado.
+- [x] `FootballManagerTests`: compilado.
+- [x] `git diff --check`: sin errores de formato.
+- [x] `git diff --cached --check`: sin errores de formato.
+- [x] Sin advertencias de compilación en la validación final.
+
+### Commits de esta etapa
+- [x] `7d1208a`: migración de copa de temporada.
+- [x] `41f2ba3`: migración de comunicaciones del staff.
+- [x] `fff046b`: migración de alertas del plantel.
+- [x] `8f36d45`: migración de narrativas semanales.
+- [x] `c9f7740`: migración de eventos semanales del entrenador.
+- [x] `b61f433`: migración de reputación semanal.
+- [x] `ebc7544`: migración de despidos y cambio de club.
+
+### Integración con GitHub
+- [x] Commits publicados en `feature/career-week-services`.
+- [x] Cambio a la rama `main`.
+- [x] Actualización de `main` desde `origin/main`.
+- [x] Merge fast-forward de `feature/career-week-services` a `main`.
+- [x] Integración sin conflictos.
+- [x] Push de `main` completado correctamente.
+- [x] `main` avanzada desde `87d0d6b` hasta `ebc7544`.
+- [x] Verificación final: `## main...origin/main`, sin cambios pendientes antes de actualizar este documento.
+
+### Estado de la etapa
+- [x] Modularización planificada para esta etapa finalizada.
+- [x] Código integrado y publicado en `main`.
+- [x] Pruebas y compilación final aprobadas.
+
+> Nota: esta etapa es posterior a la publicación de `v0.1.1-alpha`. Su integración en `main` no actualiza automáticamente el ZIP de aquella release.
