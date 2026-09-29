@@ -4248,6 +4248,86 @@ void testWeeklyContractRegressionBaseline() {
     expect(renewedIt != career.myTeam->players.end() && renewedIt->contractWeeks > 1,
            "La renovacion debe asignar un nuevo plazo contractual.");
 }
+void testWeeklyPhysicalStateRegressionBaseline() {
+    Career career;
+    career.allTeams.push_back(makeTeam("Fisico Local", "primera division", 70, 3, 3,
+                                      "Balanced", "Equilibrado", 5000000));
+    career.allTeams.push_back(makeTeam("Fisico Rival", "primera division", 68, 3, 3,
+                                      "Balanced", "Equilibrado", 5000000));
+    career.setActiveDivision("primera division");
+    career.schedule.assign(2, vector<pair<int, int>>{});
+    career.myTeam = career.findTeamByName("Fisico Local");
+    Team* rival = career.findTeamByName("Fisico Rival");
+    career.managerName = "Manager Fisico";
+    career.currentSeason = 1;
+    career.currentWeek = 1;
+    career.cupActive = false;
+
+    expect(career.myTeam != nullptr && rival != nullptr,
+           "La prueba fisica necesita dos equipos.");
+
+    for (auto& team : career.allTeams) {
+        team.trainingFocus = "Recuperacion";
+        for (auto& player : team.players) {
+            player.contractWeeks = 104;
+            player.wantsToLeave = false;
+        }
+
+        team.players[0].matchesSuspended = 2;
+
+        team.players[1].injured = true;
+        team.players[1].injuryWeeks = 10;
+        team.players[1].injuryType = "Distension";
+        team.players[1].age = 27;
+
+        team.players[2].stamina = 85;
+        team.players[2].fitness = 30;
+        team.players[2].fatigueLoad = 80;
+    }
+
+    CareerRuntimeContext runtime = currentCareerRuntimeContext();
+    runtime.presentation = WeekSimulationPresentation::Compact;
+
+    setRandomSeed(23);
+    {
+        ScopedCareerRuntimeContext runtimeScope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    for (const Team* team : {career.myTeam, rival}) {
+        expect(team->players[0].matchesSuspended == 1,
+               "La suspension previa debe descontarse una sola vez.");
+        expect(team->players[1].injured &&
+                   team->players[1].injuryWeeks > 0 &&
+                   team->players[1].injuryWeeks < 10,
+               "La lesion prolongada debe avanzar hacia su recuperacion.");
+        expect(team->players[2].fitness > 30,
+               "La condicion fisica debe mejorar durante la semana.");
+        expect(team->players[2].fatigueLoad < 80,
+               "La recuperacion semanal debe reducir la fatiga.");
+    }
+
+    for (const Team* team : {career.myTeam, rival}) {
+        expect(team->players[0].matchesSuspended == 1,
+               "Regresion fisica: la suspension debe quedar en 1.");
+        expect(team->players[1].injuryWeeks == 7,
+               "Regresion fisica: la lesion debe quedar en 7 semanas.");
+        expect(team->players[2].fitness == 44,
+               "Regresion fisica: la condicion fisica debe quedar en 44.");
+        expect(team->players[2].fatigueLoad == 58,
+               "Regresion fisica: la fatiga debe quedar en 58.");
+    }
+    std::cout << "[PHYSICAL_BASELINE] local: suspension "
+              << career.myTeam->players[0].matchesSuspended
+              << ", lesion " << career.myTeam->players[1].injuryWeeks
+              << ", fitness " << career.myTeam->players[2].fitness
+              << ", fatiga " << career.myTeam->players[2].fatigueLoad
+              << " | rival: suspension " << rival->players[0].matchesSuspended
+              << ", lesion " << rival->players[1].injuryWeeks
+              << ", fitness " << rival->players[2].fitness
+              << ", fatiga " << rival->players[2].fatigueLoad << '\n';
+}
 void testWeeklyFinanceRegressionBaseline() {
     Career career;
     career.allTeams.push_back(makeTeam("Finanzas Base FC", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 5000000));
@@ -4797,6 +4877,7 @@ int main() {
         {"season_service_runtime_forwarding", testSeasonServiceForwardsRuntimeMessages},
         {"weekly_finance_regression", testWeeklyFinanceRegressionBaseline},
         {"weekly_contract_regression", testWeeklyContractRegressionBaseline},
+        {"weekly_physical_regression", testWeeklyPhysicalStateRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},
         {"weekly_dashboard_report", testWeeklyDashboardReportHighlightsHumanManagersAndAgenda},

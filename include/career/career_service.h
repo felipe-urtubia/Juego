@@ -29,7 +29,7 @@ public:
     void simulateWeekMatches();
     
     // Update physical state of all players (injuries, fitness, training effects)
-    void updatePlayerPhysicalState();
+    void updatePlayerPhysicalState(const std::vector<TeamId>& activeTeamIds, const std::unordered_map<TeamId, std::vector<int>>& suspensionsBefore, bool cupWeek);
     
     // Process financial operations (wages, sponsorships, facility costs)
     void processWeeklyFinances(const std::unordered_map<TeamId, int>& pointsBefore);

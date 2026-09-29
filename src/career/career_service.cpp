@@ -47,20 +47,7 @@ void CareerService::simulateWeekMatches() {
     simulateCareerWeek(career_);
 }
 
-void CareerService::updatePlayerPhysicalState() {
-    if (!career_.myTeam || career_.myTeam->players.empty()) {
-        return;
-    }
-    
-    // Update each player's condition and injuries
-    for (auto& player : career_.myTeam->players) {
-        player.fitness = std::max(0, std::min(player.fitness, player.stamina));
-        if (player.injuryWeeks <= 0) {
-            player.injured = false;
-            player.injuryType.clear();
-        }
-    }
-}
+
 
 void CareerService::updateSocialDynamics(int pointsDelta) {
     if (!career_.myTeam) return;
