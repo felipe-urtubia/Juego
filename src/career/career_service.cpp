@@ -111,16 +111,6 @@ std::vector<Team*> CareerService::buildJobMarket(bool includeRelegated) {
     return jobs;
 }
 
-void CareerService::processContractUpdates() {
-    if (!career_.myTeam) return;
-    
-    for (auto& player : career_.myTeam->players) {
-        if (player.contractWeeks > 0) {
-            player.contractWeeks--;
-        }
-    }
-}
-
 void CareerService::generateDevelopmentReports() {
     if (!career_.myTeam) return;
 

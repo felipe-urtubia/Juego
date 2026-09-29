@@ -4173,6 +4173,81 @@ void testCareerRuntimeScopeRestoresContext() {
     setWeekSimulationPresentation(previous.presentation);
 }
 
+bool renewSelectedContractForRegression(const Career&, const Team&,
+                                        const Player& player, long long, int, long long) {
+    return player.name == "Renovacion Prueba";
+}
+
+void testWeeklyContractRegressionBaseline() {
+    Career career;
+    career.allTeams.push_back(makeTeam("Contratos Local", "primera division", 70, 3, 3,
+                                      "Balanced", "Equilibrado", 10000000));
+    career.allTeams.push_back(makeTeam("Contratos Rival", "primera division", 68, 3, 3,
+                                      "Balanced", "Equilibrado", 10000000));
+    career.setActiveDivision("primera division");
+    career.schedule.assign(2, vector<pair<int, int>>{});
+    career.myTeam = career.findTeamByName("Contratos Local");
+    Team* rival = career.findTeamByName("Contratos Rival");
+    career.managerName = "Manager Contratos";
+    career.currentSeason = 1;
+    career.currentWeek = 1;
+
+    expect(career.myTeam != nullptr && rival != nullptr,
+           "La prueba contractual necesita ambos equipos.");
+
+    for (auto& team : career.allTeams) {
+        for (auto& player : team.players) {
+            player.contractWeeks = 104;
+            player.wantsToLeave = false;
+        }
+    }
+
+    career.myTeam->players.pop_back();
+
+    Player renewed = makePlayer("Renovacion Prueba", "MED", 75, 82, 25, 78, 80);
+    renewed.contractWeeks = 1;
+    renewed.wage = 10000;
+    career.myTeam->addPlayer(renewed);
+
+    Player departing = makePlayer("Salida Prueba", "DEL", 68, 75, 27, 76, 78);
+    departing.contractWeeks = 1;
+    departing.wage = 10000;
+    career.myTeam->addPlayer(departing);
+
+    Player rivalDeparting = makePlayer("Salida Rival Prueba", "DEF", 67, 74, 28, 75, 77);
+    rivalDeparting.contractWeeks = 1;
+    rival->addPlayer(rivalDeparting);
+    rival->budget = 0;
+
+    CareerRuntimeContext runtime = currentCareerRuntimeContext();
+    runtime.contractRenewalDecision = renewSelectedContractForRegression;
+    runtime.presentation = WeekSimulationPresentation::Compact;
+
+    setRandomSeed(29);
+    {
+        ScopedCareerRuntimeContext runtimeScope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    const auto containsPlayer = [](const Team& team, const string& name) {
+        return any_of(team.players.begin(), team.players.end(),
+                      [&](const Player& player) { return player.name == name; });
+    };
+
+    expect(containsPlayer(*career.myTeam, "Renovacion Prueba"),
+           "El jugador que acepta renovar debe permanecer en el club.");
+    expect(!containsPlayer(*career.myTeam, "Salida Prueba"),
+           "El jugador que rechaza renovar debe abandonar el club.");
+    expect(!containsPlayer(*rival, "Salida Rival Prueba"),
+           "El rival sin presupuesto debe perder al jugador cuyo contrato vence.");
+
+    const auto renewedIt = find_if(
+        career.myTeam->players.begin(), career.myTeam->players.end(),
+        [](const Player& player) { return player.name == "Renovacion Prueba"; });
+    expect(renewedIt != career.myTeam->players.end() && renewedIt->contractWeeks > 1,
+           "La renovacion debe asignar un nuevo plazo contractual.");
+}
 void testWeeklyFinanceRegressionBaseline() {
     Career career;
     career.allTeams.push_back(makeTeam("Finanzas Base FC", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 5000000));
@@ -4721,6 +4796,7 @@ int main() {
         {"career_runtime_scope", testCareerRuntimeScopeRestoresContext},
         {"season_service_runtime_forwarding", testSeasonServiceForwardsRuntimeMessages},
         {"weekly_finance_regression", testWeeklyFinanceRegressionBaseline},
+        {"weekly_contract_regression", testWeeklyContractRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},
         {"weekly_dashboard_report", testWeeklyDashboardReportHighlightsHumanManagersAndAgenda},
