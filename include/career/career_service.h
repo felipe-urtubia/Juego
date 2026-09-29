@@ -75,6 +75,9 @@ public:
 
     // Preserve weekly staff news, inbox messages and UI briefing
     void dispatchWeeklyStaffBriefing();
+
+    // Weekly physical, offensive and contractual squad news
+    void addWeeklySquadNewsAlerts();
     
     // Add squad-related alerts and notifications
     void addSquadAlerts();

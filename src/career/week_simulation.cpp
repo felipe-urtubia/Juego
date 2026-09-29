@@ -326,41 +326,6 @@ void updateShortlistAlerts(Career& career) {
     career.scoutingShortlist = active;
 }
 
-const Player* leadingForward(const Team& team) {
-    const Player* best = nullptr;
-    for (const auto& player : team.players) {
-        if (normalizePosition(player.position) != "DEL") continue;
-        if (!best || player.skill > best->skill) best = &player;
-    }
-    return best;
-}
-
-void addSquadAlerts(Career& career) {
-    if (!career.myTeam) return;
-    int defenseFitness = averageFitnessForLine(*career.myTeam, "DEF");
-    int midfieldFitness = averageFitnessForLine(*career.myTeam, "MED");
-    int attackFitness = averageFitnessForLine(*career.myTeam, "DEL");
-    if (defenseFitness < 58 || midfieldFitness < 58 || attackFitness < 58) {
-        string line = (defenseFitness <= midfieldFitness && defenseFitness <= attackFitness)
-                          ? "la linea defensiva"
-                          : (midfieldFitness <= attackFitness ? "el mediocampo" : "el frente de ataque");
-        career.addNews("Alerta fisica: " + line + " llega exigida a la proxima fecha.");
-    }
-    const Player* forward = leadingForward(*career.myTeam);
-    if (forward && forward->matchesPlayed >= 5 && forward->goals == 0) {
-        career.addNews("Alerta ofensiva: " + forward->name + " ya suma " +
-                       to_string(forward->matchesPlayed) + " partido(s) sin marcar.");
-    }
-    int promiseWarnings = 0;
-    for (const auto& player : career.myTeam->players) {
-        if (promiseAtRisk(player, career.currentWeek)) promiseWarnings++;
-    }
-    if (promiseWarnings >= 2) {
-        career.addNews("Alerta de vestuario: hay " + to_string(promiseWarnings) +
-                       " promesa(s) contractuales bajo revision.");
-    }
-}
-
 void generateWeeklyNarratives(Career& career, int myTeamPointsDelta) {
     if (!career.myTeam) return;
     int rank = career.currentCompetitiveRank();
@@ -429,7 +394,7 @@ void generateWeeklyNarratives(Career& career, int myTeamPointsDelta) {
             break;
         }
     }
-    addSquadAlerts(career);
+    CareerService(career).addWeeklySquadNewsAlerts();
 }
 
 void updateManagerReputation(Career& career) {

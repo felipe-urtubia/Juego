@@ -1351,6 +1351,30 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
            "El briefing semanal debe conservar los canales Staff y Resumen.");
     expect(career.newsFeed.size() == newsBeforeBriefing + 1,
            "El briefing semanal urgente debe generar una noticia del staff.");
+
+    // Exercise physical, offensive and contractual weekly squad news.
+    career.currentWeek = 12;
+    for (auto& player : career.myTeam->players) {
+        player.fitness = 20;
+        player.matchesPlayed = 6;
+        player.goals = 0;
+    }
+    for (size_t i = 0; i < 2; ++i) {
+        career.myTeam->players[i].promisedRole = "Titular";
+        career.myTeam->players[i].startsThisSeason = 0;
+    }
+
+    const size_t newsBeforeSquadAlerts = career.newsFeed.size();
+    service.addWeeklySquadNewsAlerts();
+
+    expect(career.newsFeed.size() == newsBeforeSquadAlerts + 3,
+           "Las alertas semanales deben generar tres noticias del plantel.");
+    expect(career.newsFeed[newsBeforeSquadAlerts].find("Alerta fisica:") != string::npos,
+           "Debe generarse una alerta fisica.");
+    expect(career.newsFeed[newsBeforeSquadAlerts + 1].find("Alerta ofensiva:") != string::npos,
+           "Debe generarse una alerta ofensiva.");
+    expect(career.newsFeed[newsBeforeSquadAlerts + 2].find("Alerta de vestuario:") != string::npos,
+           "Debe generarse una alerta de promesas contractuales.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {
