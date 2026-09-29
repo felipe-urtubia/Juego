@@ -36,6 +36,7 @@ set(FM_CAREER_SOURCES
     src/career/career_service.cpp
     src/career/career_service_contracts.cpp
     src/career/career_service_finances.cpp
+    src/career/career_service_transfers.cpp
     src/career/career_support.cpp
     src/career/dressing_room_service.cpp
     src/career/game_events_system.cpp

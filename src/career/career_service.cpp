@@ -127,9 +127,6 @@ void CareerService::generateDevelopmentReports() {
     }
 }
 
-void CareerService::processIncomingOffers() {
-    transfer_market::processCpuTransfers(career_);
-}
 
 void CareerService::updatePendingTransfers() {
     for (auto& transfer : career_.pendingTransfers) {
