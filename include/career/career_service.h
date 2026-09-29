@@ -4,6 +4,7 @@
 #include "utils/event_system.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <memory>
 
 // ============================================================================
@@ -31,7 +32,7 @@ public:
     void updatePlayerPhysicalState();
     
     // Process financial operations (wages, sponsorships, facility costs)
-    void processWeeklyFinances();
+    void processWeeklyFinances(const std::unordered_map<TeamId, int>& pointsBefore);
     
     // Update team social dynamics based on match results
     void updateSocialDynamics(int pointsDelta);

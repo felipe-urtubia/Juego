@@ -62,29 +62,6 @@ void CareerService::updatePlayerPhysicalState() {
     }
 }
 
-void CareerService::processWeeklyFinances() {
-    if (!career_.myTeam) return;
-    
-    // Validate team identity is in the active division.
-    if (!containsActiveTeam(career_, career_.myTeam)) {
-        throw std::runtime_error("MyTeam pointer is invalid or not in activeTeams");
-    }
-    
-    // Process wages - using correct field names
-    long long weeklyWages = 0;
-    for (const auto& player : career_.myTeam->players) {
-        weeklyWages += (player.wage / 52);  // wage not salary
-    }
-    
-    if (career_.myTeam->budget >= weeklyWages) {
-        career_.myTeam->budget -= weeklyWages;
-    } else {
-        // Debt accumulation
-        career_.debtStatus.totalDebt += (weeklyWages - career_.myTeam->budget);
-        career_.myTeam->budget = 0;
-    }
-}
-
 void CareerService::updateSocialDynamics(int pointsDelta) {
     if (!career_.myTeam) return;
     

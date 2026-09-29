@@ -4173,6 +4173,56 @@ void testCareerRuntimeScopeRestoresContext() {
     setWeekSimulationPresentation(previous.presentation);
 }
 
+void testWeeklyFinanceRegressionBaseline() {
+    Career career;
+    career.allTeams.push_back(makeTeam("Finanzas Base FC", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 5000000));
+    career.allTeams.push_back(makeTeam("Finanzas Rival", "primera division", 68, 3, 3, "Balanced", "Equilibrado", 5000000));
+    career.setActiveDivision("primera division");
+    career.schedule.assign(2, vector<pair<int, int>>{});
+    career.myTeam = career.findTeamByName("Finanzas Base FC");
+    career.managerName = "Manager Finanzas";
+    career.currentSeason = 1;
+    career.currentWeek = 1;
+    expect(career.myTeam != nullptr, "La prueba financiera necesita un club activo.");
+
+    for (auto& player : career.myTeam->players) {
+        player.wage = 10000;
+        player.contractWeeks = 104;
+        player.wantsToLeave = false;
+    }
+
+    g_runtimeMessagesA.clear();
+    CareerRuntimeContext runtime = currentCareerRuntimeContext();
+    runtime.uiMessage = collectRuntimeMessageA;
+    runtime.presentation = WeekSimulationPresentation::Compact;
+
+    setRandomSeed(17);
+    {
+        ScopedCareerRuntimeContext runtimeScope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    const auto isFinanceMessage = [](const string& message) {
+        return message.find("Finanzas semanales: +") == 0;
+    };
+    const auto financeIt = std::find_if(g_runtimeMessagesA.begin(), g_runtimeMessagesA.end(), isFinanceMessage);
+    expect(financeIt != g_runtimeMessagesA.end(), "La semana debe emitir su resumen financiero.");
+    expect(std::count_if(g_runtimeMessagesA.begin(), g_runtimeMessagesA.end(), isFinanceMessage) == 1,
+           "La semana debe emitir un unico resumen financiero.");
+
+    expect(financeIt->find("Finanzas semanales: +141779") == 0,
+           "Los ingresos semanales deben conservar el valor de referencia.");
+    expect(financeIt->find("/ -153000 salarios") != string::npos,
+           "Los salarios semanales deben conservar el valor de referencia.");
+    expect(financeIt->find("= -14971 | deuda 0") != string::npos,
+           "El balance neto y la deuda deben conservar sus valores.");
+    expect(career.myTeam->budget == 4985029LL && career.myTeam->debt == 0,
+           "El presupuesto y la deuda finales deben mantenerse tras la simulacion.");
+    std::cout << "[FINANCE_BASELINE] " << *financeIt
+              << " | presupuesto final " << career.myTeam->budget
+              << " | deuda final " << career.myTeam->debt << '\n';
+}
 void testSeasonServiceForwardsRuntimeMessages() {
     g_runtimeMessagesA.clear();
 
@@ -4670,6 +4720,7 @@ int main() {
         {"market_pulse_window", testMarketPulseReflectsClosedWindow},
         {"career_runtime_scope", testCareerRuntimeScopeRestoresContext},
         {"season_service_runtime_forwarding", testSeasonServiceForwardsRuntimeMessages},
+        {"weekly_finance_regression", testWeeklyFinanceRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},
         {"weekly_dashboard_report", testWeeklyDashboardReportHighlightsHumanManagersAndAgenda},
