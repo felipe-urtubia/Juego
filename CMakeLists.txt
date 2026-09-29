@@ -36,6 +36,8 @@ set(FM_CAREER_SOURCES
     src/career/career_service.cpp
     src/career/career_service_contracts.cpp
     src/career/career_service_background.cpp
+    src/career/career_service_matches.cpp
+    src/career/week_match_helpers.cpp
     src/career/career_service_finances.cpp
     src/career/career_service_physical.cpp
     src/career/career_service_transfers.cpp

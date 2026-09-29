@@ -35,17 +35,7 @@ bool containsActiveTeam(const Career& career, const Team* target) {
 // This service layer wraps existing game systems and adds safety checks
 // and event dispatching without reimplementing existing logic
 
-void CareerService::simulateWeekMatches() {
-    if (!career_.myTeam) {
-        throw std::runtime_error("Career myTeam is null");
-    }
-    
-    if (!hasValidActiveTeamAccess(career_)) {
-        throw std::runtime_error("Invalid team pointers in activeTeams");
-    }
 
-    simulateCareerWeek(career_);
-}
 
 
 

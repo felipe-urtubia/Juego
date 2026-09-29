@@ -26,7 +26,7 @@ public:
     // ========== WEEK SIMULATION SERVICES ==========
     
     // Simulate all matches for current week
-    void simulateWeekMatches();
+    void simulateWeekMatches(const std::vector<std::pair<int, int>>& matches, const std::unordered_map<TeamId, int>& pointsBefore, int& outMyTeamPointsDelta);
 
     // Simulate matches and world events in a background division
     void simulateBackgroundDivisionWeek(const std::string& divisionId);

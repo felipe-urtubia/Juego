@@ -4410,6 +4410,93 @@ void testBackgroundDivisionWeekRegressionBaseline() {
     }
     std::cout << '\n';
 }
+void testActiveDivisionMatchRegressionBaseline() {
+    Career career;
+    career.currentSeason = 2;
+    career.currentWeek = 1;
+    career.cupActive = false;
+    career.managerName = "Manager Partidos";
+
+    for (int i = 0; i < 4; ++i) {
+        career.allTeams.push_back(makeTeam(
+            "Partido Club " + to_string(i),
+            "primera division",
+            70 - i, 3, 3, "Balanced", "Equilibrado", 5000000));
+    }
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Partido Club 0");
+
+    expect(career.myTeam != nullptr,
+           "La regresion de partidos necesita un club de usuario.");
+
+    career.schedule.assign(
+        2, vector<pair<int, int>>{{0, 1}, {2, 3}});
+
+    for (auto& team : career.allTeams) {
+        for (auto& player : team.players) {
+            player.contractWeeks = 104;
+            player.wantsToLeave = false;
+        }
+    }
+
+    CareerRuntimeContext runtime = currentCareerRuntimeContext();
+    runtime.presentation = WeekSimulationPresentation::Compact;
+
+    setRandomSeed(41);
+    {
+        ScopedCareerRuntimeContext scope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName(
+            "Partido Club " + to_string(i));
+        expect(team != nullptr,
+               "No debe desaparecer un equipo de la division activa.");
+        expect(team->wins + team->draws + team->losses == 1,
+               "Cada equipo activo debe disputar exactamente un partido.");
+    }
+
+    const auto rivalIt = career.rivalAIMap.find("Partido Club 1");
+    expect(rivalIt != career.rivalAIMap.end(),
+           "El partido del usuario debe crear memoria de su rival.");
+
+    const auto& memories = rivalIt->second.memoryBank;
+    const auto memoryIt = find_if(
+        memories.begin(), memories.end(),
+        [](const RivalMemory& memory) {
+            return memory.opponentName == "Partido Club 0";
+        });
+
+    expect(memoryIt != memories.end(),
+           "La memoria rival debe identificar al equipo del usuario.");
+    expect(memoryIt->matchesPlayed == 1,
+           "La IA rival debe registrar un enfrentamiento.");
+
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName(
+            "Partido Club " + to_string(i));
+        expect(team->wins == 0 && team->draws == 1 &&
+                   team->losses == 0 && team->points == 1 &&
+                   team->goalsFor == 0 && team->goalsAgainst == 0,
+               "Regresion liga activa: deben conservarse resultados, puntos y goles.");
+    }
+    std::cout << "[ACTIVE_MATCH_BASELINE]";
+    for (int i = 0; i < 4; ++i) {
+        const Team* team = career.findTeamByName(
+            "Partido Club " + to_string(i));
+        std::cout << " | " << team->name
+                  << ": " << team->wins << "V "
+                  << team->draws << "E "
+                  << team->losses << "D "
+                  << team->points << "pts "
+                  << team->goalsFor << "GF "
+                  << team->goalsAgainst << "GC";
+    }
+    std::cout << " | memoria=" << memoryIt->matchesPlayed << '\n';
+}
 void testWeeklyFinanceRegressionBaseline() {
     Career career;
     career.allTeams.push_back(makeTeam("Finanzas Base FC", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 5000000));
@@ -4961,6 +5048,7 @@ int main() {
         {"weekly_contract_regression", testWeeklyContractRegressionBaseline},
         {"weekly_physical_regression", testWeeklyPhysicalStateRegressionBaseline},
         {"background_division_regression", testBackgroundDivisionWeekRegressionBaseline},
+        {"active_match_regression", testActiveDivisionMatchRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},
         {"weekly_dashboard_report", testWeeklyDashboardReportHighlightsHumanManagersAndAgenda},

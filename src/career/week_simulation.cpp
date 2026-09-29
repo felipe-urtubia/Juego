@@ -1,5 +1,6 @@
 #include "career/week_simulation.h"
 #include "career/career_service.h"
+#include "week_match_helpers.h"
 
 #include "career/app_services.h"
 #include "career/career_modules.h"
@@ -41,124 +42,18 @@ using namespace std;
 
 namespace {
 
-void pushUniqueLimited(vector<string>& lines, const string& line, size_t limit = 3) {
-    if (line.empty()) return;
-    if (find(lines.begin(), lines.end(), line) != lines.end()) return;
-    if (lines.size() >= limit) return;
-    lines.push_back(line);
-}
+
 
 TeamId safeActiveTeamIdAt(const Career& career, size_t index) {
     if (index > static_cast<size_t>(numeric_limits<int>::max())) return kInvalidTeamId;
     return career.getActiveTeamIdAt(static_cast<int>(index));
 }
 
-// Safety helpers for vector access
-struct ScheduledTeamRef {
-    TeamId id = kInvalidTeamId;
-    Team* team = nullptr;
-};
 
-struct ScheduledMatchRef {
-    ScheduledTeamRef home;
-    ScheduledTeamRef away;
 
-    bool valid() const {
-        return home.team && away.team;
-    }
-};
 
-ScheduledTeamRef scheduledTeamRef(Career& career, int index) {
-    TeamRepository teams(career);
-    const TeamId id = teams.getActiveTeamIdAt(index);
-    return {id, teams.getTeamById(id)};
-}
 
-ScheduledMatchRef scheduledMatchRef(Career& career, const pair<int, int>& match) {
-    return {scheduledTeamRef(career, match.first), scheduledTeamRef(career, match.second)};
-}
 
-void updateRivalMemoryForUserMatch(Career& career, const Team& home, const Team& away, const MatchResult& result) {
-    if (!career.myTeam) return;
-    const bool playerHome = (&home == career.myTeam);
-    const bool playerAway = (&away == career.myTeam);
-    if (!playerHome && !playerAway) return;
-
-    const Team& rivalTeam = playerHome ? away : home;
-    const Team& userTeam = playerHome ? home : away;
-    const int rivalGoals = playerHome ? result.awayGoals : result.homeGoals;
-    const int userGoals = playerHome ? result.homeGoals : result.awayGoals;
-
-    RivalAI& rivalAI = career.rivalAIMap[rivalTeam.name];
-    if (rivalAI.personality.teamName.empty()) {
-        rivalAI = createRivalAI(rivalTeam);
-    }
-
-    auto memoryIt = find_if(rivalAI.memoryBank.begin(), rivalAI.memoryBank.end(), [&](const RivalMemory& memory) {
-        return memory.opponentName == userTeam.name;
-    });
-    if (memoryIt == rivalAI.memoryBank.end()) {
-        rivalAI.memoryBank.push_back(RivalMemory{});
-        memoryIt = rivalAI.memoryBank.end() - 1;
-        memoryIt->opponentName = userTeam.name;
-    }
-
-    RivalMemory& memory = *memoryIt;
-    const int previousOutcome = memory.lastMatchOutcome;
-    const int newOutcome = rivalGoals > userGoals ? 1 : (rivalGoals < userGoals ? -1 : 0);
-    memory.matchesPlayed++;
-    if (newOutcome > 0) memory.wins++;
-    else if (newOutcome < 0) memory.losses++;
-    else memory.draws++;
-    memory.lastMatchOutcome = newOutcome;
-    if (newOutcome != 0 && previousOutcome == newOutcome) {
-        memory.consecutiveVsThisTeam = clampInt(memory.consecutiveVsThisTeam + 1, 1, 12);
-    } else if (newOutcome != 0) {
-        memory.consecutiveVsThisTeam = 1;
-    } else {
-        memory.consecutiveVsThisTeam = 0;
-    }
-
-    if (newOutcome >= 0) {
-        pushUniqueLimited(memory.favoredFormations, rivalTeam.formation);
-        pushUniqueLimited(memory.favoredTactics, rivalTeam.tactics);
-    }
-
-    if (rivalTeam.matchInstruction == "Juego directo") {
-        memory.commonPlayPattern = "vertical";
-    } else if (rivalTeam.matchInstruction == "Por bandas") {
-        memory.commonPlayPattern = "bandas";
-    } else if (rivalTeam.tactics == "Pressing") {
-        memory.commonPlayPattern = "presion";
-    } else {
-        memory.commonPlayPattern = "equilibrado";
-    }
-
-    if (userGoals >= 2 || (playerHome ? result.stats.homeExpectedGoals : result.stats.awayExpectedGoals) >= 1.5) {
-        pushUniqueLimited(memory.identifiedWeaknesses, "defensive_fragility");
-    }
-    if (rivalGoals >= 2 || (playerHome ? result.stats.awayExpectedGoals : result.stats.homeExpectedGoals) >= 1.5) {
-        pushUniqueLimited(memory.identifiedStrengths, "sharp_attack");
-    }
-    if ((playerHome ? result.homePossession : result.awayPossession) >= 57) {
-        pushUniqueLimited(memory.identifiedWeaknesses, "midfield_control");
-    }
-}
-
-int teamRank(const LeagueTable& table, const Team* team) {
-    for (size_t i = 0; i < table.teams.size(); ++i) {
-        if (table.teams[i] == team) return static_cast<int>(i) + 1;
-    }
-    return -1;
-}
-
-bool isKeyMatch(const LeagueTable& table, const Team* home, const Team* away) {
-    int homeRank = teamRank(table, home);
-    int awayRank = teamRank(table, away);
-    if (homeRank <= 0 || awayRank <= 0) return false;
-    if (homeRank <= 3 || awayRank <= 3) return true;
-    return abs(homeRank - awayRank) <= 2;
-}
 
 void generateManagerCareerEvents(Career& career) {
     if (!career.myTeam) return;
@@ -421,7 +316,7 @@ void simulateSeasonCupRound(Career& career) {
         restoreTableState(*home, homeSnap);
         restoreTableState(*away, awaySnap);
         storeMatchAnalysis(career, *home, *away, result, true);
-        updateRivalMemoryForUserMatch(career, *home, *away, result);
+        career_week_matches::updateRivalMemoryForUserMatch(career, *home, *away, result);
 
         Team* winner = home;
         if (result.awayGoals > result.homeGoals) {
@@ -750,125 +645,7 @@ void checkAchievements(Career& career) {
 namespace {
 
 // Process all matches scheduled for this week and return points delta for player team
-void processWeekMatches(Career& career, const vector<pair<int, int>>& matches,
-                        const unordered_map<TeamId, int>& pointsBefore,
-                        int& outMyTeamPointsDelta) {
-    LeagueTable northTable;
-    LeagueTable southTable;
-    bool useGroups = career.usesGroupFormat();
-    if (useGroups) {
-        northTable = buildCompetitionGroupTable(career, true);
-        southTable = buildCompetitionGroupTable(career, false);
-    }
 
-    const TeamId managedTeamId = career.getTeamIdFor(career.myTeam);
-    for (const auto& match : matches) {
-        maybeInvokeIdle();
-        const ScheduledMatchRef fixture = scheduledMatchRef(career, match);
-        Team* home = fixture.home.team;
-        Team* away = fixture.away.team;
-        if (!fixture.valid()) {
-            emitUiMessage("[Calendario] Partido omitido por indice de equipo invalido.");
-            continue;
-        }
-        const bool userControlledMatch =
-            fixture.home.id == managedTeamId || fixture.away.id == managedTeamId;
-
-        const WeekSimulationPresentation presentation =
-            weekSimulationPresentation();
-
-        const bool verbose =
-            userControlledMatch &&
-            presentation == WeekSimulationPresentation::Detailed;
-
-        const bool useMatchCenter =
-            userControlledMatch &&
-            presentation == WeekSimulationPresentation::MatchCenter;
-
-        team_ai::adjustCpuTactics(*home, *away, career.myTeam);
-        team_ai::adjustCpuTactics(*away, *home, career.myTeam);
-
-        bool key = false;
-        if (useGroups) {
-            int homeGroup = competitionGroupForTeam(career, home);
-            int awayGroup = competitionGroupForTeam(career, away);
-            if (homeGroup == awayGroup && homeGroup == 0) {
-                key = isKeyMatch(northTable, home, away);
-            } else if (homeGroup == awayGroup && homeGroup == 1) {
-                key = isKeyMatch(southTable, home, away);
-            } else {
-                key = isKeyMatch(career.leagueTable, home, away);
-            }
-        } else {
-            key = isKeyMatch(career.leagueTable, home, away);
-        }
-        if (verbose && key) emitUiMessage("[Aviso] Partido clave de la semana.");
-
-        MatchResult result;
-
-        if (useMatchCenter) {
-            const bool userControlsHome =
-                fixture.home.id == managedTeamId;
-
-            Team& controlledTeam =
-                userControlsHome ? *home : *away;
-
-            result = simulateInteractiveMatch(
-                &career,
-                *home,
-                *away,
-                userControlsHome,
-                [&](const match_engine::InteractiveMatchState& state) {
-                    return match_center::askManagerDecision(
-                        controlledTeam,
-                        state);
-                },
-                key,
-                false);
-
-            match_center::showInteractiveFinalSummary(
-                *home,
-                *away,
-                result);
-        } else {
-            result =
-                userControlledMatch
-                    ? playMatch(
-                          &career,
-                          *home,
-                          *away,
-                          verbose,
-                          key)
-                    : playMatch(
-                          *home,
-                          *away,
-                          verbose,
-                          key);
-        }
-
-        storeMatchAnalysis(career, *home, *away, result, false);
-        updateRivalMemoryForUserMatch(career, *home, *away, result);
-        if (userControlledMatch) {
-            if (RivalryRecord* rivalryRec = getRivalryRecord(career.rivalryDynamics, home->name, away->name)) {
-                updateRivalryRecord(*rivalryRec, result.homeGoals, result.awayGoals);
-                rivalryRec->lastMeetingWeek = career.currentWeek;
-                if (rivalryRec->intensity >= 70) {
-                    career.managerStress.pressureIntensity =
-                        min(100, career.managerStress.pressureIntensity + 3);
-                }
-            }
-        }
-    }
-
-    // Calculate points delta for player team
-    if (managedTeamId != kInvalidTeamId) {
-        Team* managedTeam = career.getTeamById(managedTeamId);
-        const auto pointsIt = pointsBefore.find(managedTeamId);
-        if (managedTeam && pointsIt != pointsBefore.end()) {
-            outMyTeamPointsDelta = managedTeam->points - pointsIt->second;
-        }
-    }
-}
 
 // Update suspensions, injuries, fitness and training for all teams
 
@@ -974,7 +751,7 @@ void simulateMatchesPhase(Career& career,
                           const unordered_map<TeamId, int>& pointsBefore,
                           int& myTeamPointsDelta,
                           bool& cupWeek) {
-    processWeekMatches(career, matches, pointsBefore, myTeamPointsDelta);
+    CareerService(career).simulateWeekMatches(matches, pointsBefore, myTeamPointsDelta);
     maybeInvokeIdle();
 
     for (const auto& division : career.divisions) {
@@ -1030,7 +807,7 @@ void updateGameplaySystemsPhase(Career& career, const vector<pair<int, int>>& ma
 
     const TeamId managedTeamId = career.getTeamIdFor(career.myTeam);
     for (const auto& match : matches) {
-        const ScheduledMatchRef fixture = scheduledMatchRef(career, match);
+        const career_week_matches::ScheduledMatchRef fixture = career_week_matches::scheduledMatchRef(career, match);
         Team* home = fixture.home.team;
         Team* away = fixture.away.team;
         if (!fixture.valid()) continue;
