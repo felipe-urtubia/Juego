@@ -1392,6 +1392,37 @@ void testCareerServiceWrapperProducesGameplayOutputs() {
            "Una victoria con aficion alta debe generar una noticia de apoyo.");
     expect(weeklyNarratives.find("Contrato al limite:") != string::npos,
            "Las narrativas deben informar sobre contratos proximos a vencer.");
+
+    // Deterministic regression for weekly manager career events.
+    career.managerName = "DT Prueba";
+    career.managerReputation = 90;
+    career.boardExpectedFinish = 2;
+    career.myTeam->points = 30;
+    career.getActiveTeamAt(1)->points = 0;
+
+    for (size_t i = 0; i < 2; ++i) {
+        career.myTeam->players[i].age = 20;
+        career.myTeam->players[i].matchesPlayed = 5;
+    }
+
+    bool sawInterview = false;
+    bool sawYouthRecognition = false;
+    bool sawJobRumor = false;
+
+    setRandomSeed(20260929);
+    for (int attempt = 0; attempt < 200; ++attempt) {
+        service.generateWeeklyManagerCareerEvents();
+        for (const auto& item : career.newsFeed) {
+            if (item.find("Entrevista:") != string::npos) sawInterview = true;
+            if (item.find("Perfil de manager:") != string::npos) sawYouthRecognition = true;
+            if (item.find("Rumor de banquillo:") != string::npos) sawJobRumor = true;
+        }
+    }
+    resetRandomSeed();
+
+    expect(sawInterview, "Los eventos del entrenador deben permitir entrevistas.");
+    expect(sawYouthRecognition, "Los eventos deben reconocer el trabajo juvenil.");
+    expect(sawJobRumor, "Los eventos deben generar rumores de otros clubes.");
 }
 
 void testTransferEvaluationPenalizesUnaffordableDeals() {

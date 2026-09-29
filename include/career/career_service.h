@@ -81,6 +81,9 @@ public:
 
     // Generate weekly league, squad and opponent news
     void generateWeeklyNarratives(int myTeamPointsDelta);
+
+    // Weekly interviews, youth recognition and manager job rumors
+    void generateWeeklyManagerCareerEvents();
     
     // Add squad-related alerts and notifications
     void addSquadAlerts();

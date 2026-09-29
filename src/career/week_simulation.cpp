@@ -55,30 +55,6 @@ TeamId safeActiveTeamIdAt(const Career& career, size_t index) {
 
 
 
-void generateManagerCareerEvents(Career& career) {
-    if (!career.myTeam) return;
-    int rank = career.currentCompetitiveRank();
-    int field = max(1, career.currentCompetitiveFieldSize());
-    if (rank > 0 && rank <= max(2, field / 4) && randInt(1, 100) <= 18) {
-        career.addNews("Entrevista: la prensa describe a " + career.managerName + " como un DT " +
-                       managerStyleLabel(*career.myTeam) + ".");
-    }
-    int youthContributors = 0;
-    for (const auto& player : career.myTeam->players) {
-        if (player.age <= 21 && player.matchesPlayed >= 4) youthContributors++;
-    }
-    if (youthContributors >= 2 && randInt(1, 100) <= 16) {
-        career.addNews("Perfil de manager: la prensa valora la apuesta juvenil de " + career.managerName + ".");
-    }
-    if (career.managerReputation >= 58 && rank > 0 && rank <= career.boardExpectedFinish &&
-        randInt(1, 100) <= 12) {
-        vector<Team*> jobs = buildJobMarket(career, false);
-        if (!jobs.empty()) {
-            career.addNews("Rumor de banquillo: " + jobs.front()->name + " sigue a " + career.managerName + ".");
-        }
-    }
-}
-
 void weeklyDashboard(const Career& career) {
     if (!career.myTeam) return;
     emitUiMessage("");
@@ -485,7 +461,7 @@ void generateWeeklyNarrative(Career& career, int myTeamPointsDelta) {
         if (career.boardWarningWeeks >= 4) {
             career.addNews("La directiva aumenta la presion sobre " + career.myTeam->name + ".");
         }
-        generateManagerCareerEvents(career);
+        CareerService(career).generateWeeklyManagerCareerEvents();
         CareerService(career).generateWeeklyNarratives(myTeamPointsDelta);
     }
 }
