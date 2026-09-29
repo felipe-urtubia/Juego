@@ -4329,6 +4329,7 @@ void testWeeklyPhysicalStateRegressionBaseline() {
               << ", fatiga " << rival->players[2].fatigueLoad << '\n';
 }
 void testBackgroundDivisionWeekRegressionBaseline() {
+    setRandomSeed(31);
     Career career;
     career.currentSeason = 2;
     career.currentWeek = 4;
@@ -4410,7 +4411,109 @@ void testBackgroundDivisionWeekRegressionBaseline() {
     }
     std::cout << '\n';
 }
+void testSeasonCupRegressionBaseline() {
+    setRandomSeed(41);
+    Career career;
+    career.currentSeason = 2;
+    career.currentWeek = 1;
+    career.managerName = "Manager Copa";
+
+    career.allTeams.push_back(makeTeam(
+        "Copa Local", "primera division", 70, 3, 3,
+        "Balanced", "Equilibrado", 5000000));
+    career.allTeams.push_back(makeTeam(
+        "Copa Visita", "primera division", 68, 3, 3,
+        "Balanced", "Equilibrado", 5000000));
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Copa Local");
+
+    expect(career.myTeam != nullptr,
+           "La regresion de copa necesita un equipo de usuario.");
+
+    career.schedule.assign(2, vector<pair<int, int>>{});
+    career.cupActive = true;
+    career.cupRound = 0;
+    career.cupRemainingTeams = {"Copa Local", "Copa Visita"};
+
+    for (auto& team : career.allTeams) {
+        for (auto& player : team.players) {
+            player.contractWeeks = 104;
+            player.wantsToLeave = false;
+        }
+    }
+
+    auto leagueSnapshot = [](const Team& team) {
+        return vector<int>{
+            team.points,
+            team.goalsFor,
+            team.goalsAgainst,
+            team.awayGoals,
+            team.wins,
+            team.draws,
+            team.losses,
+            team.yellowCards,
+            team.redCards,
+            static_cast<int>(team.headToHead.size())
+        };
+    };
+
+    vector<vector<int>> tableBefore;
+    for (const auto& team : career.allTeams) {
+        tableBefore.push_back(leagueSnapshot(team));
+    }
+
+    CareerRuntimeContext runtime = currentCareerRuntimeContext();
+    runtime.presentation = WeekSimulationPresentation::Compact;
+
+    setRandomSeed(41);
+    {
+        ScopedCareerRuntimeContext scope(runtime);
+        simulateCareerWeek(career);
+    }
+    resetRandomSeed();
+
+    expect(!career.cupActive,
+           "La final de copa debe cerrar el torneo.");
+    expect(career.cupRound == 1,
+           "Una final entre dos equipos debe completar una ronda.");
+    expect(career.cupRemainingTeams.size() == 1,
+           "La copa debe conservar solamente al campeon.");
+    expect(career.cupChampion == career.cupRemainingTeams.front(),
+           "El campeon debe coincidir con el ganador registrado.");
+    expect(career.cupChampion == "Copa Local" ||
+               career.cupChampion == "Copa Visita",
+           "El campeon debe ser uno de los equipos participantes.");
+
+    for (size_t i = 0; i < career.allTeams.size(); ++i) {
+        expect(leagueSnapshot(career.allTeams[i]) == tableBefore[i],
+               "Los partidos de copa no deben modificar las estadisticas de liga.");
+    }
+
+    const auto rivalIt = career.rivalAIMap.find("Copa Visita");
+    expect(rivalIt != career.rivalAIMap.end(),
+           "La copa debe registrar la memoria del rival del usuario.");
+
+    const auto& memories = rivalIt->second.memoryBank;
+    const auto memoryIt = find_if(
+        memories.begin(), memories.end(),
+        [](const RivalMemory& memory) {
+            return memory.opponentName == "Copa Local";
+        });
+
+    expect(memoryIt != memories.end(),
+           "La memoria de copa debe identificar al usuario.");
+    expect(memoryIt->matchesPlayed == 1,
+           "La memoria rival debe registrar un partido de copa.");
+
+    cout << "[CUP_BASELINE] ronda=" << career.cupRound
+         << " | campeon=" << career.cupChampion
+         << " | liga=intacta"
+         << " | memoria=" << memoryIt->matchesPlayed
+         << '\n';
+}
 void testActiveDivisionMatchRegressionBaseline() {
+    setRandomSeed(41);
     Career career;
     career.currentSeason = 2;
     career.currentWeek = 1;
@@ -4475,12 +4578,23 @@ void testActiveDivisionMatchRegressionBaseline() {
     expect(memoryIt->matchesPlayed == 1,
            "La IA rival debe registrar un enfrentamiento.");
 
+
     for (int i = 0; i < 4; ++i) {
         const Team* team = career.findTeamByName(
             "Partido Club " + to_string(i));
-        expect(team->wins == 0 && team->draws == 1 &&
-                   team->losses == 0 && team->points == 1 &&
-                   team->goalsFor == 0 && team->goalsAgainst == 0,
+        const int expectedWins = i == 2 ? 1 : 0;
+        const int expectedDraws = i < 2 ? 1 : 0;
+        const int expectedLosses = i == 3 ? 1 : 0;
+        const int expectedPoints = i == 2 ? 3 : (i < 2 ? 1 : 0);
+        const int expectedGoalsFor = i == 2 ? 1 : 0;
+        const int expectedGoalsAgainst = i == 3 ? 1 : 0;
+
+        expect(team->wins == expectedWins &&
+                   team->draws == expectedDraws &&
+                   team->losses == expectedLosses &&
+                   team->points == expectedPoints &&
+                   team->goalsFor == expectedGoalsFor &&
+                   team->goalsAgainst == expectedGoalsAgainst,
                "Regresion liga activa: deben conservarse resultados, puntos y goles.");
     }
     std::cout << "[ACTIVE_MATCH_BASELINE]";
@@ -5048,6 +5162,7 @@ int main() {
         {"weekly_contract_regression", testWeeklyContractRegressionBaseline},
         {"weekly_physical_regression", testWeeklyPhysicalStateRegressionBaseline},
         {"background_division_regression", testBackgroundDivisionWeekRegressionBaseline},
+        {"season_cup_regression", testSeasonCupRegressionBaseline},
         {"active_match_regression", testActiveDivisionMatchRegressionBaseline},
         {"post_week_action_digest", testPostWeekSimulationAddsActionableDigest},
         {"human_manager_persistence", testHumanManagerProfilesPersistAcrossSaveSerialization},

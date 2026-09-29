@@ -28,6 +28,9 @@ public:
     // Simulate all matches for current week
     void simulateWeekMatches(const std::vector<std::pair<int, int>>& matches, const std::unordered_map<TeamId, int>& pointsBefore, int& outMyTeamPointsDelta);
 
+    // Simulate one round of the season cup
+    void simulateSeasonCupRound();
+
     // Simulate matches and world events in a background division
     void simulateBackgroundDivisionWeek(const std::string& divisionId);
     
