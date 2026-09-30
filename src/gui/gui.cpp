@@ -3,6 +3,7 @@
 #include "gui/gui_internal.h"
 #include "ui/global_search.h"
 #include <cstring>
+#include <commctrl.h>
 
 #ifdef _WIN32
 
@@ -642,6 +643,70 @@ void cycleDisplayMode(AppState& state) {
     }
 }
 
+LRESULT CALLBACK saveBrowserListSubclass(
+    HWND list, UINT message, WPARAM wParam, LPARAM lParam,
+    UINT_PTR subclassId, DWORD_PTR reference) {
+
+    auto* state = reinterpret_cast<AppState*>(reference);
+
+    if (message == WM_NCDESTROY) {
+        RemoveWindowSubclass(list, saveBrowserListSubclass, subclassId);
+        return DefSubclassProc(list, message, wParam, lParam);
+    }
+
+    if (message == WM_LBUTTONUP &&
+        state &&
+        state->currentPage == GuiPage::Saves &&
+        !state->pageRefreshInProgress &&
+        !state->actionInProgress) {
+
+        const POINT point{
+            static_cast<LONG>(static_cast<short>(LOWORD(lParam))),
+            static_cast<LONG>(static_cast<short>(HIWORD(lParam)))
+        };
+
+        const LRESULT hit = SendMessageW(
+            list, LB_ITEMFROMPOINT, 0, lParam);
+
+        if (HIWORD(static_cast<DWORD_PTR>(hit)) == 0) {
+            const size_t row = static_cast<size_t>(
+                LOWORD(static_cast<DWORD_PTR>(hit)));
+
+            if (row < state->saveSlotPaths.size()) {
+                RECT itemRect{};
+
+                if (SendMessageW(
+                    list, LB_GETITEMRECT,
+                    static_cast<WPARAM>(row),
+                    reinterpret_cast<LPARAM>(&itemRect)) != LB_ERR) {
+
+                    const auto s = [&](int value) {
+                        return scaleByDpi(*state, value);
+                    };
+
+                    RECT card = itemRect;
+                    InflateRect(&card, -s(7), -s(5));
+
+                    const int buttonWidth = s(82);
+                    RECT action{
+                        card.right - buttonWidth - s(12),
+                        card.top + (card.bottom - card.top - s(38)) / 2,
+                        card.right - s(12),
+                        card.top + (card.bottom - card.top + s(38)) / 2
+                    };
+
+                    if (PtInRect(&action, point)) {
+                        state->selectedSavePath = state->saveSlotPaths[row];
+                        loadCareer(*state);
+                        return 0;
+                    }
+                }
+            }
+        }
+    }
+
+    return DefSubclassProc(list, message, wParam, lParam);
+}
 LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
     AppState* state = reinterpret_cast<AppState*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 
@@ -657,6 +722,14 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             if (state) {
                 state->dpi = queryWindowDpi(hwnd);
                 initializeInterface(*state);
+                // Boton Abrir interactivo dentro de cada tarjeta de guardado.
+                if (state->newsList) {
+                    SetWindowSubclass(
+                        state->newsList,
+                        saveBrowserListSubclass,
+                        1,
+                        reinterpret_cast<DWORD_PTR>(state));
+                }
             }
             return 0;
         case WM_ERASEBKGND:
@@ -741,6 +814,182 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             }
             break;
         case WM_DRAWITEM:
+            if (state && wParam == IDC_NEWS_LIST) {
+                const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(lParam);
+                if (!item) return TRUE;
+
+                HDC hdc = item->hDC;
+                RECT row = item->rcItem;
+                const bool saves = state->currentPage == GuiPage::Saves;
+                const bool selected = (item->itemState & ODS_SELECTED) != 0;
+                const auto s = [&](int value) { return scaleByDpi(*state, value); };
+
+                HBRUSH background = CreateSolidBrush(RGB(12, 27, 37));
+                FillRect(hdc, &row, background);
+                DeleteObject(background);
+
+                if (item->itemID == static_cast<UINT>(-1)) return TRUE;
+
+                const LRESULT length = SendMessageW(
+                    item->hwndItem, LB_GETTEXTLEN, item->itemID, 0);
+                if (length == LB_ERR) return TRUE;
+
+                std::wstring entry(static_cast<size_t>(length) + 1, L'\0');
+                SendMessageW(
+                    item->hwndItem, LB_GETTEXT, item->itemID,
+                    reinterpret_cast<LPARAM>(entry.data()));
+                entry.resize(static_cast<size_t>(length));
+
+                SetBkMode(hdc, TRANSPARENT);
+
+                if (!saves) {
+                    if (selected) {
+                        HBRUSH selection = CreateSolidBrush(RGB(31, 67, 82));
+                        FillRect(hdc, &row, selection);
+                        DeleteObject(selection);
+                    }
+
+                    RECT textRect = row;
+                    textRect.left += s(8);
+                    textRect.right -= s(8);
+
+                    HGDIOBJ oldFont = SelectObject(
+                        hdc, state->font ? state->font :
+                        static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+
+                    SetTextColor(hdc, RGB(225, 234, 240));
+                    DrawTextW(
+                        hdc, entry.c_str(), -1, &textRect,
+                        DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                    SelectObject(hdc, oldFont);
+                    return TRUE;
+                }
+
+                std::wstring parts[8];
+                size_t begin = 0;
+                int count = 0;
+
+                while (count < 8) {
+                    const size_t separator = entry.find(L" | ", begin);
+                    parts[count++] = entry.substr(
+                        begin,
+                        separator == std::wstring::npos
+                            ? std::wstring::npos
+                            : separator - begin);
+
+                    if (separator == std::wstring::npos) break;
+                    begin = separator + 3;
+                }
+
+                RECT card = row;
+                InflateRect(&card, -s(7), -s(5));
+
+                HBRUSH cardBrush = CreateSolidBrush(
+                    selected ? RGB(23, 48, 58) : RGB(17, 36, 48));
+                HPEN cardPen = CreatePen(
+                    PS_SOLID, selected ? 2 : 1,
+                    selected ? RGB(217, 172, 83) : RGB(57, 91, 109));
+
+                HGDIOBJ oldBrush = SelectObject(hdc, cardBrush);
+                HGDIOBJ oldPen = SelectObject(hdc, cardPen);
+
+                RoundRect(
+                    hdc, card.left, card.top, card.right, card.bottom,
+                    s(18), s(18));
+
+                SelectObject(hdc, oldPen);
+                SelectObject(hdc, oldBrush);
+                DeleteObject(cardPen);
+                DeleteObject(cardBrush);
+
+                const int buttonWidth = s(82);
+                const int textLeft = card.left + s(16);
+                const int textRight = card.right - buttonWidth - s(29);
+
+                auto drawField = [&](const std::wstring& value,
+                                     int top, int bottom,
+                                     COLORREF color, HFONT font) {
+                    RECT field{
+                        textLeft, card.top + s(top),
+                        textRight, card.top + s(bottom)
+                    };
+
+                    HGDIOBJ previous = SelectObject(
+                        hdc, font ? font :
+                        static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+                    SetTextColor(hdc, color);
+                    DrawTextW(
+                        hdc, value.c_str(), -1, &field,
+                        DT_LEFT | DT_VCENTER | DT_SINGLELINE |
+                        DT_END_ELLIPSIS);
+                    SelectObject(hdc, previous);
+                };
+
+                drawField(
+                    count > 0 ? parts[0] : L"Guardado",
+                    9, 35, RGB(247, 249, 250), state->sectionFont);
+
+                drawField(
+                    count > 1 ? L"Division: " + parts[1] : L"",
+                    39, 59, RGB(214, 228, 236), state->font);
+
+                drawField(
+                    count > 3 ? L"Manager: " + parts[3] : L"",
+                    60, 80, RGB(190, 210, 221), state->font);
+
+                drawField(
+                    count > 2 ? L"Carrera: " + parts[2] : L"",
+                    81, 101, RGB(190, 210, 221), state->font);
+
+                drawField(
+                    count > 4 ? L"Modificado: " + parts[4] : L"",
+                    102, 122, RGB(149, 179, 194), state->font);
+
+                // Mostrar la ruta real para distinguir guardados del mismo club.
+                drawField(
+                    count > 5 ? L"Archivo: " + parts[count - 1] : L"",
+                    125, 145, RGB(173, 207, 226), state->font);
+
+                RECT action{
+                    card.right - buttonWidth - s(12),
+                    card.top + (card.bottom - card.top - s(38)) / 2,
+                    card.right - s(12),
+                    card.top + (card.bottom - card.top + s(38)) / 2
+                };
+
+                HBRUSH actionBrush = CreateSolidBrush(
+                    selected ? RGB(196, 152, 68) : RGB(35, 69, 86));
+                HPEN actionPen = CreatePen(
+                    PS_SOLID, 1,
+                    selected ? RGB(244, 201, 110) : RGB(78, 124, 148));
+
+                oldBrush = SelectObject(hdc, actionBrush);
+                oldPen = SelectObject(hdc, actionPen);
+
+                RoundRect(
+                    hdc, action.left, action.top,
+                    action.right, action.bottom, s(12), s(12));
+
+                SelectObject(hdc, oldPen);
+                SelectObject(hdc, oldBrush);
+                DeleteObject(actionPen);
+                DeleteObject(actionBrush);
+
+                HGDIOBJ oldFont = SelectObject(
+                    hdc, state->font ? state->font :
+                    static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+
+                SetTextColor(
+                    hdc, selected ? RGB(17, 29, 38) : RGB(231, 240, 245));
+
+                DrawTextW(
+                    hdc, L"Abrir", -1, &action,
+                    DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+
+                SelectObject(hdc, oldFont);
+                return TRUE;
+            }
+
             if (state && wParam != 0) {
                 drawThemedButton(*state, reinterpret_cast<const DRAWITEMSTRUCT*>(lParam));
                 return TRUE;
@@ -917,6 +1166,15 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 case IDC_NEWS_LIST:
                     if (HIWORD(wParam) == LBN_SELCHANGE) {
                         handleFeedSelectionChange(*state, IDC_NEWS_LIST);
+                    } else if (HIWORD(wParam) == LBN_DBLCLK &&
+                               state->currentPage == GuiPage::Saves) {
+                        // Doble clic sobre un guardado: cargar la carrera seleccionada.
+                        const LRESULT row = SendMessageW(state->newsList, LB_GETCURSEL, 0, 0);
+                        if (row != LB_ERR && row >= 0 &&
+                            row < static_cast<LRESULT>(state->saveSlotPaths.size())) {
+                            state->selectedSavePath = state->saveSlotPaths[static_cast<size_t>(row)];
+                            loadCareer(*state);
+                        }
                     }
                     return 0;
                 case IDC_NEW_CAREER_BUTTON:

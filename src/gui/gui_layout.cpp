@@ -1626,22 +1626,128 @@ void layoutWindow(AppState& state) {
         scrollViewportBottom = client.bottom - s(kStatusHeight) - s(8);
         scrollClipViewport = RECT{shellLeft + s(8), scrollViewportTop, shellLeft + shellWidth - s(8), scrollViewportBottom};
 
-        placeScrollableWindow(state.summaryLabel, shellLeft + s(16), panelsTop, leftWidth, s(kPanelLabelHeight));
-        placeScrollableWindow(state.summaryEdit, shellLeft + s(16), panelsTop + s(kPanelBodyOffset), leftWidth, summaryHeight);
-        placeScrollableWindow(state.detailLabel, shellLeft + s(34) + leftWidth, panelsTop, rightWidth, s(kPanelLabelHeight));
-        placeScrollableWindow(state.detailEdit, shellLeft + s(34) + leftWidth, panelsTop + s(kPanelBodyOffset), rightWidth, detailHeight);
-        const int feedTop = panelsTop + detailHeight + s(44);
-        placeScrollableWindow(state.newsLabel, shellLeft + s(34) + leftWidth, feedTop, rightWidth, s(kPanelLabelHeight));
-        placeScrollableWindow(state.newsList, shellLeft + s(34) + leftWidth, feedTop + s(kPanelBodyOffset), rightWidth, summaryHeight - detailHeight - s(18));
+        if (state.currentPage == GuiPage::Saves) {
+            // Distribucion adaptable a ventana normal y pantalla completa.
+            const int contentLeft = shellLeft + s(16);
+            const int contentWidth = shellWidth - s(32);
+            const int columnGap = s(18);
+            const int availableWidth = contentWidth - columnGap;
+
+            const int savesLeftWidth = availableWidth * 56 / 100;
+            const int savesRightWidth = availableWidth - savesLeftWidth;
+            const int rightLeft = contentLeft + savesLeftWidth + columnGap;
+
+            // Limite inferior compartido por ambas columnas.
+            const int bodyTop = panelsTop + s(kPanelBodyOffset);
+            const int bodyBottom = std::max(
+                bodyTop + s(320),
+                static_cast<int>(client.bottom) - s(74)
+            );
+            const int totalBodyHeight = bodyBottom - bodyTop;
+
+            // Separacion suficiente entre los paneles derechos.
+            const int rightPanelGap = s(40);
+            const int rightDetailHeight = std::max(
+                s(160),
+                (totalBodyHeight - rightPanelGap - s(kPanelBodyOffset)) * 56 / 100
+            );
+
+            const int summaryTop = bodyTop + rightDetailHeight + rightPanelGap;
+            const int summaryBodyTop = summaryTop + s(kPanelBodyOffset);
+            const int summaryBodyHeight = std::max(
+                s(74),
+                bodyBottom - summaryBodyTop
+            );
+
+            // Columna izquierda: partidas guardadas.
+            placeScrollableWindow(
+                state.newsLabel,
+                contentLeft + s(8), panelsTop + s(6),
+                savesLeftWidth - s(16), s(kPanelLabelHeight)
+            );
+
+            placeScrollableWindow(
+                state.newsList,
+                contentLeft, bodyTop,
+                savesLeftWidth, totalBodyHeight
+            );
+
+            // Columna derecha superior: detalles.
+            placeScrollableWindow(
+                state.detailLabel,
+                rightLeft + s(8), panelsTop + s(6),
+                savesRightWidth - s(16), s(kPanelLabelHeight)
+            );
+
+            placeScrollableWindow(
+                state.detailEdit,
+                rightLeft, bodyTop,
+                savesRightWidth, rightDetailHeight
+            );
+
+            // Columna derecha inferior: resumen.
+            placeScrollableWindow(
+                state.summaryLabel,
+                rightLeft + s(8), summaryTop + s(6),
+                savesRightWidth - s(16), s(kPanelLabelHeight)
+            );
+
+            placeScrollableWindow(
+                state.summaryEdit,
+                rightLeft, summaryBodyTop,
+                savesRightWidth, summaryBodyHeight
+            );
+
+            setControlVisibility(state, state.newsLabel, false);
+            setControlVisibility(state, state.newsList, true);
+            setControlVisibility(state, state.detailLabel, false);
+            setControlVisibility(state, state.detailEdit, true);
+            setControlVisibility(state, state.summaryLabel, false);
+            setControlVisibility(state, state.summaryEdit, true);
+        } else {
+            setControlVisibility(state, state.newsLabel, true);
+            setControlVisibility(state, state.detailLabel, true);
+            setControlVisibility(state, state.summaryLabel, true);
+            placeScrollableWindow(state.summaryLabel, shellLeft + s(16), panelsTop, leftWidth, s(kPanelLabelHeight));
+            placeScrollableWindow(state.summaryEdit, shellLeft + s(16), panelsTop + s(kPanelBodyOffset), leftWidth, summaryHeight);
+            placeScrollableWindow(state.detailLabel, shellLeft + s(34) + leftWidth, panelsTop, rightWidth, s(kPanelLabelHeight));
+            placeScrollableWindow(state.detailEdit, shellLeft + s(34) + leftWidth, panelsTop + s(kPanelBodyOffset), rightWidth, detailHeight);
+            const int feedTop = panelsTop + detailHeight + s(44);
+            placeScrollableWindow(state.newsLabel, shellLeft + s(34) + leftWidth, feedTop, rightWidth, s(kPanelLabelHeight));
+            placeScrollableWindow(state.newsList, shellLeft + s(34) + leftWidth, feedTop + s(kPanelBodyOffset),
+                                  rightWidth, summaryHeight - detailHeight - s(18));
+        }
 
         if (state.currentPage == GuiPage::MainMenu) {
             // Usar UI principal limpia del menú de inicio.
             layoutMainMenuPanel(state, client);
         } else if (state.currentPage == GuiPage::Saves) {
-            const int saveButtonWidth = clampValue((shellWidth - s(56)) / 3, s(190), s(320));
-            placeFixedWindow(state.menuLoadButton, shellLeft + s(16), buttonTop, saveButtonWidth, s(40));
-            placeFixedWindow(state.menuDeleteSaveButton, shellLeft + s(28) + saveButtonWidth, buttonTop, saveButtonWidth, s(40));
-            placeFixedWindow(state.menuBackButton, shellLeft + s(40) + saveButtonWidth * 2, buttonTop, saveButtonWidth, s(40));
+            const int saveButtonWidth = clampValue(
+                (shellWidth - s(56)) / 3, s(190), s(320)
+            );
+            const int saveButtonGap = s(14);
+            const int saveButtonsWidth =
+                saveButtonWidth * 3 + saveButtonGap * 2;
+            const int saveButtonsLeft =
+                shellLeft + (shellWidth - saveButtonsWidth) / 2;
+
+            placeFixedWindow(
+                state.menuLoadButton,
+                saveButtonsLeft, buttonTop,
+                saveButtonWidth, s(40)
+            );
+
+            placeFixedWindow(
+                state.menuDeleteSaveButton,
+                saveButtonsLeft + saveButtonWidth + saveButtonGap,
+                buttonTop, saveButtonWidth, s(40)
+            );
+
+            placeFixedWindow(
+                state.menuBackButton,
+                saveButtonsLeft + (saveButtonWidth + saveButtonGap) * 2,
+                buttonTop, saveButtonWidth, s(40)
+            );
             setControlVisibility(state, state.menuContinueButton, false);
             setControlVisibility(state, state.menuPlayButton, false);
             setControlVisibility(state, state.menuSettingsButton, false);
@@ -1662,28 +1768,31 @@ void layoutWindow(AppState& state) {
             setControlVisibility(state, state.menuApplySettingsButton, false);
             setControlVisibility(state, state.menuResetSettingsButton, false);
         } else if (state.currentPage == GuiPage::Settings) {
-            const int settingsWidth = clampValue((shellWidth - s(44)) / 2, s(280), s(420));
-            const int rightColumnLeft = shellLeft + s(28) + settingsWidth;
-            placeFixedWindow(state.menuVolumeButton, shellLeft + s(16), buttonTop, settingsWidth, s(38));
-            placeFixedWindow(state.menuDifficultyButton, rightColumnLeft, buttonTop, settingsWidth, s(38));
-            placeFixedWindow(state.menuSpeedButton, shellLeft + s(16), buttonTop + s(46), settingsWidth, s(38));
-            placeFixedWindow(state.menuSimulationButton, rightColumnLeft, buttonTop + s(46), settingsWidth, s(38));
-            placeFixedWindow(state.menuLanguageButton, shellLeft + s(16), buttonTop + s(92), settingsWidth, s(38));
-            placeFixedWindow(state.menuTextSpeedButton, rightColumnLeft, buttonTop + s(92), settingsWidth, s(38));
-            placeFixedWindow(state.menuVisualButton, shellLeft + s(16), buttonTop + s(138), settingsWidth, s(38));
-            placeFixedWindow(state.menuMusicModeButton, rightColumnLeft, buttonTop + s(138), settingsWidth, s(38));
-            placeFixedWindow(state.menuAudioFadeButton, shellLeft + s(16), buttonTop + s(184), settingsWidth, s(38));
-            placeFixedWindow(state.menuApplySettingsButton, rightColumnLeft, buttonTop + s(184), settingsWidth, s(38));
-            placeFixedWindow(state.menuResetSettingsButton, shellLeft + s(16), buttonTop + s(230), settingsWidth, s(36));
-            placeFixedWindow(state.menuBackButton, rightColumnLeft, buttonTop + s(230), settingsWidth, s(36));
-            setControlVisibility(state, state.menuContinueButton, false);
+            // Diseno limpio para Configuraciones:
+            // - sin subtitulo
+            // - sin paneles informativos
+            // - bloque de botones centrado y mas ordenado
+            const int settingsGridWidth = std::min(s(1080), std::max(s(860), shellWidth - s(80)));
+            const int settingsLeft = shellLeft + (shellWidth - settingsGridWidth) / 2;
+            const int settingsGap = s(14);
+            const int settingsButtonWidth = (settingsGridWidth - settingsGap) / 2;
+            const int settingsButtonHeight = s(54);
+            const int settingsRowGap = s(14);
+            const int settingsTop = buttonTop - s(8);
+
+            const int leftX = settingsLeft;
+            const int rightX = settingsLeft + settingsButtonWidth + settingsGap;
+            const int stepY = settingsButtonHeight + settingsRowGap;
+
+            // Mostrar solo controles de configuracion
             setControlVisibility(state, state.menuPlayButton, false);
             setControlVisibility(state, state.menuSettingsButton, false);
+            setControlVisibility(state, state.menuContinueButton, false);
             setControlVisibility(state, state.menuLoadButton, false);
             setControlVisibility(state, state.menuDeleteSaveButton, false);
             setControlVisibility(state, state.menuCreditsButton, false);
             setControlVisibility(state, state.menuExitButton, false);
-            setControlVisibility(state, state.menuBackButton, true);
+
             setControlVisibility(state, state.menuVolumeButton, true);
             setControlVisibility(state, state.menuDifficultyButton, true);
             setControlVisibility(state, state.menuSpeedButton, true);
@@ -1693,10 +1802,61 @@ void layoutWindow(AppState& state) {
             setControlVisibility(state, state.menuVisualButton, true);
             setControlVisibility(state, state.menuMusicModeButton, true);
             setControlVisibility(state, state.menuAudioFadeButton, true);
-            setControlVisibility(state, state.menuApplySettingsButton, true);
             setControlVisibility(state, state.menuResetSettingsButton, true);
+            setControlVisibility(state, state.menuBackButton, true);
+
+            // Mantener visible la accion Aplicar ajustes.
+            setControlVisibility(state, state.menuApplySettingsButton, true);
+
+            // Forzar ocultacion de cualquier control residual que pueda quedar visible.
+            setControlVisibility(state, state.summaryLabel, false);
+            setControlVisibility(state, state.summaryEdit, false);
+            setControlVisibility(state, state.detailLabel, false);
+            setControlVisibility(state, state.detailEdit, false);
+            setControlVisibility(state, state.newsLabel, false);
+            setControlVisibility(state, state.newsList, false);
+            setControlVisibility(state, state.statusLabel, false);
+
+            // Reubicar botones en una cuadricula centrada
+            placeFixedWindow(state.menuVolumeButton,       leftX,  settingsTop + stepY * 0, settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuDifficultyButton,   rightX, settingsTop + stepY * 0, settingsButtonWidth, settingsButtonHeight);
+
+            placeFixedWindow(state.menuSpeedButton,        leftX,  settingsTop + stepY * 1, settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuSimulationButton,   rightX, settingsTop + stepY * 1, settingsButtonWidth, settingsButtonHeight);
+
+            placeFixedWindow(state.menuLanguageButton,     leftX,  settingsTop + stepY * 2, settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuTextSpeedButton,    rightX, settingsTop + stepY * 2, settingsButtonWidth, settingsButtonHeight);
+
+            placeFixedWindow(state.menuVisualButton,       leftX,  settingsTop + stepY * 3, settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuMusicModeButton,    rightX, settingsTop + stepY * 3, settingsButtonWidth, settingsButtonHeight);
+
+            placeFixedWindow(state.menuAudioFadeButton,    leftX,  settingsTop + stepY * 4, settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuBackButton,         rightX, settingsTop + stepY * 4, settingsButtonWidth, settingsButtonHeight);
+
+            // Fila final de acciones
+            placeFixedWindow(state.menuApplySettingsButton,
+                             leftX, settingsTop + stepY * 5,
+                             settingsButtonWidth, settingsButtonHeight);
+            placeFixedWindow(state.menuResetSettingsButton,
+                             rightX, settingsTop + stepY * 5,
+                             settingsButtonWidth, settingsButtonHeight);
         } else {
-            placeFixedWindow(state.menuBackButton, shellLeft + s(16), buttonTop, s(220), s(38));
+            // Diseno limpio de Creditos.
+            const int creditsLeft = shellLeft + s(16);
+            const int creditsWidth = shellWidth - s(32);
+            const int creditsGap = s(18);
+
+            const int creditsButtonWidth = s(180);
+            const int creditsButtonHeight = s(40);
+            const int creditsButtonLeft = shellLeft + (shellWidth - creditsButtonWidth) / 2;
+            const int creditsButtonTop = buttonTop - s(24);
+
+            placeFixedWindow(
+                state.menuBackButton,
+                creditsButtonLeft, creditsButtonTop,
+                creditsButtonWidth, creditsButtonHeight
+            );
+
             setControlVisibility(state, state.menuContinueButton, false);
             setControlVisibility(state, state.menuPlayButton, false);
             setControlVisibility(state, state.menuSettingsButton, false);
@@ -1704,7 +1864,7 @@ void layoutWindow(AppState& state) {
             setControlVisibility(state, state.menuDeleteSaveButton, false);
             setControlVisibility(state, state.menuCreditsButton, false);
             setControlVisibility(state, state.menuExitButton, false);
-            setControlVisibility(state, state.menuBackButton, true);
+
             setControlVisibility(state, state.menuVolumeButton, false);
             setControlVisibility(state, state.menuDifficultyButton, false);
             setControlVisibility(state, state.menuSpeedButton, false);
@@ -1716,8 +1876,47 @@ void layoutWindow(AppState& state) {
             setControlVisibility(state, state.menuAudioFadeButton, false);
             setControlVisibility(state, state.menuApplySettingsButton, false);
             setControlVisibility(state, state.menuResetSettingsButton, false);
-        }
+            setControlVisibility(state, state.menuBackButton, true);
 
+            setControlVisibility(state, state.newsLabel, false);
+            setControlVisibility(state, state.detailLabel, false);
+            setControlVisibility(state, state.summaryLabel, false);
+
+            setControlVisibility(state, state.newsList, true);
+            setControlVisibility(state, state.detailEdit, true);
+            setControlVisibility(state, state.summaryEdit, true);
+
+            const int creditsPanelsTop = creditsButtonTop + creditsButtonHeight + s(62);
+            const int creditsBodyTop = creditsPanelsTop + s(kPanelBodyOffset);
+            const int creditsBodyBottom = std::max(
+                creditsBodyTop + s(300),
+                static_cast<int>(client.bottom) - s(78)
+            );
+            const int creditsBodyHeight = creditsBodyBottom - creditsBodyTop;
+
+            const int creditsColumnWidth = (creditsWidth - creditsGap * 2) / 3;
+            const int creditsCol1Left = creditsLeft;
+            const int creditsCol2Left = creditsCol1Left + creditsColumnWidth + creditsGap;
+            const int creditsCol3Left = creditsCol2Left + creditsColumnWidth + creditsGap;
+
+            placeScrollableWindow(
+                state.newsList,
+                creditsCol1Left, creditsBodyTop,
+                creditsColumnWidth, creditsBodyHeight
+            );
+
+            placeScrollableWindow(
+                state.detailEdit,
+                creditsCol2Left, creditsBodyTop,
+                creditsColumnWidth, creditsBodyHeight
+            );
+
+            placeScrollableWindow(
+                state.summaryEdit,
+                creditsCol3Left, creditsBodyTop,
+                creditsColumnWidth, creditsBodyHeight
+            );
+        }
         state.layout.statusBar = makeRect(padding,
                                           static_cast<int>(client.bottom) - s(kStatusHeight),
                                           std::max(0, static_cast<int>(client.right) - padding * 2),
@@ -1727,6 +1926,12 @@ void layoutWindow(AppState& state) {
                          state.layout.statusBar.top,
                          rectWidth(state.layout.statusBar),
                          s(20));
+        // Sin barra de estado en Cargar partida.
+        setControlVisibility(state, state.statusLabel, state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Settings && state.currentPage != GuiPage::Credits);
+        // Evitar barras blancas innecesarias en los paneles de guardados.
+        const bool showFrontPanelScrollbars = state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Credits;
+        ShowScrollBar(state.detailEdit, SB_VERT, showFrontPanelScrollbars);
+        ShowScrollBar(state.summaryEdit, SB_VERT, showFrontPanelScrollbars);
         applyEditInteriorPadding(state, state.summaryEdit, 10, 8);
         applyEditInteriorPadding(state, state.detailEdit, 10, 8);
         applyEditInteriorPadding(state, state.managerEdit, 8, 0);
@@ -2308,7 +2513,7 @@ void initializeInterface(AppState& state) {
     state.detailLabel = createControl(state, 0, L"STATIC", L"Ultimo resultado", WS_CHILD | WS_VISIBLE, 0, 0, 220, 18, state.window, 0);
     state.detailEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL, 0, 0, 280, 240, state.window, IDC_DETAIL_EDIT);
     state.newsLabel = createControl(state, 0, L"STATIC", L"Noticias", WS_CHILD | WS_VISIBLE, 0, 0, 240, 18, state.window, 0);
-    state.newsList = createControl(state, WS_EX_CLIENTEDGE, L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY, 0, 0, 280, 220, state.window, IDC_NEWS_LIST);
+    state.newsList = createControl(state, WS_EX_CLIENTEDGE, L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS, 0, 0, 280, 220, state.window, IDC_NEWS_LIST);
     state.statusLabel = createControl(state, 0, L"STATIC", L"Interfaz lista.", WS_CHILD | WS_VISIBLE, 0, 0, 420, 18, state.window, 0);
 
     applyInterfaceFonts(state);
@@ -2472,7 +2677,8 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         RECT header{shell.left + s(14), shell.top + s(14), shell.right - s(14), shell.top + headerHeight};
         drawRoundedPanel(hdc, header, panelFill, panelBorder, s(20));
 
-        RECT accent{header.left + s(28), header.top + s(22), header.left + s(138), header.top + s(28)};
+        const int headerCenter = (header.left + header.right) / 2;
+        RECT accent{headerCenter - s(55), header.top + s(22), headerCenter + s(55), header.top + s(28)};
         HBRUSH accentBrush = CreateSolidBrush(kThemeAccent);
         FillRect(hdc, &accent, accentBrush);
         DeleteObject(accentBrush);
@@ -2487,7 +2693,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
                   L"Chilean Footballito",
                   -1,
                   &title,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                  DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
         RECT tagline{header.left + s(28), header.top + s(88), header.right - s(28), header.bottom - s(18)};
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
@@ -2496,7 +2702,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
                   L"Construye tu club. Define tu estilo. Deja tu legado.",
                   -1,
                   &tagline,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                  DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
         RECT versionBadge{header.right - s(164), header.top + s(26), header.right - s(26), header.top + s(78)};
         drawRoundedPanel(hdc, versionBadge, RGB(9, 31, 40), RGB(43, 85, 102), s(12));
@@ -2578,6 +2784,11 @@ void paintWindowChrome(AppState& state, HDC hdc) {
                          s(20));
 
         RECT accentLine{titleBand.left + s(22), titleBand.top + s(18), titleBand.left + s(118), titleBand.top + s(24)};
+        if (state.currentPage == GuiPage::Saves || state.currentPage == GuiPage::Settings || state.currentPage == GuiPage::Credits) {
+            const int center = (titleBand.left + titleBand.right) / 2;
+            accentLine.left = center - s(48);
+            accentLine.right = center + s(48);
+        }
         HBRUSH accentBrush = CreateSolidBrush(kThemeAccent);
         FillRect(hdc, &accentLine, accentBrush);
         DeleteObject(accentBrush);
@@ -2594,24 +2805,24 @@ void paintWindowChrome(AppState& state, HDC hdc) {
                   L"SIMULADOR DE GESTION FUTBOLISTICA CHILENA",
                   -1,
                   &kickerRect,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                  ((state.currentPage == GuiPage::Saves || state.currentPage == GuiPage::Settings || state.currentPage == GuiPage::Credits) ? DT_CENTER : DT_LEFT) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         SelectObject(hdc, state.heroFont ? state.heroFont : state.titleFont);
         SetTextColor(hdc, RGB(244, 247, 249));
         DrawTextW(hdc,
                   L"Chilean Footballito",
                   -1,
                   &nameRect,
-                  DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                  ((state.currentPage == GuiPage::Saves || state.currentPage == GuiPage::Settings || state.currentPage == GuiPage::Credits) ? DT_CENTER : DT_LEFT) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
         SetTextColor(hdc, RGB(188, 209, 220));
         const wchar_t* subtitleText = state.currentPage == GuiPage::MainMenu
             ? L"Portada del manager: continua, abre guardados, configura o entra al juego real desde un solo frontend."
             : (state.currentPage == GuiPage::Settings
-                ? L"Cabina de configuracion: audio, accesibilidad, timing y perfil visual comparten persistencia."
+                ? L""
                 : (state.currentPage == GuiPage::Saves
-                    ? L"Gestor de guardados: elige una carrera, revisa su detalle y decide si cargarla o borrarla."
-                    : L"Creditos y hoja tecnica del proyecto, con la misma identidad visual del frontend principal."));
-        DrawTextW(hdc, subtitleText, -1, &subtitleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+                    ? L""
+                    : L""));
+        DrawTextW(hdc, subtitleText, -1, &subtitleRect, ((state.currentPage == GuiPage::Saves || state.currentPage == GuiPage::Settings || state.currentPage == GuiPage::Credits) ? DT_CENTER : DT_LEFT) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
         auto drawChip = [&](const RECT& area, const std::wstring& label, COLORREF fill, COLORREF border) {
             drawRoundedPanel(hdc, area, fill, border, s(12));
@@ -2631,7 +2842,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
             {utf8ToWide("Modo " + game_settings::simulationModeLabel(state.settings.simulationMode)), kThemeAccentBlue},
             {utf8ToWide("Musica " + game_settings::menuMusicModeLabel(state.settings.menuMusicMode)), kThemeAccentGreen}
         };
-        for (size_t i = 0; i < chips.size(); ++i) {
+        for (size_t i = 0; i < chips.size() && state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Settings && state.currentPage != GuiPage::Credits; ++i) {
             RECT chipRect{
                 navRect.left + static_cast<int>(i) * (chipWidth + chipGap),
                 navRect.top,
@@ -2641,14 +2852,115 @@ void paintWindowChrome(AppState& state, HDC hdc) {
             drawChip(chipRect, chips[i].first, RGB(15, 32, 43), chips[i].second);
         }
 
-        RECT summaryCard = expandedRect(childRectOnParent(state.summaryEdit, state.window), s(8), s(24));
-        RECT detailCard = expandedRect(childRectOnParent(state.detailEdit, state.window), s(8), s(24));
-        RECT newsCard = expandedRect(childRectOnParent(state.newsList, state.window), s(8), s(24));
+        RECT summaryCard = expandedRect(childRectOnParent(state.summaryEdit, state.window),
+                                        s(8),
+                                        state.currentPage == GuiPage::Saves ? s(16) : s(24));
+        RECT detailCard = expandedRect(childRectOnParent(state.detailEdit, state.window),
+                                       s(8),
+                                       state.currentPage == GuiPage::Saves ? s(16) : s(24));
+        RECT newsCard = expandedRect(childRectOnParent(state.newsList, state.window),
+                                     s(8),
+                                     state.currentPage == GuiPage::Saves ? s(16) : s(24));
+        if (state.currentPage == GuiPage::Saves) {
+            summaryCard.top += s(6);
+            detailCard.top += s(6);
+            newsCard.top += s(6);
+        }
         RECT statusCard = expandedRect(childRectOnParent(state.statusLabel, state.window), s(6), s(8));
         if (IsWindowVisible(state.summaryEdit)) drawRoundedPanel(hdc, summaryCard, kThemePanel, RGB(40, 64, 79), s(18));
         if (IsWindowVisible(state.detailEdit)) drawRoundedPanel(hdc, detailCard, RGB(15, 27, 37), RGB(44, 72, 90), s(18));
         if (IsWindowVisible(state.newsList)) drawRoundedPanel(hdc, newsCard, RGB(15, 27, 37), RGB(44, 72, 90), s(18));
-        drawRoundedPanel(hdc, statusCard, RGB(11, 23, 31), RGB(39, 65, 79), s(12));
+        if (state.currentPage == GuiPage::Saves) {
+            const int previousBkMode = SetBkMode(hdc, TRANSPARENT);
+            const COLORREF previousColor = SetTextColor(hdc, kThemeAccent);
+
+            HGDIOBJ previousFont = SelectObject(
+                hdc,
+                state.sectionFont ? state.sectionFont : state.font
+            );
+
+            const auto drawSaveTitle = [&](const RECT& panel,
+                                           const wchar_t* title) {
+                RECT titleRect{
+                    panel.left + s(12),
+                    panel.top - s(30),
+                    panel.right - s(12),
+                    panel.top - s(6)
+                };
+
+                DrawTextW(
+                    hdc,
+                    title,
+                    -1,
+                    &titleRect,
+                    DT_LEFT | DT_VCENTER |
+                    DT_SINGLELINE | DT_END_ELLIPSIS
+                );
+            };
+
+            if (IsWindowVisible(state.newsList)) {
+                drawSaveTitle(newsCard, L"Guardados disponibles");
+            }
+
+            if (IsWindowVisible(state.detailEdit)) {
+                drawSaveTitle(detailCard, L"Detalle del guardado");
+            }
+
+            if (IsWindowVisible(state.summaryEdit)) {
+                drawSaveTitle(summaryCard, L"Resumen");
+            }
+
+            SelectObject(hdc, previousFont);
+            SetTextColor(hdc, previousColor);
+            SetBkMode(hdc, previousBkMode);
+        }
+        if (state.currentPage == GuiPage::Credits) {
+            const int previousBkMode = SetBkMode(hdc, TRANSPARENT);
+            const COLORREF previousColor = SetTextColor(hdc, kThemeAccent);
+
+            HGDIOBJ previousFont = SelectObject(
+                hdc,
+                state.sectionFont ? state.sectionFont : state.font
+            );
+
+            const auto drawCreditsTitle = [&](const RECT& panel,
+                                              const wchar_t* title) {
+                RECT titleRect{
+                    panel.left + s(12),
+                    panel.top - s(36),
+                    panel.right - s(12),
+                    panel.top - s(12)
+                };
+
+                DrawTextW(
+                    hdc,
+                    title,
+                    -1,
+                    &titleRect,
+                    DT_LEFT | DT_VCENTER |
+                    DT_SINGLELINE | DT_END_ELLIPSIS
+                );
+            };
+
+            if (IsWindowVisible(state.newsList)) {
+                drawCreditsTitle(newsCard, L"Hoja de ruta");
+            }
+
+            if (IsWindowVisible(state.detailEdit)) {
+                drawCreditsTitle(detailCard, L"Perfil del manager");
+            }
+
+            if (IsWindowVisible(state.summaryEdit)) {
+                drawCreditsTitle(summaryCard, L"Panorama de arranque");
+            }
+
+            SelectObject(hdc, previousFont);
+            SetTextColor(hdc, previousColor);
+            SetBkMode(hdc, previousBkMode);
+        }
+        if (state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Settings && state.currentPage != GuiPage::Credits) {
+            drawRoundedPanel(hdc, statusCard, RGB(11, 23, 31), RGB(39, 65, 79), s(12));
+        }
         SelectObject(hdc, oldFont);
         drawSimulationProgressOverlay(state, hdc, client);
         return;

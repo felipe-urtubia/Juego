@@ -1225,8 +1225,15 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
         return;
     }
 
+    const bool centeredSettingsAction =
+        (state.currentPage == GuiPage::Settings &&
+         (id == IDC_MENU_APPLY_SETTINGS_BUTTON ||
+          id == IDC_MENU_RESET_SETTINGS_BUTTON)) ||
+        (state.currentPage == GuiPage::Credits &&
+         id == IDC_MENU_BACK_BUTTON);
+
     RECT textRect = rect;
-    if (usesButtonBadge(id)) {
+    if (usesButtonBadge(id) && !centeredSettingsAction) {
         RECT badgeRect{rect.left + 14, rect.top + 8, rect.left + 38, rect.bottom - 8};
         COLORREF badgeFill = RGB(28, 46, 58);
         if (id == IDC_DISPLAY_MODE_BUTTON) badgeFill = kThemeAccentBlue;
@@ -1260,7 +1267,7 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
         SelectObject(hdc, oldBadgeFont);
 
         textRect.left += 46;
-    } else {
+    } else if (!centeredSettingsAction) {
         textRect.left += 6;
     }
     if (pressed) OffsetRect(&textRect, 0, 1);
@@ -1274,7 +1281,7 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
               textBuffer,
               -1,
               &textRect,
-              (usesButtonBadge(id) ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+              (usesButtonBadge(id) && !centeredSettingsAction ? DT_LEFT : DT_CENTER) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
     SelectObject(hdc, oldFont);
 }
 

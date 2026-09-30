@@ -121,8 +121,26 @@ bool parseSaveSlot(const std::string& path, SaveBrowserSlot& slot) {
 
 void addUniqueCandidate(std::vector<std::string>& candidates, const std::string& path) {
     if (path.empty()) return;
-    if (std::find(candidates.begin(), candidates.end(), path) == candidates.end()) {
-        candidates.push_back(path);
+
+    // En Windows, ambas barras representan el mismo separador.
+    std::string normalized = path;
+    std::replace(normalized.begin(), normalized.end(), '\\', '/');
+
+    while (normalized.rfind("./", 0) == 0) {
+        normalized.erase(0, 2);
+    }
+
+    // Evitar entradas duplicadas por separadores o mayusculas.
+    const std::string key = toLower(normalized);
+    const bool exists = std::any_of(
+        candidates.begin(),
+        candidates.end(),
+        [&](const std::string& candidate) {
+            return toLower(candidate) == key;
+        });
+
+    if (!exists) {
+        candidates.push_back(normalized);
     }
 }
 
@@ -243,9 +261,9 @@ GuiPageModel buildSavesPageModel(AppState& state) {
     model.title = "Guardados";
     model.breadcrumb = "Inicio > Guardados";
     model.infoLine = "Administra los guardados detectados en la carpeta saves.";
-    model.summary.title = "SaveBrowserOverview";
+    model.summary.title = "Resumen";
     model.detail.title = "SaveBrowserDetail";
-    model.feed.title = "SaveBrowserList";
+    model.feed.title = "SaveBrowserOverview";
 
     const std::vector<SaveBrowserSlot> slots = discoverSaveSlots(state);
     state.saveSlotPaths.clear();
@@ -269,22 +287,11 @@ GuiPageModel buildSavesPageModel(AppState& state) {
     };
 
     std::ostringstream summary;
-    summary << "Centro de guardados\r\n\r\n";
-    summary << "Guardados detectados: " << slots.size() << "\r\n";
-    summary << "Carpetas revisadas: saves/ y guardado legado de la raiz.\r\n\r\n";
-    summary << "Acciones\r\n";
-    summary << "- Abrir seleccionado carga el save marcado en la lista.\r\n";
-    summary << "- Borrar seleccionado elimina el save y su backup .bak.\r\n";
-    summary << "- Volver regresa al menu principal.\r\n\r\n";
-    if (state.career.myTeam) {
-        summary << "Hay una carrera activa en memoria. Para borrar un guardado debes salir de esa carrera o volver a la portada sin sesion activa.";
-    } else if (selected) {
-        summary << "Seleccion actual: " << selected->club << " (" << selected->path << ").";
-    } else {
-        summary << "No hay guardados validos para cargar.";
-    }
+    summary << "Guardados encontrados: " << slots.size() << "\r\n";
+    summary << "Carpeta: saves/\r\n";
+    summary << "Ultima actualizacion: "
+            << (slots.empty() ? std::string("Sin guardados") : slots.front().modified);
     model.summary.content = summary.str();
-
     std::ostringstream detail;
     if (selected) {
         detail << "Club: " << selected->club << "\r\n";
@@ -293,8 +300,8 @@ GuiPageModel buildSavesPageModel(AppState& state) {
         detail << "Fecha carrera: " << selected->seasonWeek << "\r\n";
         detail << "Archivo: " << selected->path << "\r\n";
         detail << "Modificado: " << selected->modified << "\r\n";
-        detail << "Backup: " << (selected->hasBackup ? selected->path + ".bak" : std::string("No disponible")) << "\r\n\r\n";
-        detail << "Pulsa Abrir seleccionado para cargar esta carrera.";
+        detail << "Backup: " << (selected->hasBackup ? selected->path + ".bak" : std::string("No disponible")) << "\r\n";
+
     } else {
         detail << "No se encontraron archivos de carrera validos.\r\n\r\n";
         detail << "Crea una carrera nueva y usa Guardar para generar saves/career_save.txt.";
@@ -416,9 +423,12 @@ GuiPageModel buildCreditsPageModel(AppState& state) {
     model.detail.content = detail.str();
 
     model.feed.lines = {
-        "Arquitectura preparada para continuar, cargar, creditos ampliados y opciones de video.",
-        "Settings persistentes unificados entre consola, GUI, audio y timing del frontend.",
-        "Audio y assets del menu ya viven en assets/audio con manifiesto documentado.",
+        "Arquitectura preparada para continuar,",
+        "cargar, creditos ampliados y opciones de video.",
+        "Settings persistentes unificados entre consola,",
+        "GUI, audio y timing del frontend.",
+        "Audio y assets del menu ya viven en assets/audio",
+        "con manifiesto documentado.",
         "Volver te devuelve limpio a la portada principal."
     };
     return model;

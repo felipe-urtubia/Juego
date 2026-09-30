@@ -7910,3 +7910,74 @@ Rama de trabajo utilizada: `feature/career-week-services`.
 - [x] Pruebas y compilación final aprobadas.
 
 > Nota: esta etapa es posterior a la publicación de `v0.1.1-alpha`. Su integración en `main` no actualiza automáticamente el ZIP de aquella release.
+---
+
+## ✅ Rediseño de Guardados, Configuraciones y Créditos - 2026-09-30
+
+Rama de trabajo utilizada:
+
+`feature/save-browser-redesign`
+
+### Cargar partida
+
+- [x] Rediseñada la pantalla de guardados en una distribución de dos columnas.
+- [x] Lista de partidas convertida en tarjetas personalizadas mediante `LBS_OWNERDRAWFIXED`.
+- [x] Cada tarjeta muestra club, división, manager, temporada/semana, fecha de modificación y archivo.
+- [x] Agregado botón visual `Abrir` dentro de cada tarjeta.
+- [x] El botón `Abrir` es interactivo mediante subclass de la lista Win32.
+- [x] Agregado soporte de doble clic para cargar una partida seleccionada.
+- [x] Normalizadas las rutas de guardado para evitar duplicados por `\`, `/`, `./` o diferencias de mayúsculas/minúsculas.
+- [x] Reorganizados los paneles `Guardados disponibles`, `Detalle del guardado` y `Resumen`.
+- [x] Centrados los botones principales de la pantalla de guardados.
+- [x] Ocultadas barras de desplazamiento innecesarias y elementos residuales de la interfaz.
+
+### Configuraciones
+
+- [x] Rediseñada la pantalla en una cuadrícula limpia de dos columnas.
+- [x] Aumentado el tamaño útil de los controles.
+- [x] Reorganizados volumen, dificultad, velocidad, simulación, idioma, velocidad de texto, visual, música y audio.
+- [x] Reubicados `Volver`, `Aplicar ajustes` y `Restaurar`.
+- [x] Centrados los textos de `Aplicar ajustes` y `Restaurar`.
+- [x] Eliminados badges laterales de las acciones finales.
+- [x] Ocultados subtítulo, paneles informativos y barra de estado propios del diseño anterior.
+- [x] Eliminado un control residual que permanecía visible sobre la nueva interfaz.
+- [x] Conservada la persistencia existente de las configuraciones.
+
+### Créditos
+
+- [x] Rediseñada la pantalla en tres columnas de igual tamaño.
+- [x] Columnas finales: `Hoja de ruta`, `Perfil del manager` y `Panorama de arranque`.
+- [x] Títulos dibujados fuera de los paneles para evitar superposición visual.
+- [x] Botón `Volver` centrado.
+- [x] Eliminados chips, subtítulo y barra de estado del diseño anterior.
+- [x] Centrados encabezado y línea decorativa superior.
+- [x] Ocultadas barras verticales innecesarias.
+- [x] Ajustados los textos de `Hoja de ruta` para evitar truncamiento.
+
+### Archivos modificados
+
+- `src/gui/gui.cpp`
+- `src/gui/gui_layout.cpp`
+- `src/gui/gui_runtime.cpp`
+- `src/gui/gui_shared.cpp`
+- `src/gui/gui_view_menu.cpp`
+- `TODO.md`
+
+### Compilación y pruebas
+
+- [x] `FootballManager`: compilación correcta.
+- [x] `FootballManagerCLI`: compilación correcta.
+- [x] `FootballManagerTests`: compilación correcta.
+- [x] Build completo mediante `cmake --build .\build-ci`: correcto.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: 100% de pruebas superadas.
+- [x] Resultado final: `1/1` test aprobado.
+- [x] `git diff --check`: sin errores de whitespace.
+- [x] Solo se mantienen advertencias normales de conversión LF/CRLF del entorno Windows.
+
+### Estado de la etapa
+
+- [x] Rediseño funcional completado.
+- [x] Limpieza final del código realizada.
+- [x] Compilación completa aprobada.
+- [x] Suite automática aprobada.
+- [x] Cambios listos para commit y publicación en GitHub.

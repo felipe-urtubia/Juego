@@ -1052,6 +1052,7 @@ void refreshCurrentPage(AppState& state) {
     renderListPanel(state, state.tableLabel, state.tableList, state.currentModel.primary);
     renderListPanel(state, state.squadLabel, state.squadList, state.currentModel.secondary);
     renderListPanel(state, state.transferLabel, state.transferList, state.currentModel.footer);
+    SendMessageW(state.newsList, LB_SETITEMHEIGHT, 0, scaleByDpi(state, state.currentPage == GuiPage::Saves ? 162 : 23));
     renderFeed(state.newsList, state.currentModel.feed.lines);
     syncSaveBrowserSelection(state);
 
