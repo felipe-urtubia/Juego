@@ -5365,6 +5365,44 @@ void testStartCareerUsesExactRequestedClubAndRebuildsLinks() {
     expect(career.hasSyncedActiveTeamIds(),
            "Los enlaces de equipos activos deben quedar sincronizados tras el commit.");
 }
+void testNewCareerNavigationGuardsShortcutsAndKeepsFrontendAudioScope() {
+    const string guiPath = resolveProjectPath("src/gui/gui.cpp");
+    const string audioPath = resolveProjectPath("src/gui/gui_audio.cpp");
+
+    ifstream guiInput(guiPath, ios::binary);
+    ifstream audioInput(audioPath, ios::binary);
+
+    expect(guiInput.is_open() && audioInput.is_open(),
+           "La prueba de navegacion de Nueva carrera necesita leer GUI y audio.");
+
+    ostringstream guiBuffer;
+    ostringstream audioBuffer;
+    guiBuffer << guiInput.rdbuf();
+    audioBuffer << audioInput.rdbuf();
+
+    const string guiSource = guiBuffer.str();
+    const string audioSource = audioBuffer.str();
+
+    const size_t shortcutStart = guiSource.find("bool handleCareerShortcut");
+    const size_t shortcutEnd = guiSource.find("void cycleDisplayMode", shortcutStart);
+
+    expect(shortcutStart != string::npos &&
+               shortcutEnd != string::npos &&
+               guiSource.substr(shortcutStart, shortcutEnd - shortcutStart)
+                       .find("state.currentPage == GuiPage::NewCareer") != string::npos,
+           "Nueva carrera debe bloquear los atajos propios de una carrera activa.");
+
+    expect(guiSource.find(
+               "if (state->currentPage == GuiPage::NewCareer && wParam == VK_ESCAPE)") !=
+               string::npos &&
+               guiSource.find("openFrontendMenu(*state);") != string::npos,
+           "Escape desde Nueva carrera debe volver al menu principal.");
+
+    expect(audioSource.find(
+               "isFrontMenuPage(state.currentPage) || state.currentPage == GuiPage::NewCareer") !=
+               string::npos,
+           "Nueva carrera debe pertenecer al alcance de audio del frontend.");
+}
 }  // namespace
 
 int main() {
@@ -5482,6 +5520,7 @@ int main() {
         {"app_services_career_split", testAppServiceCareerIsSeparatedFromMainOrchestrator},
         {"gui_critical_event_notifications", testGuiActionsRegisterCriticalEvents},
         {"gui_keyboard_shortcuts", testGuiKeyboardShortcutsAreIntegrated},
+        {"new_career_navigation", testNewCareerNavigationGuardsShortcutsAndKeepsFrontendAudioScope},
         {"gui_player_context_menu", testGuiPlayerContextMenuIsIntegrated},
         {"project_root_paths", testProjectPathsResolveFromNestedWorkingDirectory},
         {"simulate_match_state", testSimulateMatchAppliesPostProcessState},
