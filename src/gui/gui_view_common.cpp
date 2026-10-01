@@ -59,6 +59,7 @@ std::string pageTitleFor(GuiPage page) {
         case GuiPage::Settings: return "Configuraciones";
         case GuiPage::Credits: return "Creditos";
         case GuiPage::Saves: return "Guardados";
+        case GuiPage::NewCareer: return "Nueva carrera";
         case GuiPage::Dashboard: return "Resumen del club";
         case GuiPage::Squad: return "Plantilla";
         case GuiPage::Tactics: return "Tacticas";
@@ -78,6 +79,7 @@ std::string breadcrumbFor(GuiPage page) {
     if (page == GuiPage::Settings) return "Inicio > Configuraciones";
     if (page == GuiPage::Credits) return "Inicio > Creditos";
     if (page == GuiPage::Saves) return "Inicio > Guardados";
+    if (page == GuiPage::NewCareer) return "Inicio > Nueva carrera";
     return "Club > " + pageTitleFor(page);
 }
 

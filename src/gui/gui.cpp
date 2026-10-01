@@ -1202,8 +1202,21 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                     continueCareer(*state);
                     return 0;
                 case IDC_MENU_PLAY_BUTTON:
-                    setCurrentPage(*state, GuiPage::Dashboard); // evitar que MainMenu se superponga al iniciar
-                    setStatus(*state, "Flujo principal abierto. Ya puedes crear o cargar una carrera.");
+                    state->gameSetup.division.clear();
+                    state->gameSetup.club.clear();
+                    state->gameSetup.manager.clear();
+                    state->gameSetup.managerError.clear();
+                    state->gameSetup.inlineMessage.clear();
+                    state->gameSetup.ready = false;
+                    state->gameSetup.currentStep = 1;
+                    setCurrentPage(*state, GuiPage::NewCareer);
+                    fillDivisionCombo(*state, "");
+                    fillTeamCombo(*state, "", "");
+                    setWindowTextUtf8(state->managerEdit, "");
+                    check_game_ready(*state);
+                    refreshCurrentPage(*state);
+                    setStatus(*state, "Elige division, club y nombre del manager para comenzar.");
+                    if (state->divisionCombo) SetFocus(state->divisionCombo);
                     return 0;
                 case IDC_MENU_SETTINGS_BUTTON:
                     openSettingsMenu(*state);

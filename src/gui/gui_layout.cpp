@@ -274,6 +274,7 @@ PageLayoutProfile buildPageLayoutProfile(GuiPage page) {
         case GuiPage::Credits:
         case GuiPage::Saves:
             return {360, 320, 52, 360, 220, 220, 160, 148, 140};
+        case GuiPage::NewCareer:
         case GuiPage::Dashboard:
             return {340, 300, 56, 348, 226, 166, 160, 148, 132};
         case GuiPage::Squad:
@@ -1508,6 +1509,7 @@ void layoutWindow(AppState& state) {
         contentWidth = availableMainWidth - infoWidth - s(kPanelGap);
     }
     const int infoLeft = stackedMainColumns ? contentLeft : contentLeft + contentWidth + s(kPanelGap);
+    const bool newCareerLayout = state.currentPage == GuiPage::NewCareer;
     const bool dashboardLayout = state.currentPage == GuiPage::Dashboard;
     const bool dashboardEmptyState = dashboardLayout && !state.career.myTeam;
     const int summaryWidth = stackedMainColumns
@@ -1584,6 +1586,10 @@ void layoutWindow(AppState& state) {
         return false;
     };
 
+    if (!newCareerLayout) {
+        setWindowTextUtf8(state.newCareerButton, "Nueva carrera");
+        setWindowTextUtf8(state.frontMenuButton, "Menu principal");
+    }
     if (frontMenuPage) {
         for (HWND hwnd : topControls) setControlVisibility(state, hwnd, false);
         for (HWND hwnd : topLabels) setControlVisibility(state, hwnd, false);
@@ -1939,6 +1945,355 @@ void layoutWindow(AppState& state) {
         return;
     }
 
+    if (newCareerLayout) {
+        // Nueva carrera tiene su propia pantalla: sin navegacion ni herramientas del club.
+        for (HWND hwnd : topControls) setControlVisibility(state, hwnd, false);
+        for (HWND hwnd : topLabels) setControlVisibility(state, hwnd, false);
+        for (HWND hwnd : navButtons) setControlVisibility(state, hwnd, false);
+        for (HWND hwnd : headerButtons) setControlVisibility(state, hwnd, false);
+
+        const std::array<HWND, 14> setupHiddenActions = {
+            state.scoutActionButton, state.shortlistButton, state.followShortlistButton,
+            state.buyButton, state.preContractButton, state.loanButton, state.renewButton,
+            state.sellButton, state.planButton, state.instructionButton,
+            state.youthUpgradeButton, state.trainingUpgradeButton,
+            state.scoutingUpgradeButton, state.stadiumUpgradeButton
+        };
+        for (HWND hwnd : setupHiddenActions) setControlVisibility(state, hwnd, false);
+
+        setMenuButtonsVisible(state, false);
+
+        setControlVisibility(state, state.validateButton, false);
+        setControlVisibility(state, state.displayModeButton, false);
+        setControlVisibility(state, state.filterLabel, false);
+        setControlVisibility(state, state.filterCombo, false);
+        setControlVisibility(state, state.globalSearchEdit, false);
+
+        setControlVisibility(state, state.tableLabel, false);
+        setControlVisibility(state, state.tableList, false);
+        setControlVisibility(state, state.squadLabel, false);
+        setControlVisibility(state, state.squadList, false);
+        setControlVisibility(state, state.transferLabel, false);
+        setControlVisibility(state, state.transferList, false);
+        setControlVisibility(state, state.newsLabel, false);
+        setControlVisibility(state, state.newsList, false);
+        setControlVisibility(state, state.detailLabel, false);
+        setControlVisibility(state, state.detailEdit, false);
+
+        setControlVisibility(state, state.emptyNewButton, false);
+        setControlVisibility(state, state.emptyLoadButton, false);
+        setControlVisibility(state, state.emptyValidateButton, false);
+
+        setControlVisibility(state, state.breadcrumbLabel, true);
+        setControlVisibility(state, state.pageTitleLabel, true);
+        setControlVisibility(state, state.infoLabel, true);
+
+        setControlVisibility(state, state.divisionLabel, true);
+        setControlVisibility(state, state.divisionCombo, true);
+        setControlVisibility(state, state.teamLabel, true);
+        setControlVisibility(state, state.teamCombo, true);
+        setControlVisibility(state, state.managerLabel, true);
+        setControlVisibility(state, state.managerEdit, true);
+        setControlVisibility(state, state.managerHelpLabel, true);
+
+        setControlVisibility(state, state.summaryLabel, true);
+        setControlVisibility(state, state.summaryEdit, true);
+
+        setControlVisibility(state, state.frontMenuButton, true);
+        setControlVisibility(state, state.newCareerButton, true);
+        setControlVisibility(state, state.statusLabel, false);
+
+        setWindowTextUtf8(state.frontMenuButton, "Volver");
+        setWindowTextUtf8(state.newCareerButton, "Comenzar carrera");
+        setWindowTextUtf8(state.summaryLabel, "Vista previa de la carrera");
+
+        state.pageScrollY = 0;
+        state.pageContentHeight = static_cast<int>(client.bottom);
+        state.maxPageScrollY = 0;
+        ShowScrollBar(state.window, SB_VERT, FALSE);
+
+        const int shellMargin = s(54);
+        const int shellLeft = shellMargin;
+        const int shellTop = s(34);
+        const int shellWidth = std::max(
+            s(620),
+            static_cast<int>(client.right) - shellMargin * 2
+        );
+        const int shellBottom = std::max(
+            shellTop + s(560),
+            static_cast<int>(client.bottom) - s(28)
+        );
+
+        state.layout.contentShell = makeRect(
+            shellLeft,
+            shellTop,
+            shellWidth,
+            shellBottom - shellTop
+        );
+        state.layout.shellInner = shrinkRect(
+            state.layout.contentShell,
+            s(32),
+            s(26)
+        );
+
+        const int innerLeft = state.layout.shellInner.left;
+        const int innerTop = state.layout.shellInner.top;
+        const int innerWidth = rectWidth(state.layout.shellInner);
+
+
+        // Encabezado.
+        state.layout.pageHeader = makeRect(
+            innerLeft,
+            innerTop,
+            innerWidth,
+            s(104)
+        );
+        state.layout.headerTextArea = state.layout.pageHeader;
+
+        state.layout.breadcrumb = makeRect(
+            innerLeft,
+            innerTop,
+            innerWidth,
+            s(kBreadcrumbHeight)
+        );
+        state.layout.pageTitle = makeRect(
+            innerLeft,
+            state.layout.breadcrumb.bottom + s(4),
+            innerWidth,
+            s(kPageTitleHeight)
+        );
+        state.layout.infoLine = makeRect(
+            innerLeft,
+            state.layout.pageTitle.bottom + s(4),
+            innerWidth,
+            s(kPageInfoHeight)
+        );
+
+        placeFixedWindow(
+            state.breadcrumbLabel,
+            state.layout.breadcrumb.left,
+            state.layout.breadcrumb.top,
+            rectWidth(state.layout.breadcrumb),
+            rectHeight(state.layout.breadcrumb)
+        );
+        placeFixedWindow(
+            state.pageTitleLabel,
+            state.layout.pageTitle.left,
+            state.layout.pageTitle.top,
+            rectWidth(state.layout.pageTitle),
+            rectHeight(state.layout.pageTitle)
+        );
+        placeFixedWindow(
+            state.infoLabel,
+            state.layout.infoLine.left,
+            state.layout.infoLine.top,
+            rectWidth(state.layout.infoLine),
+            rectHeight(state.layout.infoLine)
+        );
+
+        // Formulario principal.
+        const int formTop = state.layout.pageHeader.bottom + s(30);
+        const int formGap = s(24);
+        const int labelHeight = s(22);
+        const int inputHeight = s(kHeaderFieldHeight);
+        const bool stackedSetup = innerWidth < s(980);
+
+        auto placeSetupField = [&](HWND label,
+                                   HWND field,
+                                   int x,
+                                   int y,
+                                   int width,
+                                   bool combo) {
+            placeFixedWindow(label, x, y, width, labelHeight);
+
+            RECT fieldRect = makeRect(
+                x,
+                y + labelHeight + s(6),
+                width,
+                inputHeight
+            );
+
+            if (combo) {
+                RECT comboRect = controlRectForCombo(
+                    fieldRect,
+                    s(kComboPopupHeight)
+                );
+                placeFixedWindow(
+                    field,
+                    comboRect.left,
+                    comboRect.top,
+                    rectWidth(comboRect),
+                    rectHeight(comboRect)
+                );
+            } else {
+                placeFixedWindow(
+                    field,
+                    fieldRect.left,
+                    fieldRect.top,
+                    rectWidth(fieldRect),
+                    rectHeight(fieldRect)
+                );
+            }
+        };
+
+        int formBottom = formTop;
+
+        if (stackedSetup) {
+            const int fieldWidth = std::min(innerWidth, s(620));
+            const int fieldLeft = innerLeft + std::max(0, (innerWidth - fieldWidth) / 2);
+            const int rowStep = labelHeight + inputHeight + s(22);
+
+            placeSetupField(
+                state.divisionLabel,
+                state.divisionCombo,
+                fieldLeft,
+                formTop,
+                fieldWidth,
+                true
+            );
+
+            placeSetupField(
+                state.teamLabel,
+                state.teamCombo,
+                fieldLeft,
+                formTop + rowStep,
+                fieldWidth,
+                true
+            );
+
+            placeSetupField(
+                state.managerLabel,
+                state.managerEdit,
+                fieldLeft,
+                formTop + rowStep * 2,
+                fieldWidth,
+                false
+            );
+
+            placeFixedWindow(
+                state.managerHelpLabel,
+                fieldLeft,
+                formTop + rowStep * 2 + labelHeight + inputHeight + s(10),
+                fieldWidth,
+                s(kHeaderHintHeight)
+            );
+
+            formBottom = formTop + rowStep * 3 + s(8);
+        } else {
+            const int fieldWidth = (innerWidth - formGap * 2) / 3;
+            const int divisionX = innerLeft;
+            const int teamX = divisionX + fieldWidth + formGap;
+            const int managerX = teamX + fieldWidth + formGap;
+
+            placeSetupField(
+                state.divisionLabel,
+                state.divisionCombo,
+                divisionX,
+                formTop,
+                fieldWidth,
+                true
+            );
+
+            placeSetupField(
+                state.teamLabel,
+                state.teamCombo,
+                teamX,
+                formTop,
+                fieldWidth,
+                true
+            );
+
+            placeSetupField(
+                state.managerLabel,
+                state.managerEdit,
+                managerX,
+                formTop,
+                fieldWidth,
+                false
+            );
+
+            placeFixedWindow(
+                state.managerHelpLabel,
+                managerX,
+                formTop + labelHeight + inputHeight + s(10),
+                fieldWidth,
+                s(kHeaderHintHeight)
+            );
+
+            formBottom = formTop + labelHeight + inputHeight + s(52);
+        }
+
+        applyEditInteriorPadding(state, state.managerEdit, 8, 0);
+
+        // Tarjeta de vista previa.
+        const int previewTop = formBottom + s(26);
+        const int buttonsHeight = s(42);
+        const int bottomReserve = buttonsHeight + s(76);
+        const int previewHeight = std::max(
+            s(210),
+            shellBottom - previewTop - bottomReserve
+        );
+
+        RECT previewOuter = makeRect(
+            innerLeft,
+            previewTop,
+            innerWidth,
+            previewHeight
+        );
+
+        state.layout.summaryPanel = buildPanelBounds(
+            previewOuter,
+            s(kPanelTitleHeight),
+            s(kPanelContentPadding),
+            s(kPanelHeaderGap)
+        );
+
+        placeFixedWindow(
+            state.summaryLabel,
+            state.layout.summaryPanel.title.left,
+            state.layout.summaryPanel.title.top,
+            rectWidth(state.layout.summaryPanel.title),
+            rectHeight(state.layout.summaryPanel.title)
+        );
+
+        placeFixedWindow(
+            state.summaryEdit,
+            state.layout.summaryPanel.body.left,
+            state.layout.summaryPanel.body.top,
+            rectWidth(state.layout.summaryPanel.body),
+            rectHeight(state.layout.summaryPanel.body)
+        );
+
+        applyEditInteriorPadding(state, state.summaryEdit, 14, 10);
+        ShowScrollBar(state.summaryEdit, SB_VERT, FALSE);
+
+        // Acciones finales.
+        const int actionTop = previewOuter.bottom + s(18);
+        const int backWidth = s(160);
+        const int startWidth = s(230);
+        const int actionGap = s(16);
+        const int actionsWidth = backWidth + actionGap + startWidth;
+        const int actionsLeft = innerLeft + std::max(0, (innerWidth - actionsWidth) / 2);
+
+        placeFixedWindow(
+            state.frontMenuButton,
+            actionsLeft,
+            actionTop,
+            backWidth,
+            buttonsHeight
+        );
+        placeFixedWindow(
+            state.newCareerButton,
+            actionsLeft + backWidth + actionGap,
+            actionTop,
+            startWidth,
+            buttonsHeight
+        );
+
+        state.layout.statusBar = RECT{};
+
+        return;
+    }
     if (dashboardLayout && state.career.myTeam) {
         layoutCareerDashboard(state, client);
         applyEditInteriorPadding(state, state.summaryEdit, 10, 8);
@@ -2975,16 +3330,17 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         return;
     }
 
-    RECT topBar = state.layout.topBar;
-    FillRect(hdc, &topBar, state.headerBrush ? state.headerBrush : state.backgroundBrush);
-    drawRoundedPanel(hdc,
-                     RECT{s(8), s(8), client.right - s(8), std::max(s(24), static_cast<int>(state.layout.topBar.bottom) - s(12))},
-                     kThemeTopBarPanel,
-                     RGB(28, 53, 65),
-                     s(18));
-    drawTopMetrics(state, hdc, client);
-
-    drawRoundedPanel(hdc, state.layout.sideMenu, RGB(12, 23, 31), RGB(34, 57, 70), s(18));
+    if (state.currentPage != GuiPage::NewCareer) {
+        RECT topBar = state.layout.topBar;
+        FillRect(hdc, &topBar, state.headerBrush ? state.headerBrush : state.backgroundBrush);
+        drawRoundedPanel(hdc,
+                         RECT{s(8), s(8), client.right - s(8), std::max(s(24), static_cast<int>(state.layout.topBar.bottom) - s(12))},
+                         kThemeTopBarPanel,
+                         RGB(28, 53, 65),
+                         s(18));
+        drawTopMetrics(state, hdc, client);
+        drawRoundedPanel(hdc, state.layout.sideMenu, RGB(12, 23, 31), RGB(34, 57, 70), s(18));
+    }
     drawRoundedPanel(hdc, state.layout.contentShell, kThemeShell, RGB(32, 53, 66), s(22));
     if (rectHasArea(state.layout.statusBar)) {
         drawRoundedPanel(hdc, state.layout.statusBar, RGB(11, 23, 31), RGB(39, 65, 79), s(12));
@@ -3026,12 +3382,14 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         drawScrollableChrome();
     }
 
-    RECT menuTitle = state.layout.sideMenuTitle;
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, kThemeMuted);
-    HGDIOBJ oldFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-    DrawTextW(hdc, L"Secciones", -1, &menuTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-    SelectObject(hdc, oldFont);
+    if (state.currentPage != GuiPage::NewCareer) {
+        RECT menuTitle = state.layout.sideMenuTitle;
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, kThemeMuted);
+        HGDIOBJ oldFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
+        DrawTextW(hdc, L"Secciones", -1, &menuTitle, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(hdc, oldFont);
+    }
 
     if (state.currentPage == GuiPage::Tactics) {
         RECT boardRect = shrinkRect(state.layout.primaryPanel.body, s(2), s(2));

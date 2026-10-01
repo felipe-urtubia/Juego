@@ -244,6 +244,7 @@ std::vector<std::string> filterOptionsForPage(GuiPage page) {
         case GuiPage::Settings:
         case GuiPage::Credits:
         case GuiPage::Saves:
+        case GuiPage::NewCareer:
             return {};
         case GuiPage::Dashboard: return {"Todo", "Alertas", "Lesiones", "Contratos"};
         case GuiPage::Squad: return {"Todos", "XI", "ARQ", "DEF", "MED", "DEL", "Lesionados"};
@@ -803,12 +804,14 @@ namespace {
 
 void syncSetupButtonsAndHints(AppState& state) {
     const bool hasCareer = state.career.myTeam != nullptr;
+    const bool newCareerPage = state.currentPage == GuiPage::NewCareer;
+    const bool setupBlockedByCareer = hasCareer && !newCareerPage;
     const bool hasSavedCareer = hasPersistedCareer(state);
     const bool busy = state.actionInProgress;
-    EnableWindow(state.divisionCombo, !busy && !hasCareer);
-    EnableWindow(state.teamCombo, !busy && !hasCareer && hasAvailableTeams(state, state.gameSetup.division));
+    EnableWindow(state.divisionCombo, !busy && !setupBlockedByCareer);
+    EnableWindow(state.teamCombo, !busy && !setupBlockedByCareer && hasAvailableTeams(state, state.gameSetup.division));
     EnableWindow(state.managerEdit, !busy);
-    EnableWindow(state.newCareerButton, !busy && !hasCareer && state.gameSetup.ready);
+    EnableWindow(state.newCareerButton, !busy && !setupBlockedByCareer && state.gameSetup.ready);
     EnableWindow(state.emptyNewButton, !busy && state.gameSetup.ready);
     EnableWindow(state.loadButton, !busy);
     EnableWindow(state.saveButton, !busy && hasCareer);
@@ -829,7 +832,7 @@ void syncSetupButtonsAndHints(AppState& state) {
     if (state.divisionLabel) {
         std::string badge = "Division";
         const std::string resolved = resolveKnownDivisionId(state, state.gameSetup.division.empty() ? state.career.activeDivision : state.gameSetup.division);
-        if (hasCareer && !resolved.empty()) {
+        if (hasCareer && !newCareerPage && !resolved.empty()) {
             badge += " [" + divisionDisplay(resolved) + "]";
         }
         setWindowTextUtf8(state.divisionLabel, badge);
@@ -837,7 +840,7 @@ void syncSetupButtonsAndHints(AppState& state) {
 
     if (state.managerHelpLabel) {
         std::string helper;
-        if (hasCareer) {
+        if (hasCareer && !newCareerPage) {
             const std::string resolved = resolveKnownDivisionId(state, state.career.activeDivision);
             helper = "Carrera activa.";
             if (!resolved.empty()) helper += " Division resuelta: " + divisionDisplay(resolved) + ".";
@@ -889,13 +892,16 @@ void fillTeamCombo(AppState& state, const std::string& divisionId, const std::st
     }
     SendMessageW(state.teamCombo, CB_SETCURSEL, selectedIndex, 0);
     state.suppressComboEvents = false;
-    EnableWindow(state.teamCombo, !state.career.myTeam && !divisionId.empty() && !teams.empty());
+    EnableWindow(state.teamCombo,
+                 (!state.career.myTeam || state.currentPage == GuiPage::NewCareer) &&
+                 !divisionId.empty() &&
+                 !teams.empty());
 }
 
 void syncManagerNameFromUi(AppState& state) {
     std::string name = getWindowTextUtf8(state.managerEdit);
     state.gameSetup.manager = trim(name);
-    if (state.career.myTeam) {
+    if (state.career.myTeam && state.currentPage != GuiPage::NewCareer) {
         state.career.managerName = state.gameSetup.manager.empty() ? "Manager" : state.gameSetup.manager;
     }
 }
@@ -987,7 +993,8 @@ void refreshCurrentPage(AppState& state) {
     ScopedRefreshRedrawLock redrawLock(state);
     const DWORD refreshStart = GetTickCount();
 
-    if (state.career.myTeam || (state.gameSetup.division.empty() && !state.gameSetup.club.empty())) {
+    if (state.currentPage != GuiPage::NewCareer &&
+        (state.career.myTeam || (state.gameSetup.division.empty() && !state.gameSetup.club.empty()))) {
         syncCombosFromCareer(state);
     }
     check_game_ready(state);
