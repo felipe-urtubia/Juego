@@ -605,6 +605,9 @@ void startNewCareer(AppState& state) {
     if (!result.ok) {
         std::string message = result.messages.empty() ? "No se pudo iniciar la carrera." : result.messages.front();
         MessageBoxW(state.window, utf8ToWide(message).c_str(), L"Football Manager", MB_OK | MB_ICONWARNING);
+        setStatus(state, message);
+        refreshCurrentPage(state);
+        return;
     }
     syncCombosFromCareer(state);
     state.selectedPlayerName.clear();
