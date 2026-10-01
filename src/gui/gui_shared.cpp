@@ -1228,7 +1228,8 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
     const bool centeredSettingsAction =
         (state.currentPage == GuiPage::Settings &&
          (id == IDC_MENU_APPLY_SETTINGS_BUTTON ||
-          id == IDC_MENU_RESET_SETTINGS_BUTTON)) ||
+          id == IDC_MENU_RESET_SETTINGS_BUTTON ||
+          id == IDC_MENU_BACK_BUTTON)) ||
         (state.currentPage == GuiPage::Credits &&
          id == IDC_MENU_BACK_BUTTON) ||
         (state.currentPage == GuiPage::NewCareer &&
