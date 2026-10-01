@@ -232,7 +232,8 @@ void ensureMenuMusicOpened(AppState& state) {
 
 void syncMenuMusicForPage(AppState& state) {
     const bool onMainMenu = state.currentPage == GuiPage::MainMenu;
-    const bool onFrontendPage = isFrontMenuPage(state.currentPage);
+    const bool onFrontendPage =
+        isFrontMenuPage(state.currentPage) || state.currentPage == GuiPage::NewCareer;
     const bool shouldPlay = game_settings::shouldPlayMenuMusic(state.settings, onMainMenu, onFrontendPage);
     if (!shouldPlay) {
         stopMenuMusic(state);

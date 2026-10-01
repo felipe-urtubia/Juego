@@ -525,7 +525,12 @@ bool isCtrlKeyDown() {
 }
 
 bool handleCareerShortcut(AppState& state, const MSG& msg) {
-    if (msg.message != WM_KEYDOWN || state.actionInProgress || isFrontMenuPage(state.currentPage)) return false;
+    if (msg.message != WM_KEYDOWN ||
+        state.actionInProgress ||
+        isFrontMenuPage(state.currentPage) ||
+        state.currentPage == GuiPage::NewCareer) {
+        return false;
+    }
     const WPARAM key = msg.wParam;
     const bool repeated = (msg.lParam & (1u << 30)) != 0;
     const bool hasCareer = state.career.myTeam != nullptr;
@@ -1359,6 +1364,10 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             break;
         case WM_KEYDOWN:
             if (state) {
+                if (state->currentPage == GuiPage::NewCareer && wParam == VK_ESCAPE) {
+                    openFrontendMenu(*state);
+                    return 0;
+                }
                 if (isFrontMenuPage(state->currentPage) && wParam == VK_ESCAPE) {
                     if (state->currentPage == GuiPage::Settings || state->currentPage == GuiPage::Credits || state->currentPage == GuiPage::Saves) {
                         openFrontendMenu(*state);
