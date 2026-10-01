@@ -139,81 +139,112 @@ ServiceResult startCareerService(Career& career,
                                  const string& teamName,
                                  const string& managerName) {
     ServiceResult result;
-    career.initializeLeague(true);
-    if (career.divisions.empty()) {
+
+    // Construir la nueva carrera fuera del estado activo. De esta forma,
+    // cualquier error de validacion deja intacta la carrera que ya existe.
+    Career candidate;
+    candidate.saveFile = career.saveFile;
+    candidate.initializeLeague(true);
+
+    if (candidate.divisions.empty()) {
         result.messages.push_back("No se encontraron divisiones disponibles.");
         return result;
     }
-    career.setActiveDivision(divisionId);
-    if (career.getActiveTeamCount() == 0) {
+
+    candidate.setActiveDivision(divisionId);
+    if (candidate.getActiveTeamCount() == 0) {
         result.messages.push_back("La division seleccionada no tiene equipos.");
         return result;
     }
-    Team* selectedTeam = career.getActiveTeamAt(0);
-    for (int i = 0; i < career.getActiveTeamCount(); ++i) {
-        Team* team = career.getActiveTeamAt(i);
+
+    Team* selectedTeam = nullptr;
+    for (int i = 0; i < candidate.getActiveTeamCount(); ++i) {
+        Team* team = candidate.getActiveTeamAt(i);
         if (team && team->name == teamName) {
             selectedTeam = team;
             break;
         }
     }
-    career.myTeam = selectedTeam;
-    career.managerName = managerName.empty() ? "Manager" : managerName;
-    career.managerReputation = 50;
-    career.clearHumanManagers();
-    career.addHumanManager(career.managerName, career.myTeam ? career.myTeam->name : string(), career.managerReputation, true);
-    career.newsFeed.clear();
-    career.managerInbox.clear();
-    career.scoutInbox.clear();
-    career.scoutingShortlist.clear();
-    career.scoutingAssignments.clear();
-    career.history.clear();
-    career.activePromises.clear();
-    career.historicalRecords.clear();
-    career.pendingTransfers.clear();
-    career.achievements.clear();
-    career.currentSeason = 1;
-    career.currentWeek = 1;
-    career.resetSeason();
-    
+
+    if (!selectedTeam) {
+        result.messages.push_back("No se encontro el club seleccionado en la division indicada.");
+        return result;
+    }
+
+    candidate.myTeam = selectedTeam;
+    candidate.managerName = managerName.empty() ? "Manager" : managerName;
+    candidate.managerReputation = 50;
+    candidate.clearHumanManagers();
+    candidate.addHumanManager(candidate.managerName,
+                              candidate.myTeam->name,
+                              candidate.managerReputation,
+                              true);
+    candidate.newsFeed.clear();
+    candidate.managerInbox.clear();
+    candidate.scoutInbox.clear();
+    candidate.scoutingShortlist.clear();
+    candidate.scoutingAssignments.clear();
+    candidate.history.clear();
+    candidate.activePromises.clear();
+    candidate.historicalRecords.clear();
+    candidate.pendingTransfers.clear();
+    candidate.achievements.clear();
+    candidate.currentSeason = 1;
+    candidate.currentWeek = 1;
+    candidate.resetSeason();
+
     // === Inicializar Nuevos Sistemas de Gameplay ===
     vector<string> playerNames;
-    for (const auto& player : career.myTeam->players) {
+    for (const auto& player : candidate.myTeam->players) {
         playerNames.push_back(player.name);
     }
-    career.dressingRoomDynamics = initializeDressingRoom(playerNames);
-    
+    candidate.dressingRoomDynamics = initializeDressingRoom(playerNames);
+
     // Inicializar IA rival para todos los equipos
-    for (int i = 0; i < career.getActiveTeamCount(); ++i) {
-        Team* team = career.getActiveTeamAt(i);
-        if (team != career.myTeam && team) {
-            career.rivalAIMap[team->name] = createRivalAI(*team);
+    for (int i = 0; i < candidate.getActiveTeamCount(); ++i) {
+        Team* team = candidate.getActiveTeamAt(i);
+        if (team != candidate.myTeam && team) {
+            candidate.rivalAIMap[team->name] = createRivalAI(*team);
         }
     }
-    
+
     // Inicializar rivalidades
     vector<string> teamNames;
-    for (int i = 0; i < career.getActiveTeamCount(); ++i) {
-        Team* team = career.getActiveTeamAt(i);
+    for (int i = 0; i < candidate.getActiveTeamCount(); ++i) {
+        Team* team = candidate.getActiveTeamAt(i);
         if (team) teamNames.push_back(team->name);
     }
-    initializeRivalries(teamNames, career.rivalryDynamics);
-    
+    initializeRivalries(teamNames, candidate.rivalryDynamics);
+
     // Deuda inicial
-    career.debtStatus = calculateDebtStatus(
-        career.myTeam->budget,
-        0,  // Sin deuda inicial
-        career.myTeam->budget / 10  // Ingresos aproximados semanales
+    candidate.debtStatus = calculateDebtStatus(
+        candidate.myTeam->budget,
+        0,
+        candidate.myTeam->budget / 10
     );
-    syncInfrastructureFromTeam(career, *career.myTeam);
-    // === Fin InicializaciÃ³n Sistemas ===
-    
-    world_state_service::seedSeasonPromises(career);
+    syncInfrastructureFromTeam(candidate, *candidate.myTeam);
+    // === Fin Inicializacion Sistemas ===
+
+    world_state_service::seedSeasonPromises(candidate);
+
+    const string committedDivision = candidate.activeDivision;
+    const string committedTeamName = candidate.myTeam->name;
+
+    // Commit atomico del nuevo estado. Career contiene punteros hacia allTeams,
+    // por lo que despues de copiar reconstruimos todos los enlaces derivados.
+    career = candidate;
+    career.refreshActiveDivisionTeamLinks(committedDivision);
+    career.setMyTeamByName(committedTeamName);
+
+    if (!career.myTeam) {
+        result.messages.push_back("No se pudo reconstruir el club de la nueva carrera.");
+        return result;
+    }
+
     result.ok = true;
     result.messages.push_back("Nueva carrera iniciada con " + career.myTeam->name + ".");
     return result;
 }
-
 ServiceResult loadCareerService(Career& career) {
     ServiceResult result;
     career.initializeLeague(true);

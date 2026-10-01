@@ -5268,6 +5268,103 @@ void testWeeklyTransferRecordsNotification() {
     expect(transferRecorded,
            "Una transferencia aceptada durante la semana debe registrar una notificacion TransferCompleted.");
 }
+void testStartCareerRejectsUnknownClubWithoutMutatingExistingCareer() {
+    Career catalog;
+    catalog.initializeLeague(true);
+
+    string validDivision;
+    for (const auto& division : catalog.divisions) {
+        catalog.setActiveDivision(division.id);
+        if (catalog.getActiveTeamCount() > 0) {
+            validDivision = division.id;
+            break;
+        }
+    }
+
+    expect(!validDivision.empty(),
+           "La prueba de nueva carrera necesita al menos una division configurada.");
+
+    Career career;
+    career.allTeams.push_back(
+        makeTeam("Carrera Protegida FC",
+                 "primera division",
+                 70,
+                 3,
+                 3,
+                 "Balanced",
+                 "Equilibrado",
+                 2500000));
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Carrera Protegida FC");
+    career.managerName = "Manager Original";
+    career.currentSeason = 4;
+    career.currentWeek = 11;
+    career.newsFeed.push_back("Estado anterior protegido.");
+
+    expect(career.myTeam != nullptr,
+           "La prueba necesita una carrera activa previa.");
+
+    ServiceResult result = startCareerService(
+        career,
+        validDivision,
+        "__CLUB_INEXISTENTE_NUEVA_CARRERA__",
+        "Manager Nuevo");
+
+    expect(!result.ok,
+           "Un club inexistente debe rechazar el inicio de carrera.");
+    expect(career.myTeam != nullptr &&
+               career.myTeam->name == "Carrera Protegida FC",
+           "Un inicio fallido no debe reemplazar el club de la carrera activa.");
+    expect(career.managerName == "Manager Original",
+           "Un inicio fallido no debe reemplazar el manager activo.");
+    expect(career.currentSeason == 4 && career.currentWeek == 11,
+           "Un inicio fallido no debe reiniciar temporada ni semana.");
+    expect(career.newsFeed.size() == 1 &&
+               career.newsFeed.front() == "Estado anterior protegido.",
+           "Un inicio fallido no debe borrar el estado de la carrera previa.");
+}
+
+void testStartCareerUsesExactRequestedClubAndRebuildsLinks() {
+    Career catalog;
+    catalog.initializeLeague(true);
+
+    string validDivision;
+    string validTeam;
+
+    for (const auto& division : catalog.divisions) {
+        catalog.setActiveDivision(division.id);
+        if (catalog.getActiveTeamCount() > 0) {
+            Team* team = catalog.getActiveTeamAt(0);
+            if (team) {
+                validDivision = division.id;
+                validTeam = team->name;
+                break;
+            }
+        }
+    }
+
+    expect(!validDivision.empty() && !validTeam.empty(),
+           "La prueba de nueva carrera necesita un club configurado.");
+
+    Career career;
+    ServiceResult result =
+        startCareerService(career, validDivision, validTeam, "Manager Exacto");
+
+    expect(result.ok,
+           "Una division y club validos deben iniciar la carrera.");
+    expect(career.myTeam != nullptr,
+           "La nueva carrera debe reconstruir el puntero al club usuario.");
+    expect(career.myTeam->name == validTeam,
+           "La nueva carrera debe usar exactamente el club solicitado.");
+    expect(career.managerName == "Manager Exacto",
+           "La nueva carrera debe conservar el nombre del manager solicitado.");
+    expect(career.currentSeason == 1 && career.currentWeek == 1,
+           "La nueva carrera debe comenzar en temporada 1, semana 1.");
+    expect(career.getTeamIdFor(career.myTeam) != kInvalidTeamId,
+           "El club usuario debe apuntar a un equipo perteneciente a allTeams.");
+    expect(career.hasSyncedActiveTeamIds(),
+           "Los enlaces de equipos activos deben quedar sincronizados tras el commit.");
+}
 }  // namespace
 
 int main() {
@@ -5298,6 +5395,8 @@ int main() {
         {"competition_group_table", testCompetitionGroupTableScopesActiveGroup},
         {"team_id_repository", testTeamRepositoryResolvesStableIds},
         {"career_service_wrapper", testCareerServiceWrapperProducesGameplayOutputs},
+        {"new_career_invalid_club_preserves_state", testStartCareerRejectsUnknownClubWithoutMutatingExistingCareer},
+        {"new_career_exact_club", testStartCareerUsesExactRequestedClubAndRebuildsLinks},
         {"game_settings_cycle", testGameSettingsCycleAndDifficultyImpact},
         {"game_settings_persistence", testGameSettingsPersistenceAndFrontendScope},
         {"transfer_affordability", testTransferEvaluationPenalizesUnaffordableDeals},
