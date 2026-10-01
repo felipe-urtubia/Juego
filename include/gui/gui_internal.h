@@ -97,6 +97,7 @@ enum class GuiPage {
     Settings,
     Credits,
     Saves,
+    NewCareer,
     Dashboard,
     Squad,
     Tactics,

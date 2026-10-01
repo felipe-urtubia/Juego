@@ -405,9 +405,9 @@ GuiPageModel buildDashboardModel(AppState& state) {
     model.title = pageTitleFor(state.currentPage);
     model.breadcrumb = breadcrumbFor(state.currentPage);
     model.metrics = buildMetrics(state, alerts);
-    model.infoLine = state.career.myTeam
-        ? weeklyFocus.headline
-        : state.gameSetup.inlineMessage;
+    model.infoLine = (state.currentPage == GuiPage::NewCareer || !state.career.myTeam)
+        ? state.gameSetup.inlineMessage
+        : weeklyFocus.headline;
     model.summary.title = "UpcomingMatchWidget";
     model.primary = buildLeagueTableModel(state.career, "Grupo actual");
     model.secondary = buildTeamStatusModel(state.career);
@@ -416,7 +416,7 @@ GuiPageModel buildDashboardModel(AppState& state) {
     model.feed.title = "NewsFeedPanel";
     model.feed.lines = state.currentFilter == "Alertas" ? alerts : buildFeedLines(state.career, state.currentFilter == "Todo" ? "" : state.currentFilter);
 
-    if (!state.career.myTeam) {
+    if (state.currentPage == GuiPage::NewCareer || !state.career.myTeam) {
         const Team* setupTeam = nullptr;
         for (const auto& team : state.career.allTeams) {
             if (team.division == state.gameSetup.division && team.name == state.gameSetup.club) {
@@ -435,25 +435,29 @@ GuiPageModel buildDashboardModel(AppState& state) {
         model.summary.title = "LaunchChecklistPanel";
         model.detail.title = "GameSetupStatusPanel";
         model.feed.title = "GameSetupChecklistPanel";
-        model.summary.content =
-            "Flujo de inicio\r\n\r\n"
-            "[1] Division\r\n"
-            "Estado: " + std::string(hasDivision ? "OK" : "PENDIENTE") + "\r\n"
-            "Actual: " + (hasDivision ? divisionDisplay(state.gameSetup.division) : std::string("Sin elegir")) + "\r\n"
-            "Define el universo competitivo y habilita el listado de clubes.\r\n\r\n"
-            "[2] Club\r\n"
-            "Estado: " + std::string(hasClub ? "OK" : "PENDIENTE") + "\r\n"
-            "Actual: " + (hasClub ? setupTeam->name : std::string("Sin elegir")) + "\r\n"
-            "Presupuesto base: " + (hasClub ? formatMoneyValue(setupTeam->budget) : std::string("No disponible")) + "\r\n\r\n"
-            "[3] Manager\r\n"
-            "Estado: " + std::string(hasManager ? "OK" : "PENDIENTE") + "\r\n"
-            "Actual: " + (hasManager ? state.gameSetup.manager : std::string("Ingresa nombre del manager")) + "\r\n" +
-            (state.gameSetup.managerError.empty() ? std::string("Validacion en vivo activa.") : ("Error: " + state.gameSetup.managerError)) +
-            "\r\n\r\n"
-            "[Desbloqueas al iniciar]\r\n"
-            "- centro del club, partido y clasificacion\r\n"
-            "- mercado, contratos, finanzas y scouting\r\n"
-            "- cantera, directiva y noticias";
+        if (!hasDivision) {
+            model.summary.content =
+                "Configura tu nueva carrera\r\n\r\n"
+                "Selecciona una division para cargar los clubes disponibles.\r\n\r\n"
+                "Despues podras elegir el club y definir el nombre del manager.";
+        } else if (!hasClub) {
+            model.summary.content =
+                std::string("Division seleccionada\r\n\r\n") +
+                divisionDisplay(state.gameSetup.division) +
+                "\r\n\r\n"
+                "Ahora elige el club que quieres dirigir.";
+        } else {
+            model.summary.content =
+                setupTeam->name + "\r\n\r\n" +
+                "Division: " + divisionDisplay(state.gameSetup.division) + "\r\n" +
+                "Presupuesto inicial: " + formatMoneyValue(setupTeam->budget) + "\r\n" +
+                "Manager: " + (hasManager ? state.gameSetup.manager : std::string("Pendiente")) + "\r\n\r\n" +
+                (state.gameSetup.ready
+                     ? std::string("Tu carrera esta lista. Pulsa Comenzar carrera para asumir el club.")
+                     : std::string("Completa el nombre del manager para habilitar el inicio.")) +
+                "\r\n\r\n"
+                "Al comenzar tendras acceso a plantilla, calendario, liga, mercado, finanzas, cantera, directiva y noticias.";
+        }
         model.detail.content =
             "Estado de setup\r\n\r\n"
             "Division: " + (hasDivision ? divisionDisplay(state.gameSetup.division) : std::string("Pendiente")) + "\r\n"

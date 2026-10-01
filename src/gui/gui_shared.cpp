@@ -1230,7 +1230,9 @@ void drawThemedButton(AppState& state, const DRAWITEMSTRUCT* drawItem) {
          (id == IDC_MENU_APPLY_SETTINGS_BUTTON ||
           id == IDC_MENU_RESET_SETTINGS_BUTTON)) ||
         (state.currentPage == GuiPage::Credits &&
-         id == IDC_MENU_BACK_BUTTON);
+         id == IDC_MENU_BACK_BUTTON) ||
+        (state.currentPage == GuiPage::NewCareer &&
+         id == IDC_FRONT_MENU_BUTTON);
 
     RECT textRect = rect;
     if (usesButtonBadge(id) && !centeredSettingsAction) {
