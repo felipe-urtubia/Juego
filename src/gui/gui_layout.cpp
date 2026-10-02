@@ -1183,17 +1183,17 @@ void layoutCareerDashboardLegacy(AppState& state, const RECT& client) {
 void layoutCareerDashboard(AppState& state, const RECT& client) {
     const auto s = [&](int value) { return scaleByDpi(state, value); };
     const int padding = s(24);
-    const int gap = s(16);
+    const int gap = s(18);
     const int innerWidth = std::max(s(320), static_cast<int>(client.right) - padding * 2);
-    const int contentWidth = std::min(innerWidth, clampValue(innerWidth, s(720), s(1500)));
+    const int contentWidth = std::min(innerWidth, clampValue(innerWidth, s(760), s(1680)));
     const int contentLeft = padding + std::max(0, (innerWidth - contentWidth) / 2);
     const int contentTop = s(32);
     const int titleHeight = s(40);
     const int infoHeight = s(24);
-    const int buttonGap = s(12);
-    const int buttonHeight = s(44);
-    const int gridCols = contentWidth < s(620) ? 2 : (contentWidth < s(1040) ? 3 : 4);
-    const int buttonWidth = std::max(s(140), (contentWidth - buttonGap * (gridCols - 1)) / gridCols);
+    const int buttonGap = s(10);
+    const int buttonHeight = s(38);
+    const int gridCols = contentWidth < s(760) ? 2 : (contentWidth < s(1200) ? 4 : 6);
+    const int buttonWidth = std::max(s(118), (contentWidth - buttonGap * (gridCols - 1)) / gridCols);
 
     const std::array<HWND, 37> hiddenControls = {
         state.divisionLabel, state.teamLabel, state.managerLabel, state.managerHelpLabel,
@@ -1268,12 +1268,15 @@ void layoutCareerDashboard(AppState& state, const RECT& client) {
     setControlVisibility(state, state.dashboardButton, false);
 
     const int buttonRows = static_cast<int>((dashboardButtons.size() + gridCols - 1) / gridCols);
-    const int panelsTop = buttonsTop + buttonRows * buttonHeight + (buttonRows - 1) * buttonGap + s(22);
+    const int panelsTop = buttonsTop + buttonRows * buttonHeight + (buttonRows - 1) * buttonGap + s(16);
     const int statusTop = static_cast<int>(client.bottom) - s(kStatusHeight);
     const int availablePanelHeight = std::max(s(250), statusTop - panelsTop - s(14));
-    const int topPanelHeight = clampValue(availablePanelHeight * 48 / 100, s(150), s(230));
-    const int bottomPanelHeight = std::max(s(130), availablePanelHeight - topPanelHeight - gap);
-    const int leftWidth = std::max(s(300), contentWidth * 36 / 100);
+    const int topPanelHeight = clampValue(availablePanelHeight * 40 / 100, s(160), s(190));
+    const int bottomPanelTop = panelsTop + s(kPanelBodyOffset) + topPanelHeight + gap;
+    const int bottomPanelHeight = std::max(
+        s(110),
+        statusTop - bottomPanelTop - s(kPanelBodyOffset) - s(8));
+    const int leftWidth = std::max(s(340), contentWidth * 34 / 100);
     const int rightWidth = contentWidth - leftWidth - gap;
     const int bottomColWidth = std::max(s(220), (contentWidth - gap * 2) / 3);
 
@@ -1339,7 +1342,7 @@ void layoutCareerDashboard(AppState& state, const RECT& client) {
     MoveWindow(state.transferLabel, contentLeft + leftWidth + gap, panelsTop, rightWidth, s(kPanelLabelHeight), TRUE);
     MoveWindow(state.transferList, contentLeft + leftWidth + gap, panelsTop + s(kPanelBodyOffset), rightWidth, topPanelHeight, TRUE);
 
-    const int bottomTop = panelsTop + s(kPanelBodyOffset) + topPanelHeight + gap;
+    const int bottomTop = bottomPanelTop;
     setControlVisibility(state, state.tableLabel, true);
     setControlVisibility(state, state.tableList, true);
     MoveWindow(state.tableLabel, contentLeft, bottomTop, bottomColWidth, s(kPanelLabelHeight), TRUE);

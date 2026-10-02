@@ -527,7 +527,7 @@ GuiPageModel buildDashboardModel(AppState& state) {
     };
 
     model.footer.title = "ActionCuePanel";
-    model.footer.columns = {{L"Prioridad", 90}, {L"Destino", 110}, {L"Accion", 150}, {L"Motivo", 420}};
+    model.footer.columns = {{L"Prioridad", 80}, {L"Destino", 105}, {L"Accion", 220}, {L"Motivo", 540}};
     model.footer.rows.clear();
     if (!postWeekDigest.empty()) {
         pushDashboardActionRow(model.footer,
