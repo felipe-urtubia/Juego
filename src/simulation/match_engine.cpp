@@ -430,6 +430,13 @@ if (stats.awayGoals > awayGoalsBefore) {
             interactiveState.timelineEvents =
                 buildInteractiveTimeline(timeline, minuteEnd);
 
+            interactiveState.timelineEventsDetailed.clear();
+            for (const MatchEvent& event : timeline.events) {
+                if (event.minute <= minuteEnd) {
+                    interactiveState.timelineEventsDetailed.push_back(event);
+                }
+            }
+
             interactiveState.currentTactics =
                 userState.team.tactics;
 

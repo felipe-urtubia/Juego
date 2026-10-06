@@ -4316,14 +4316,21 @@ void testCareerRuntimeScopeRestoresContext() {
     g_runtimeMessagesA.clear();
     g_runtimeMessagesB.clear();
 
+    const LiveMatchStateCallback liveMatchProbe =
+        +[](const std::string&,
+            const std::string&,
+            const match_engine::InteractiveMatchState&) {};
+
     const CareerRuntimeContext previous = currentCareerRuntimeContext();
     setUiMessageCallback(collectRuntimeMessageA);
     setIdleCallback(idleRuntimeProbe);
+    setLiveMatchStateCallback(nullptr);
     setWeekSimulationPresentation(WeekSimulationPresentation::Compact);
 
     CareerRuntimeContext scoped = currentCareerRuntimeContext();
     scoped.uiMessage = collectRuntimeMessageB;
     scoped.idle = nullptr;
+    scoped.liveMatchState = liveMatchProbe;
     scoped.presentation = WeekSimulationPresentation::Detailed;
 
     {
@@ -4332,6 +4339,8 @@ void testCareerRuntimeScopeRestoresContext() {
                "El contexto de runtime activo debe exponer el callback de UI scoped.");
         expect(idleCallback() == nullptr,
                "El scope debe poder anular callbacks temporales sin tocar el default externo.");
+        expect(liveMatchStateCallback() == liveMatchProbe,
+               "El scope debe exponer el callback temporal de partido en vivo.");
         expect(weekSimulationPresentation() == WeekSimulationPresentation::Detailed,
                "La presentacion scoped debe sobreescribir la del runtime base.");
         emitUiMessage("scope");
@@ -4341,6 +4350,8 @@ void testCareerRuntimeScopeRestoresContext() {
            "Al salir del scope debe restaurarse el callback de UI previo.");
     expect(idleCallback() == idleRuntimeProbe,
            "Al salir del scope debe restaurarse el idle callback previo.");
+    expect(liveMatchStateCallback() == nullptr,
+           "Al salir del scope debe restaurarse el callback previo de partido en vivo.");
     expect(weekSimulationPresentation() == WeekSimulationPresentation::Compact,
            "La presentacion previa debe restaurarse tras destruir el scope.");
 
@@ -4352,6 +4363,7 @@ void testCareerRuntimeScopeRestoresContext() {
 
     setUiMessageCallback(previous.uiMessage);
     setIdleCallback(previous.idle);
+    setLiveMatchStateCallback(previous.liveMatchState);
     setIncomingOfferDecisionCallback(previous.incomingOfferDecision);
     setContractRenewalDecisionCallback(previous.contractRenewalDecision);
     setManagerJobSelectionCallback(previous.managerJobSelection);

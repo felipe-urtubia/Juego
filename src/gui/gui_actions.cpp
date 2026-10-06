@@ -7,10 +7,12 @@
 #include "career/career_runtime.h"
 #include "career/game_events_system.h"
 #include "engine/game_settings.h"
+#include "simulation/match_engine.h"
 #include "transfers/negotiation_system.h"
 #include "utils/utils.h"
 
 #include <algorithm>
+#include <iomanip>
 #include <memory>
 #include <sstream>
 #include <utility>
@@ -159,6 +161,24 @@ bool dashboardShowsPostWeekDigest(const AppState& state) {
             state.currentModel.detail.content.find("Cierre post-semana") != std::string::npos);
 }
 
+void pumpGuiMessagesFor(int delay) {
+    if (delay <= 0) return;
+
+    const DWORD stopTime = GetTickCount() + static_cast<DWORD>(delay);
+    MSG msg{};
+    while (GetTickCount() < stopTime) {
+        while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
+            if (msg.message == WM_QUIT) {
+                PostQuitMessage(static_cast<int>(msg.wParam));
+                return;
+            }
+            TranslateMessage(&msg);
+            DispatchMessageW(&msg);
+        }
+        Sleep(4);
+    }
+}
+
 void pulseFrontendTiming(AppState& state) {
     const int delay = game_settings::pageTransitionDelayMs(state.settings);
     if (delay <= 0) return;
@@ -204,6 +224,9 @@ struct SimulationWorkerProgressContext {
     int spinner = 0;
     std::vector<std::string> events;
     int lastPercent = 35;
+    int liveMatchMinute = 0;
+    std::string liveHomeTeam;
+    std::string liveAwayTeam;
 };
 
 thread_local SimulationWorkerProgressContext* g_workerProgressContext = nullptr;
@@ -244,6 +267,7 @@ void setSimulationProgress(AppState& state,
     if (state.window && IsWindow(state.window)) {
         if (!wasActive) layoutWindow(state);
         InvalidateRect(state.window, nullptr, TRUE);
+        UpdateWindow(state.window);
     }
 }
 
@@ -498,6 +522,225 @@ int progressPercentForEventPhase(const std::string& phase, int fallback) {
     return clampValue(std::max(fallback, phasePercent), 0, 95);
 }
 
+int liveMatchMinuteDelayMs(const GameSettings& settings) {
+    switch (settings.simulationSpeed) {
+        case SimulationSpeed::Relaxed: return 5000;
+        case SimulationSpeed::Standard: return 3300;
+        case SimulationSpeed::Rapid: return 1000;
+    }
+    return 3300;
+}
+
+bool shouldShowLiveMatchEvent(const MatchEvent& event) {
+    switch (event.type) {
+        case MatchEventType::Shot:
+        case MatchEventType::BigChance:
+        case MatchEventType::Goal:
+        case MatchEventType::Miss:
+        case MatchEventType::Save:
+        case MatchEventType::Foul:
+        case MatchEventType::YellowCard:
+        case MatchEventType::RedCard:
+        case MatchEventType::Injury:
+        case MatchEventType::Corner:
+        case MatchEventType::Offside:
+        case MatchEventType::Counterattack:
+        case MatchEventType::TacticalChange:
+        case MatchEventType::Substitution:
+            return true;
+        default:
+            return false;
+    }
+}
+
+std::string liveMatchEventText(const MatchEvent& event) {
+    std::ostringstream out;
+    out << event.minute << "' ";
+    if (!event.teamName.empty()) out << event.teamName << ": ";
+
+    if (!event.description.empty()) {
+        out << event.description;
+    } else if (!event.playerName.empty()) {
+        out << event.playerName;
+    } else {
+        out << "Evento de partido";
+    }
+
+    return out.str();
+}
+
+struct LiveMatchTotals {
+    int homeGoals = 0;
+    int awayGoals = 0;
+    int homeShots = 0;
+    int awayShots = 0;
+    int homeDangerousAttacks = 0;
+    int awayDangerousAttacks = 0;
+    int homeYellowCards = 0;
+    int awayYellowCards = 0;
+    int homeRedCards = 0;
+    int awayRedCards = 0;
+    int homeCorners = 0;
+    int awayCorners = 0;
+    double homeExpectedGoals = 0.0;
+    double awayExpectedGoals = 0.0;
+};
+
+LiveMatchTotals liveMatchTotalsAtMinute(
+    const std::vector<MatchEvent>& events,
+    int minute) {
+
+    LiveMatchTotals totals;
+
+    for (const MatchEvent& event : events) {
+        if (event.minute > minute) continue;
+
+        totals.homeGoals += event.impact.homeGoalsDelta;
+        totals.awayGoals += event.impact.awayGoalsDelta;
+        totals.homeShots += event.impact.homeShotsDelta;
+        totals.awayShots += event.impact.awayShotsDelta;
+        totals.homeDangerousAttacks += event.impact.homeDangerousAttacksDelta;
+        totals.awayDangerousAttacks += event.impact.awayDangerousAttacksDelta;
+        totals.homeYellowCards += event.impact.homeYellowCardsDelta;
+        totals.awayYellowCards += event.impact.awayYellowCardsDelta;
+        totals.homeRedCards += event.impact.homeRedCardsDelta;
+        totals.awayRedCards += event.impact.awayRedCardsDelta;
+        totals.homeCorners += event.impact.homeCornersDelta;
+        totals.awayCorners += event.impact.awayCornersDelta;
+        totals.homeExpectedGoals += event.impact.homeExpectedGoalsDelta;
+        totals.awayExpectedGoals += event.impact.awayExpectedGoalsDelta;
+    }
+
+    return totals;
+}
+
+void postWorkerLiveMatchState(
+    const std::string& homeTeamName,
+    const std::string& awayTeamName,
+    const match_engine::InteractiveMatchState& state) {
+
+    if (!g_workerProgressContext) return;
+
+    SimulationWorkerProgressContext& progress =
+        *g_workerProgressContext;
+
+    if (!progress.window || !IsWindow(progress.window)) return;
+
+    const bool newMatch =
+        progress.liveHomeTeam != homeTeamName ||
+        progress.liveAwayTeam != awayTeamName ||
+        state.minute <= progress.liveMatchMinute;
+
+    if (newMatch) {
+        progress.liveMatchMinute = 0;
+        progress.liveHomeTeam = homeTeamName;
+        progress.liveAwayTeam = awayTeamName;
+        progress.events.clear();
+    }
+
+    const int targetMinute =
+        clampValue(state.minute, 0, 90);
+
+    const int delayMs =
+        liveMatchMinuteDelayMs(progress.settings);
+
+    for (int minute = progress.liveMatchMinute + 1;
+         minute <= targetMinute;
+         ++minute) {
+
+        if (!progress.window || !IsWindow(progress.window)) {
+            return;
+        }
+
+        const LiveMatchTotals totals =
+            liveMatchTotalsAtMinute(
+                state.timelineEventsDetailed,
+                minute);
+
+        for (const MatchEvent& event :
+             state.timelineEventsDetailed) {
+
+            if (event.minute != minute ||
+                !shouldShowLiveMatchEvent(event)) {
+                continue;
+            }
+
+            const std::string eventText =
+                liveMatchEventText(event);
+
+            if (progress.events.empty() ||
+                progress.events.back() != eventText) {
+
+                progress.events.push_back(eventText);
+
+                if (progress.events.size() >
+                    kMaxSimulationProgressEvents) {
+
+                    progress.events.erase(
+                        progress.events.begin());
+                }
+            }
+        }
+
+        std::ostringstream phase;
+        phase << "EN VIVO | "
+              << minute << "' | "
+              << homeTeamName << " "
+              << totals.homeGoals
+              << " - "
+              << totals.awayGoals
+              << " "
+              << awayTeamName;
+
+        std::ostringstream detail;
+        detail << "Posesion "
+               << state.homePossession << "%-"
+               << state.awayPossession << "%"
+               << " | Tiros "
+               << totals.homeShots << "-"
+               << totals.awayShots
+               << " | xG "
+               << std::fixed << std::setprecision(2)
+               << totals.homeExpectedGoals << "-"
+               << totals.awayExpectedGoals
+               << " | Amarillas "
+               << totals.homeYellowCards << "-"
+               << totals.awayYellowCards
+               << " | Corners "
+               << totals.homeCorners << "-"
+               << totals.awayCorners;
+
+        if (minute == 45) {
+            detail << " | DESCANSO";
+        } else if (minute == 90) {
+            detail << " | FINAL";
+        }
+
+        const int weeklyPercent =
+            35 + (minute * 50 / 90);
+
+        progress.lastPercent = weeklyPercent;
+
+        postSimulationProgress(
+            progress.window,
+            phase.str(),
+            detail.str(),
+            weeklyPercent,
+            progress.events);
+
+        Sleep(static_cast<DWORD>(delayMs));
+    }
+
+    progress.liveMatchMinute = targetMinute;
+
+    if (targetMinute >= 90) {
+        progress.liveMatchMinute = 0;
+        progress.liveHomeTeam.clear();
+        progress.liveAwayTeam.clear();
+        progress.events.clear();
+    }
+}
+
 void postWorkerSimulationEvent(const std::string& message) {
     if (!g_workerProgressContext) return;
 
@@ -545,7 +788,13 @@ DWORD WINAPI simulationThreadProc(LPVOID rawArgs) {
     postSimulationProgress(args->window, "Partidos", "Simulando partidos de la semana...", 35);
 
     CareerRuntimeContext runtime = currentCareerRuntimeContext();
-    runtime.presentation = WeekSimulationPresentation::Compact;
+    if (game_settings::isDetailedSimulation(args->settings)) {
+        runtime.presentation = WeekSimulationPresentation::MatchCenter;
+        runtime.liveMatchState = postWorkerLiveMatchState;
+    } else {
+        runtime.presentation = WeekSimulationPresentation::Compact;
+        runtime.liveMatchState = nullptr;
+    }
     runtime.uiMessage = postWorkerSimulationEvent;
     runtime.idle = pumpWorkerSimulationProgress;
     ScopedCareerRuntimeContext scopedRuntime(runtime);
@@ -792,10 +1041,14 @@ void completeSimulationWeek(AppState& state, LPARAM payload) {
     state.career = std::move(job->career);
     relinkCareerPointers(state.career, job->managedTeamName);
     syncCombosFromCareer(state);
-    state.actionInProgress = false;
-    if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
+
     setSimulationProgress(state, "Finalizando", "Refrescando paneles y estado de carrera.", 100);
     refreshAll(state);
+    UpdateWindow(state.window);
+    pumpGuiMessagesFor(550);
+
+    state.actionInProgress = false;
+    if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
     clearSimulationProgress(state);
     setStatus(state, job->result.messages.empty() ? "Semana simulada." : job->result.messages.back());
 }

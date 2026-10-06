@@ -49,6 +49,10 @@ void setIdleCallback(IdleCallback callback) {
     mutableCurrentContext().idle = callback;
 }
 
+void setLiveMatchStateCallback(LiveMatchStateCallback callback) {
+    mutableCurrentContext().liveMatchState = callback;
+}
+
 void setIncomingOfferDecisionCallback(IncomingOfferDecisionCallback callback) {
     mutableCurrentContext().incomingOfferDecision = callback;
 }
@@ -83,6 +87,10 @@ ContractRenewalDecisionCallback contractRenewalDecisionCallback() {
 
 IdleCallback idleCallback() {
     return currentContext().idle;
+}
+
+LiveMatchStateCallback liveMatchStateCallback() {
+    return currentContext().liveMatchState;
 }
 
 WeekSimulationPresentation weekSimulationPresentation() {

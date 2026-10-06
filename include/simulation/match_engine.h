@@ -64,6 +64,7 @@ struct InteractiveMatchState {
     std::vector<int> availableBench;
     std::vector<std::string> recentEvents;
     std::vector<std::string> timelineEvents;
+    std::vector<MatchEvent> timelineEventsDetailed;
     std::vector<player_rating_system::PlayerLiveRating> playerStats;
 };
 

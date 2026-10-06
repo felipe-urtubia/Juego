@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+namespace match_engine {
+struct InteractiveMatchState;
+}
+
 struct IncomingOfferDecision {
     int action = 3;
     long long counterOffer = 0;
@@ -19,6 +23,10 @@ enum class WeekSimulationPresentation {
 using ManagerJobSelectionCallback = int (*)(const Career& career, const std::vector<Team*>& jobs);
 using UiMessageCallback = void (*)(const std::string& message);
 using IdleCallback = void (*)();
+using LiveMatchStateCallback = void (*)(
+    const std::string& homeTeamName,
+    const std::string& awayTeamName,
+    const match_engine::InteractiveMatchState& state);
 using IncomingOfferDecisionCallback = IncomingOfferDecision (*)(const Career& career,
                                                                 const Player& player,
                                                                 long long offer,
@@ -34,6 +42,7 @@ struct CareerRuntimeContext {
     ManagerJobSelectionCallback managerJobSelection = nullptr;
     UiMessageCallback uiMessage = nullptr;
     IdleCallback idle = nullptr;
+    LiveMatchStateCallback liveMatchState = nullptr;
     IncomingOfferDecisionCallback incomingOfferDecision = nullptr;
     ContractRenewalDecisionCallback contractRenewalDecision = nullptr;
     WeekSimulationPresentation presentation = WeekSimulationPresentation::Detailed;
@@ -56,6 +65,7 @@ private:
 void setManagerJobSelectionCallback(ManagerJobSelectionCallback callback);
 void setUiMessageCallback(UiMessageCallback callback);
 void setIdleCallback(IdleCallback callback);
+void setLiveMatchStateCallback(LiveMatchStateCallback callback);
 void setIncomingOfferDecisionCallback(IncomingOfferDecisionCallback callback);
 void setContractRenewalDecisionCallback(ContractRenewalDecisionCallback callback);
 void setWeekSimulationPresentation(WeekSimulationPresentation presentation);
@@ -64,6 +74,7 @@ CareerRuntimeContext currentCareerRuntimeContext();
 ManagerJobSelectionCallback managerJobSelectionCallback();
 UiMessageCallback uiMessageCallback();
 IdleCallback idleCallback();
+LiveMatchStateCallback liveMatchStateCallback();
 IncomingOfferDecisionCallback incomingOfferDecisionCallback();
 ContractRenewalDecisionCallback contractRenewalDecisionCallback();
 WeekSimulationPresentation weekSimulationPresentation();

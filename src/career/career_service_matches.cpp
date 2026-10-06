@@ -111,6 +111,12 @@ void CareerService::simulateWeekMatches(const vector<pair<int, int>>& matches,
                 *away,
                 userControlsHome,
                 [&](const match_engine::InteractiveMatchState& state) {
+                    if (LiveMatchStateCallback callback =
+                            liveMatchStateCallback()) {
+                        callback(home->name, away->name, state);
+                        return match_engine::ManagerDecision{};
+                    }
+
                     return match_center::askManagerDecision(
                         controlledTeam,
                         state);
@@ -118,10 +124,30 @@ void CareerService::simulateWeekMatches(const vector<pair<int, int>>& matches,
                 key,
                 false);
 
-            match_center::showInteractiveFinalSummary(
-                *home,
-                *away,
-                result);
+            if (LiveMatchStateCallback callback =
+                    liveMatchStateCallback()) {
+                match_engine::InteractiveMatchState finalState;
+                finalState.minute = 90;
+                finalState.userIsHome = userControlsHome;
+                finalState.homeGoals = result.homeGoals;
+                finalState.awayGoals = result.awayGoals;
+                finalState.homeShots = result.homeShots;
+                finalState.awayShots = result.awayShots;
+                finalState.homePossession = result.homePossession;
+                finalState.awayPossession = result.awayPossession;
+                finalState.timelineEventsDetailed =
+                    result.timeline.events;
+
+                callback(
+                    home->name,
+                    away->name,
+                    finalState);
+            } else {
+                match_center::showInteractiveFinalSummary(
+                    *home,
+                    *away,
+                    result);
+            }
         } else {
             result =
                 userControlledMatch

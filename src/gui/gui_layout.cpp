@@ -1462,26 +1462,14 @@ void applyInterfaceFonts(AppState& state) {
 }
 
 void hideSimulationProgressCoveredControls(AppState& state) {
-    // The progress overlay is painted by the parent window, so child HWNDs must be hidden while it is active.
-    const HWND coveredControls[] = {
-        state.breadcrumbLabel, state.pageTitleLabel, state.infoLabel,
-        state.filterLabel, state.filterCombo,
-        state.summaryLabel, state.summaryEdit,
-        state.tableLabel, state.tableList,
-        state.squadLabel, state.squadList,
-        state.transferLabel, state.transferList,
-        state.detailLabel, state.detailEdit,
-        state.newsLabel, state.newsList,
-        state.emptyNewButton, state.emptyLoadButton, state.emptyValidateButton,
-        state.scoutActionButton, state.shortlistButton, state.followShortlistButton,
-        state.buyButton, state.preContractButton, state.loanButton, state.renewButton,
-        state.sellButton, state.planButton, state.instructionButton,
-        state.youthUpgradeButton, state.trainingUpgradeButton,
-        state.scoutingUpgradeButton, state.stadiumUpgradeButton
-    };
-    for (HWND hwnd : coveredControls) {
-        setControlVisibility(state, hwnd, false, 16, 16);
-    }
+    // El Match Center ocupa la ventana completa durante el partido en vivo.
+    // Ocultamos todos los controles hijos para evitar que el dashboard quede visible detras.
+    if (!state.window || !IsWindow(state.window)) return;
+
+    EnumChildWindows(state.window, [](HWND hwnd, LPARAM) -> BOOL {
+        ShowWindow(hwnd, SW_HIDE);
+        return TRUE;
+    }, 0);
 }
 
 void layoutWindow(AppState& state) {
@@ -2902,6 +2890,213 @@ void initializeInterface(AppState& state) {
 
 void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client) {
     if (!state.simulationProgressActive) return;
+
+    hideSimulationProgressCoveredControls(state);
+    const std::string livePhase = state.simulationProgressPhase.empty()
+                                      ? std::string()
+                                      : state.simulationProgressPhase;
+
+    if (livePhase.rfind("EN VIVO |", 0) == 0) {
+        const auto s = [&](int value) { return scaleByDpi(state, value); };
+
+        HBRUSH liveBackground = CreateSolidBrush(RGB(5, 15, 22));
+        FillRect(hdc, &client, liveBackground);
+        DeleteObject(liveBackground);
+
+        const int margin = s(28);
+        RECT shell{
+            client.left + margin,
+            client.top + margin,
+            client.right - margin,
+            client.bottom - margin
+        };
+
+        drawRoundedPanel(
+            hdc,
+            shell,
+            RGB(8, 24, 34),
+            RGB(46, 92, 112),
+            s(24)
+        );
+
+        SetBkMode(hdc, TRANSPARENT);
+
+        HGDIOBJ oldFont = SelectObject(
+            hdc,
+            state.sectionFont ? state.sectionFont : state.font
+        );
+
+        RECT titleRect{
+            shell.left + s(30),
+            shell.top + s(24),
+            shell.right - s(30),
+            shell.top + s(58)
+        };
+
+        SetTextColor(hdc, RGB(242, 247, 249));
+        DrawTextW(
+            hdc,
+            L"MATCH CENTER  •  PARTIDO EN VIVO",
+            -1,
+            &titleRect,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE
+        );
+
+        RECT accent{
+            shell.left + s(30),
+            shell.top + s(68),
+            shell.left + s(190),
+            shell.top + s(73)
+        };
+
+        HBRUSH accentBrush = CreateSolidBrush(kThemeAccent);
+        FillRect(hdc, &accent, accentBrush);
+        DeleteObject(accentBrush);
+
+        const std::string liveScoreRaw =
+            livePhase.size() > 9 ? livePhase.substr(9) : livePhase;
+
+        const std::wstring liveScoreText = utf8ToWide(liveScoreRaw);
+
+        SelectObject(
+            hdc,
+            state.heroFont ? state.heroFont : state.titleFont
+        );
+
+        RECT scoreRect{
+            shell.left + s(30),
+            shell.top + s(92),
+            shell.right - s(30),
+            shell.top + s(178)
+        };
+
+        SetTextColor(hdc, RGB(248, 250, 251));
+        DrawTextW(
+            hdc,
+            liveScoreText.c_str(),
+            -1,
+            &scoreRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+        );
+
+        SelectObject(
+            hdc,
+            state.sectionFont ? state.sectionFont : state.font
+        );
+
+        RECT detailRect{
+            shell.left + s(42),
+            shell.top + s(190),
+            shell.right - s(42),
+            shell.top + s(226)
+        };
+
+        const std::wstring liveDetailText = utf8ToWide(
+            state.simulationProgressDetail.empty()
+                ? std::string("Partido en curso.")
+                : state.simulationProgressDetail
+        );
+
+        SetTextColor(hdc, RGB(190, 214, 226));
+        DrawTextW(
+            hdc,
+            liveDetailText.c_str(),
+            -1,
+            &detailRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+        );
+
+        RECT eventsTitle{
+            shell.left + s(42),
+            shell.top + s(250),
+            shell.right - s(42),
+            shell.top + s(282)
+        };
+
+        SetTextColor(hdc, kThemeAccent);
+        DrawTextW(
+            hdc,
+            L"EVENTOS RECIENTES",
+            -1,
+            &eventsTitle,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE
+        );
+
+        const int eventLineHeight = s(30);
+        const int eventsTop = shell.top + s(292);
+        const int eventsBottom = shell.bottom - s(72);
+        const int maxEventRows = std::max(
+            1,
+            (eventsBottom - eventsTop) / eventLineHeight
+        );
+
+        SetTextColor(hdc, RGB(220, 231, 237));
+
+        if (state.simulationProgressEvents.empty()) {
+            RECT eventRect{
+                shell.left + s(42),
+                eventsTop,
+                shell.right - s(42),
+                eventsTop + eventLineHeight
+            };
+
+            DrawTextW(
+                hdc,
+                L"Esperando eventos del partido...",
+                -1,
+                &eventRect,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE
+            );
+        } else {
+            const size_t maxVisibleEvents = std::min<size_t>(
+                state.simulationProgressEvents.size(),
+                static_cast<size_t>(maxEventRows)
+            );
+
+            const size_t firstEvent =
+                state.simulationProgressEvents.size() - maxVisibleEvents;
+
+            for (size_t i = 0; i < maxVisibleEvents; ++i) {
+                RECT eventRect{
+                    shell.left + s(42),
+                    eventsTop + static_cast<int>(i) * eventLineHeight,
+                    shell.right - s(42),
+                    eventsTop + static_cast<int>(i + 1) * eventLineHeight
+                };
+
+                const std::wstring eventText = utf8ToWide(
+                    "• " + state.simulationProgressEvents[firstEvent + i]
+                );
+
+                DrawTextW(
+                    hdc,
+                    eventText.c_str(),
+                    -1,
+                    &eventRect,
+                    DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+                );
+            }
+        }
+
+        RECT footerRect{
+            shell.left + s(42),
+            shell.bottom - s(52),
+            shell.right - s(42),
+            shell.bottom - s(24)
+        };
+
+        SetTextColor(hdc, RGB(122, 151, 166));
+        DrawTextW(
+            hdc,
+            L"El partido esta en curso  •  Match Center",
+            -1,
+            &footerRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE
+        );
+
+        SelectObject(hdc, oldFont);
+        return;
+    }
 
     const auto s = [&](int value) { return scaleByDpi(state, value); };
     const int clientWidth = static_cast<int>(client.right - client.left);
