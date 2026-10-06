@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.1.2.0-alpha - 2026-10-06
+
+### Match Center interactivo
+- El Match Center ahora permite tomar decisiones durante el partido.
+- Se agregaron cambios de mentalidad e instrucciones desde la interfaz.
+- Mentalidad e instruccion pueden aplicarse juntas en el mismo corte.
+- Se agregaron sustituciones manuales con seleccion de jugador que sale y entra.
+- Las sustituciones realizadas por la IA ahora son visibles en el Match Center.
+- Se incorporaron controles de pausa y reanudacion.
+- Se agregaron velocidades de simulacion `1x`, `2x` y `4x`.
+- Los cortes de decision continúan detenidos hasta confirmar con `CONTINUAR`.
+
+### Interfaz
+- Se rediseño el menu principal.
+- Se rediseño el flujo de nueva carrera.
+- Se rediseñaron las pantallas de guardados, configuraciones y creditos.
+- Se mejoro la proteccion frente a errores al iniciar o navegar por una nueva carrera.
+- Se centro y ajusto el boton volver en configuraciones.
+- Se incorporaron mejoras visuales y de distribucion en el dashboard.
+
+### Gestion de carrera
+- Se amplio la modularizacion de `CareerService`.
+- Se migraron finanzas semanales, contratos, ofertas de transferencias y actualizaciones fisicas.
+- Se migraron simulaciones de divisiones, liga activa y copa.
+- Se migraron comunicaciones del staff, noticias de plantilla, narrativas y eventos de carrera.
+- Se migraron reputacion y despido del manager al servicio de carrera.
+
+### Economia y dashboard
+- Se agrego salary cap relativo a los ingresos del club.
+- Se añadieron KPIs visuales al dashboard.
+- Se incorporo menu contextual de jugadores.
+
+### Calidad y pruebas
+- Se ampliaron las pruebas de sustituciones manuales y de la IA.
+- Se agrego cobertura para decisiones combinadas de mentalidad e instruccion.
+- Se amplio la cobertura del runtime del Match Center.
+- Compilacion completa y suite automatica verificadas durante el desarrollo.
+
 ## v0.1.1-alpha - 2026-09-26
 
 ### Match Center
