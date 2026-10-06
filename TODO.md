@@ -8243,3 +8243,243 @@ Rama de trabajo utilizada:
 - [x] Rama de feature publicada.
 - [x] Feature integrada en `main`.
 - [x] `main` publicada y sincronizada con GitHub.
+---
+
+## ✅ Match Center interactivo: controles, sustituciones y gestión en vivo - 2026-10-06
+
+### Controles tácticos interactivos
+
+- [x] Agregados controles tácticos directamente dentro del Match Center gráfico.
+- [x] Implementado cambio de mentalidad durante el partido desde la GUI.
+- [x] Mentalidades disponibles: `Defensive`, `Balanced`, `Offensive`, `Pressing` y `Counter`.
+- [x] Implementado cambio de instrucciones durante el partido desde la GUI.
+- [x] Instrucciones disponibles: `Equilibrado`, `Laterales altos`, `Bloque bajo`, `Balon parado`, `Presion final`, `Por bandas`, `Juego directo`, `Contra-presion` y `Pausar juego`.
+- [x] Las decisiones tácticas se mantienen detenidas hasta pulsar `CONTINUAR`.
+- [x] Los cambios seleccionados no reanudan automáticamente el partido.
+- [x] Mentalidad e instrucción pueden modificarse en el mismo corte de decisión.
+- [x] Agregados flags `changeTactics` y `changeInstruction` a `ManagerDecision`.
+- [x] El motor procesa mentalidad e instrucción de forma independiente dentro de una misma decisión.
+- [x] Conservada compatibilidad con `ManagerDecisionType::ChangeTactics` y `ManagerDecisionType::ChangeInstruction`.
+
+### Compatibilidad entre mentalidad e instrucciones
+
+- [x] Las nueve instrucciones permanecen visibles en la interfaz.
+- [x] Las instrucciones incompatibles con la mentalidad seleccionada se muestran deshabilitadas.
+- [x] Las instrucciones incompatibles no pueden seleccionarse.
+- [x] Al cambiar de mentalidad, una instrucción incompatible se reemplaza automáticamente por una alternativa coherente.
+- [x] La simulación sigue esperando `CONTINUAR` después de cambiar mentalidad o instrucción.
+- [x] Compatibilidad implementada tanto en la lógica de clics como en el layout del Match Center.
+
+### Sustituciones manuales
+
+- [x] Agregado botón `SUSTITUCIONES x/5` al Match Center.
+- [x] Implementado panel gráfico de sustituciones.
+- [x] Panel dividido en columnas `SALE` y `ENTRA`.
+- [x] Se muestran nombres reales de los jugadores.
+- [x] Se muestran posición, estado físico (`FIS`) y media (`MED`).
+- [x] Implementada selección del jugador que sale.
+- [x] Implementada selección del jugador que entra.
+- [x] La sustitución seleccionada se mantiene pendiente hasta pulsar `CONTINUAR`.
+- [x] La decisión pendiente se transforma en `ManagerDecisionType::Substitute`.
+- [x] El motor valida que el jugador saliente pertenezca al XI activo.
+- [x] El motor valida que el jugador entrante sea un suplente disponible.
+- [x] El motor impide reingresos inválidos.
+- [x] El motor respeta el máximo de cinco sustituciones.
+- [x] El XI activo se actualiza después de una sustitución válida.
+- [x] El suplente utilizado se registra como participante.
+- [x] Cada sustitución genera un evento `MatchEventType::Substitution`.
+- [x] El evento indica quién `sale` y quién `entra`.
+- [x] El contador `SUSTITUCIONES x/5` se actualiza correctamente.
+- [x] Prueba visual manual confirmada con sustituciones durante un partido.
+
+### Sustituciones de la IA
+
+- [x] Revisada la integración de `ai_match_manager` con la simulación interactiva.
+- [x] Confirmado que la IA puede realizar sustituciones durante el partido.
+- [x] Confirmado que las sustituciones de la IA llegan a `timelineEventsDetailed`.
+- [x] Confirmado que las sustituciones de la IA llegan a los eventos recientes del Match Center.
+- [x] Los eventos de sustitución de la IA muestran quién sale y quién entra.
+- [x] Agregada prueba directa de sustituciones de la IA.
+- [x] Agregada prueba end-to-end para confirmar que una sustitución de la IA es visible en el Match Center.
+
+### Pausa y reanudación
+
+- [x] Agregado botón `PAUSAR` al Match Center.
+- [x] Al pausar, el botón cambia a `REANUDAR`.
+- [x] Al pausar, el minuto del partido deja de avanzar.
+- [x] El pie del Match Center cambia a `PARTIDO EN PAUSA`.
+- [x] Al reanudar, el partido continúa desde el mismo punto.
+- [x] La pausa manual funciona también fuera de los cortes tácticos.
+- [x] La pausa manual no elimina la obligación de confirmar una decisión táctica pendiente con `CONTINUAR`.
+- [x] Confirmado manualmente que en un corte de decisión se debe pulsar `CONTINUAR` para que el partido avance.
+- [x] La espera interna del worker consulta el estado de pausa aproximadamente cada 40 ms.
+- [x] La simulación puede cancelarse correctamente si la ventana deja de existir.
+
+### Velocidad del partido
+
+- [x] Agregado control de velocidad directamente en el Match Center.
+- [x] Implementadas velocidades `1x`, `2x` y `4x`.
+- [x] El control rota `1x -> 2x -> 4x -> 1x`.
+- [x] La velocidad puede cambiarse mientras el partido está en vivo.
+- [x] El worker aplica el multiplicador de velocidad sobre el retraso configurado de simulación.
+- [x] La velocidad seleccionada permanece visible en la interfaz.
+- [x] Confirmado manualmente que `4x` acelera el avance del partido.
+
+### Layout del Match Center
+
+- [x] Nueva fila inferior con `PAUSAR | velocidad | SUSTITUCIONES | CONTINUAR`.
+- [x] Controles centrados dentro del panel.
+- [x] Verificado visualmente que no existen solapamientos.
+- [x] `CONTINUAR` permanece deshabilitado fuera de los cortes de decisión.
+- [x] `CONTINUAR` se activa en los cortes interactivos correspondientes.
+- [x] Botones de pausa y velocidad permanecen disponibles durante el partido.
+- [x] Estado visual de pausa validado mediante captura manual.
+- [x] Estado visual de reanudación validado mediante captura manual.
+
+### Runtime y comunicación GUI / simulación
+
+- [x] Agregado `LiveMatchDecisionCallback` al runtime de carrera.
+- [x] Agregado `liveMatchDecision` a `CareerRuntimeContext`.
+- [x] Implementados setter y getter para el callback de decisiones en vivo.
+- [x] El callback visual `LiveMatchStateCallback` y el callback de decisiones quedaron desacoplados.
+- [x] Una decisión en vivo ya no depende de que exista un callback visual.
+- [x] El último estado interactivo conserva cambios de mentalidad e instrucción.
+- [x] El estado final conserva correctamente una sustitución realizada en el último corte.
+- [x] El estado final mantiene `activeXi`, `availableBench` y `substitutionsUsed` coherentes.
+- [x] Actualizado `testCareerRuntimeScopeRestoresContext()` para incluir `liveMatchDecision`.
+- [x] Verificado que `liveMatchDecision` se aplica dentro del contexto scoped.
+- [x] Verificado que el callback anterior se restaura al destruir el scope.
+- [x] Restaurado `previous.liveMatchDecision` al finalizar la prueba.
+
+### Bridge del Match Center
+
+- [x] Implementado `LiveMatchDecisionBridge` compartido entre GUI y worker.
+- [x] El bridge mantiene decisión pendiente, cancelación, pausa y velocidad.
+- [x] Uso protegido mediante `std::mutex`.
+- [x] Sincronización mediante `std::condition_variable`.
+- [x] El bridge se crea de nuevo al iniciar cada simulación.
+- [x] El worker y la GUI comparten el mismo bridge.
+- [x] El bridge se limpia si falla la creación del hilo.
+- [x] El bridge se limpia al finalizar la simulación semanal.
+- [x] `MatchCenterUiState` se reinicia al completar la simulación.
+- [x] Confirmado que no queda estado de pausa o decisiones de un partido anterior.
+
+### Integración Win32
+
+- [x] Agregado `MatchCenterUiState` a `AppState`.
+- [x] Agregado `std::shared_ptr<LiveMatchDecisionBridge>` a `AppState`.
+- [x] Agregado mensaje `kGuiLiveMatchStateMessage = WM_APP + 20`.
+- [x] Implementado `handleLiveMatchState()`.
+- [x] Implementado `handleMatchCenterClick()`.
+- [x] Los clics del Match Center se procesan antes de otros hotspots de la ventana.
+- [x] El mensaje de estado en vivo se procesa desde `windowProc`.
+- [x] Los cambios visuales provocan repintado mediante `InvalidateRect`.
+
+### Pruebas automáticas agregadas / ampliadas
+
+- [x] Agregada prueba de sustitución visible de la IA: `interactive_match_ai_substitution_visible`.
+- [x] Agregada prueba directa del gestor IA: `ai_match_substitution`.
+- [x] Conservada prueba de sustitución manual válida.
+- [x] Conservada prueba de sustitución inválida.
+- [x] Conservada prueba de máximo de cinco sustituciones.
+- [x] Conservada prueba de rechazo de reingreso.
+- [x] Agregada regresión para mentalidad + instrucción simultáneas: `interactive_match_combined_adjustment`.
+- [x] La prueba combinada aplica `Offensive` + `Por bandas` en el minuto 15.
+- [x] La prueba combinada confirma ambos cambios activos en el minuto 30.
+- [x] Ampliada prueba del contexto runtime para cubrir `LiveMatchDecisionCallback`.
+
+### Validación técnica
+
+- [x] `cmake --build .\build-ci` completado correctamente durante el desarrollo.
+- [x] `FootballManager` compilado correctamente.
+- [x] `FootballManagerCLI` compilado correctamente.
+- [x] `FootballManagerTests` compilado correctamente.
+- [x] Suite automática aprobada después de implementar pausa y velocidad.
+- [x] Suite automática aprobada después de corregir el runtime.
+- [x] Suite automática aprobada después de agregar la prueba combinada.
+- [x] Compilación completa repetida después de integrar en `main`.
+- [x] Suite ejecutada nuevamente sobre `main`.
+- [x] Resultado final: `1/1` test aprobado.
+- [x] Resultado final: `100% tests passed`.
+- [x] `git diff --check` limpio.
+- [x] `git diff --cached --check` limpio.
+- [x] Único aviso observado: conversión futura `LF -> CRLF` en `include/gui/gui_internal.h`, sin errores de whitespace.
+
+### Pruebas manuales
+
+- [x] Match Center iniciado manualmente desde `FootballManager.exe`.
+- [x] Verificada visualmente la nueva fila de controles.
+- [x] Verificado botón `PAUSAR`.
+- [x] Verificado cambio visual a `REANUDAR`.
+- [x] Verificado mensaje `PARTIDO EN PAUSA`.
+- [x] Verificado que el minuto queda detenido al pausar.
+- [x] Verificado que el partido continúa al reanudar.
+- [x] Verificado funcionamiento de velocidad `4x`.
+- [x] Verificado que un corte táctico continúa detenido hasta pulsar `CONTINUAR`.
+- [x] Verificado que `REANUDAR` no sustituye la confirmación de una decisión pendiente.
+- [x] Reinicio manual de partida comprobado sin problemas con el contador de sustituciones.
+
+### Archivos incluidos en la feature
+
+- [x] `include/career/career_runtime.h`.
+- [x] `include/gui/gui_internal.h`.
+- [x] `include/simulation/match_engine.h`.
+- [x] `src/career/career_runtime.cpp`.
+- [x] `src/career/career_service_matches.cpp`.
+- [x] `src/gui/gui.cpp`.
+- [x] `src/gui/gui_actions.cpp`.
+- [x] `src/gui/gui_layout.cpp`.
+- [x] `src/simulation/match_engine.cpp`.
+- [x] `tests/project_tests.cpp`.
+- [x] No se incluyeron archivos adicionales por accidente.
+
+### Commit de la feature
+
+- [x] Rama utilizada: `feature/match-center-controls`.
+- [x] Commit creado: `827c77f feat: add match center controls and substitutions`.
+- [x] 10 archivos incluidos en el commit.
+- [x] 1646 inserciones.
+- [x] 13 eliminaciones.
+- [x] Working tree limpio después del commit.
+- [x] Rama publicada en `origin/feature/match-center-controls`.
+- [x] Tracking remoto configurado correctamente.
+
+### Integración final en main
+
+- [x] Cambio desde `feature/match-center-controls` a `main`.
+- [x] Confirmado que `main` estaba sincronizada con `origin/main` antes del merge.
+- [x] Merge realizado con `--no-ff`.
+- [x] Merge realizado sin conflictos.
+- [x] Commit de integración: `d2b6d37 merge: integrate match center controls`.
+- [x] Compilación completa aprobada después del merge.
+- [x] Suite automática aprobada después del merge.
+- [x] `main` publicada correctamente en GitHub.
+- [x] `main` avanzada de `4f71e29` a `d2b6d37`.
+- [x] Verificación final: `## main...origin/main`.
+- [x] Working tree limpio y sincronizado.
+
+### Limpieza de ramas
+
+- [x] Eliminada rama local `feature/match-center-controls`.
+- [x] Eliminada rama remota `origin/feature/match-center-controls`.
+- [x] Todo el trabajo permanece integrado en `main`.
+- [x] Repositorio final limpio y sincronizado con GitHub.
+
+### Estado final de esta etapa
+
+- [x] Match Center gráfico ahora permite tomar decisiones durante el partido.
+- [x] Cambios de mentalidad funcionando.
+- [x] Cambios de instrucciones funcionando.
+- [x] Cambios combinados de mentalidad e instrucción funcionando.
+- [x] Sustituciones manuales funcionando.
+- [x] Sustituciones de la IA visibles en el Match Center.
+- [x] Pausa y reanudación funcionando.
+- [x] Velocidad `1x / 2x / 4x` funcionando.
+- [x] Cortes de decisión y botón `CONTINUAR` funcionando correctamente.
+- [x] Runtime y bridge revisados.
+- [x] Código revisado.
+- [x] Compilación limpia.
+- [x] Suite automática al 100%.
+- [x] Validación visual/manual completada.
+- [x] Feature integrada y publicada en `main`.
+- [x] Rama de trabajo eliminada local y remotamente.
