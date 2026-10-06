@@ -7,6 +7,7 @@
 
 namespace match_engine {
 struct InteractiveMatchState;
+struct ManagerDecision;
 }
 
 struct IncomingOfferDecision {
@@ -27,6 +28,8 @@ using LiveMatchStateCallback = void (*)(
     const std::string& homeTeamName,
     const std::string& awayTeamName,
     const match_engine::InteractiveMatchState& state);
+using LiveMatchDecisionCallback = match_engine::ManagerDecision (*)(
+    const match_engine::InteractiveMatchState& state);
 using IncomingOfferDecisionCallback = IncomingOfferDecision (*)(const Career& career,
                                                                 const Player& player,
                                                                 long long offer,
@@ -43,6 +46,7 @@ struct CareerRuntimeContext {
     UiMessageCallback uiMessage = nullptr;
     IdleCallback idle = nullptr;
     LiveMatchStateCallback liveMatchState = nullptr;
+    LiveMatchDecisionCallback liveMatchDecision = nullptr;
     IncomingOfferDecisionCallback incomingOfferDecision = nullptr;
     ContractRenewalDecisionCallback contractRenewalDecision = nullptr;
     WeekSimulationPresentation presentation = WeekSimulationPresentation::Detailed;
@@ -66,6 +70,7 @@ void setManagerJobSelectionCallback(ManagerJobSelectionCallback callback);
 void setUiMessageCallback(UiMessageCallback callback);
 void setIdleCallback(IdleCallback callback);
 void setLiveMatchStateCallback(LiveMatchStateCallback callback);
+void setLiveMatchDecisionCallback(LiveMatchDecisionCallback callback);
 void setIncomingOfferDecisionCallback(IncomingOfferDecisionCallback callback);
 void setContractRenewalDecisionCallback(ContractRenewalDecisionCallback callback);
 void setWeekSimulationPresentation(WeekSimulationPresentation presentation);
@@ -75,6 +80,7 @@ ManagerJobSelectionCallback managerJobSelectionCallback();
 UiMessageCallback uiMessageCallback();
 IdleCallback idleCallback();
 LiveMatchStateCallback liveMatchStateCallback();
+LiveMatchDecisionCallback liveMatchDecisionCallback();
 IncomingOfferDecisionCallback incomingOfferDecisionCallback();
 ContractRenewalDecisionCallback contractRenewalDecisionCallback();
 WeekSimulationPresentation weekSimulationPresentation();

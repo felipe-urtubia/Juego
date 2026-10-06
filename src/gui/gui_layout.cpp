@@ -3024,7 +3024,7 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
 
         const int eventLineHeight = s(30);
         const int eventsTop = shell.top + s(292);
-        const int eventsBottom = shell.bottom - s(72);
+        const int eventsBottom = shell.bottom - s(326);
         const int maxEventRows = std::max(
             1,
             (eventsBottom - eventsTop) / eventLineHeight
@@ -3078,6 +3078,703 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
             }
         }
 
+        RECT tacticsTitleRect{
+            shell.left + s(42),
+            shell.bottom - s(320),
+            shell.right - s(42),
+            shell.bottom - s(300)
+        };
+
+        SetTextColor(hdc, RGB(155, 185, 199));
+        DrawTextW(
+            hdc,
+            L"MENTALIDAD",
+            -1,
+            &tacticsTitleRect,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE
+        );
+
+        state.matchCenter.tacticsRect = RECT{
+            shell.left + s(42),
+            shell.bottom - s(296),
+            shell.right - s(42),
+            shell.bottom - s(258)
+        };
+
+        static const std::array<const char*, 5> tacticValues = {{
+            "Defensive",
+            "Balanced",
+            "Offensive",
+            "Pressing",
+            "Counter"
+        }};
+
+        static const std::array<const wchar_t*, 5> tacticLabels = {{
+            L"DEFENSIVA",
+            L"EQUILIBRADA",
+            L"OFENSIVA",
+            L"PRESION",
+            L"CONTRA"
+        }};
+
+        const int tacticGap = s(6);
+        const int tacticWidth =
+            (rectWidth(state.matchCenter.tacticsRect) - tacticGap * 4) / 5;
+
+        for (size_t i = 0; i < tacticValues.size(); ++i) {
+            RECT tacticRect{
+                state.matchCenter.tacticsRect.left +
+                    static_cast<int>(i) * (tacticWidth + tacticGap),
+                state.matchCenter.tacticsRect.top,
+                state.matchCenter.tacticsRect.left +
+                    static_cast<int>(i) * (tacticWidth + tacticGap) +
+                    tacticWidth,
+                state.matchCenter.tacticsRect.bottom
+            };
+
+            const bool selected =
+                state.matchCenter.currentTactics == tacticValues[i];
+
+            COLORREF tacticFill = RGB(19, 39, 49);
+            COLORREF tacticBorder = RGB(55, 82, 95);
+            COLORREF tacticText = RGB(137, 158, 168);
+
+            if (selected) {
+                tacticFill = RGB(31, 72, 92);
+                tacticBorder = kThemeAccent;
+                tacticText = RGB(239, 247, 250);
+            }
+
+            if (state.matchCenter.awaitingDecision && !selected) {
+                tacticFill = RGB(20, 55, 66);
+                tacticBorder = RGB(70, 116, 134);
+                tacticText = RGB(220, 235, 241);
+            }
+
+            drawRoundedPanel(
+                hdc,
+                tacticRect,
+                tacticFill,
+                tacticBorder,
+                s(10)
+            );
+
+            SetTextColor(hdc, tacticText);
+            DrawTextW(
+                hdc,
+                tacticLabels[i],
+                -1,
+                &tacticRect,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+            );
+        }
+
+        RECT instructionTitleRect{
+            shell.left + s(42),
+            shell.bottom - s(244),
+            shell.right - s(42),
+            shell.bottom - s(224)
+        };
+
+        SetTextColor(hdc, RGB(155, 185, 199));
+        DrawTextW(
+            hdc,
+            L"INSTRUCCION",
+            -1,
+            &instructionTitleRect,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE
+        );
+
+        state.matchCenter.instructionRect = RECT{
+            shell.left + s(42),
+            shell.bottom - s(220),
+            shell.right - s(42),
+            shell.bottom - s(122)
+        };
+
+        static const std::array<const char*, 9> instructionValues = {{
+            "Equilibrado",
+            "Laterales altos",
+            "Bloque bajo",
+            "Balon parado",
+            "Presion final",
+            "Por bandas",
+            "Juego directo",
+            "Contra-presion",
+            "Pausar juego"
+        }};
+
+        static const std::array<const wchar_t*, 9> instructionLabels = {{
+            L"EQUILIBRADO",
+            L"LATERALES ALTOS",
+            L"BLOQUE BAJO",
+            L"BALON PARADO",
+            L"PRESION FINAL",
+            L"POR BANDAS",
+            L"JUEGO DIRECTO",
+            L"CONTRA-PRESION",
+            L"PAUSAR JUEGO"
+        }};
+
+        const auto instructionAllowedForTactics =
+            [&](const std::string& instruction) {
+                const std::string& tactics =
+                    state.matchCenter.currentTactics;
+
+                if (tactics == "Defensive") {
+                    return instruction == "Equilibrado" ||
+                           instruction == "Bloque bajo" ||
+                           instruction == "Balon parado" ||
+                           instruction == "Juego directo" ||
+                           instruction == "Pausar juego";
+                }
+                if (tactics == "Balanced") {
+                    return instruction == "Equilibrado" ||
+                           instruction == "Laterales altos" ||
+                           instruction == "Balon parado" ||
+                           instruction == "Por bandas" ||
+                           instruction == "Juego directo";
+                }
+                if (tactics == "Offensive") {
+                    return instruction == "Laterales altos" ||
+                           instruction == "Balon parado" ||
+                           instruction == "Presion final" ||
+                           instruction == "Por bandas" ||
+                           instruction == "Juego directo";
+                }
+                if (tactics == "Pressing") {
+                    return instruction == "Laterales altos" ||
+                           instruction == "Presion final" ||
+                           instruction == "Por bandas" ||
+                           instruction == "Juego directo" ||
+                           instruction == "Contra-presion";
+                }
+                if (tactics == "Counter") {
+                    return instruction == "Bloque bajo" ||
+                           instruction == "Balon parado" ||
+                           instruction == "Juego directo" ||
+                           instruction == "Contra-presion" ||
+                           instruction == "Pausar juego";
+                }
+
+                return true;
+            };
+
+        const int instructionGap = s(6);
+        const int instructionWidth =
+            (rectWidth(state.matchCenter.instructionRect) - instructionGap * 2) / 3;
+        const int instructionHeight =
+            (rectHeight(state.matchCenter.instructionRect) - instructionGap * 2) / 3;
+
+        for (size_t i = 0; i < instructionValues.size(); ++i) {
+            const int row = static_cast<int>(i) / 3;
+            const int column = static_cast<int>(i) % 3;
+            RECT instructionOption{
+                state.matchCenter.instructionRect.left +
+                    column * (instructionWidth + instructionGap),
+                state.matchCenter.instructionRect.top +
+                    row * (instructionHeight + instructionGap),
+                state.matchCenter.instructionRect.left +
+                    column * (instructionWidth + instructionGap) +
+                    instructionWidth,
+                state.matchCenter.instructionRect.top +
+                    row * (instructionHeight + instructionGap) +
+                    instructionHeight
+            };
+
+            const bool selected =
+                state.matchCenter.currentInstruction == instructionValues[i];
+            const bool available =
+                instructionAllowedForTactics(instructionValues[i]);
+
+            COLORREF instructionFill = RGB(19, 39, 49);
+            COLORREF instructionBorder = RGB(55, 82, 95);
+            COLORREF instructionText = RGB(137, 158, 168);
+
+            if (selected) {
+                instructionFill = RGB(31, 72, 92);
+                instructionBorder = kThemeAccent;
+                instructionText = RGB(239, 247, 250);
+            }
+
+            if (state.matchCenter.awaitingDecision &&
+                available && !selected) {
+                instructionFill = RGB(20, 55, 66);
+                instructionBorder = RGB(70, 116, 134);
+                instructionText = RGB(220, 235, 241);
+            }
+
+            if (!available && !selected) {
+                instructionFill = RGB(14, 29, 36);
+                instructionBorder = RGB(40, 58, 67);
+                instructionText = RGB(78, 99, 109);
+            }
+
+            drawRoundedPanel(
+                hdc,
+                instructionOption,
+                instructionFill,
+                instructionBorder,
+                s(8)
+            );
+
+            SetTextColor(hdc, instructionText);
+            DrawTextW(
+                hdc,
+                instructionLabels[i],
+                -1,
+                &instructionOption,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+            );
+        }
+
+        const int actionWidth = clampValue(
+            rectWidth(shell) / 5,
+            s(140),
+            s(220)
+        );
+        const int actionGap = s(10);
+        const int actionsWidth =
+            actionWidth * 4 + actionGap * 3;
+        const int actionsLeft =
+            shell.left + (rectWidth(shell) - actionsWidth) / 2;
+
+        state.matchCenter.pauseRect = RECT{
+            actionsLeft,
+            shell.bottom - s(108),
+            actionsLeft + actionWidth,
+            shell.bottom - s(66)
+        };
+
+        state.matchCenter.speedRect = RECT{
+            actionsLeft + actionWidth + actionGap,
+            shell.bottom - s(108),
+            actionsLeft + actionWidth * 2 + actionGap,
+            shell.bottom - s(66)
+        };
+
+        state.matchCenter.substituteRect = RECT{
+            actionsLeft + actionWidth * 2 + actionGap * 2,
+            shell.bottom - s(108),
+            actionsLeft + actionWidth * 3 + actionGap * 2,
+            shell.bottom - s(66)
+        };
+
+        state.matchCenter.continueRect = RECT{
+            actionsLeft + actionWidth * 3 + actionGap * 3,
+            shell.bottom - s(108),
+            actionsLeft + actionWidth * 4 + actionGap * 3,
+            shell.bottom - s(66)
+        };
+
+        drawRoundedPanel(
+            hdc,
+            state.matchCenter.pauseRect,
+            state.matchCenter.paused
+                ? RGB(24, 111, 77)
+                : RGB(58, 55, 37),
+            state.matchCenter.paused
+                ? kThemeAccentGreen
+                : kThemeWarning,
+            s(12)
+        );
+
+        SetTextColor(hdc, RGB(242, 247, 249));
+
+        DrawTextW(
+            hdc,
+            state.matchCenter.paused
+                ? L"REANUDAR"
+                : L"PAUSAR",
+            -1,
+            &state.matchCenter.pauseRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE
+        );
+
+        drawRoundedPanel(
+            hdc,
+            state.matchCenter.speedRect,
+            RGB(36, 61, 82),
+            kThemeAccentBlue,
+            s(12)
+        );
+
+        const std::wstring playbackSpeedText =
+            utf8ToWide(
+                std::to_string(
+                    clampValue(
+                        state.matchCenter.playbackSpeed,
+                        1,
+                        4)) +
+                "x");
+
+        SetTextColor(hdc, RGB(238, 246, 250));
+
+        DrawTextW(
+            hdc,
+            playbackSpeedText.c_str(),
+            -1,
+            &state.matchCenter.speedRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE
+        );
+
+        const bool substitutionsAvailable =
+            state.matchCenter.awaitingDecision &&
+            state.matchCenter.substitutionsUsed < 5 &&
+            !state.matchCenter.activeXi.empty() &&
+            !state.matchCenter.availableBench.empty();
+
+        drawRoundedPanel(
+            hdc,
+            state.matchCenter.substituteRect,
+            substitutionsAvailable
+                ? RGB(46, 69, 94)
+                : RGB(22, 43, 53),
+            substitutionsAvailable
+                ? kThemeAccentBlue
+                : RGB(62, 86, 98),
+            s(12)
+        );
+
+        SetTextColor(
+            hdc,
+            substitutionsAvailable
+                ? RGB(238, 246, 250)
+                : RGB(132, 153, 163)
+        );
+
+        const std::wstring substitutionText = utf8ToWide(
+            "SUSTITUCIONES " +
+            std::to_string(state.matchCenter.substitutionsUsed) +
+            "/5"
+        );
+
+        DrawTextW(
+            hdc,
+            substitutionText.c_str(),
+            -1,
+            &state.matchCenter.substituteRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS
+        );
+
+        if (state.matchCenter.substitutionPanelOpen &&
+            state.career.myTeam) {
+
+            const Team& controlledTeam = *state.career.myTeam;
+
+            state.matchCenter.substitutionOutRects.clear();
+            state.matchCenter.substitutionInRects.clear();
+
+            state.matchCenter.substitutionPanelRect = RECT{
+                shell.left + s(120),
+                shell.top + s(200),
+                shell.right - s(120),
+                shell.bottom - s(126)
+            };
+
+            drawRoundedPanel(
+                hdc,
+                state.matchCenter.substitutionPanelRect,
+                RGB(7, 20, 29),
+                RGB(73, 122, 150),
+                s(18)
+            );
+
+            RECT substitutionHeader{
+                state.matchCenter.substitutionPanelRect.left + s(24),
+                state.matchCenter.substitutionPanelRect.top + s(14),
+                state.matchCenter.substitutionPanelRect.right - s(24),
+                state.matchCenter.substitutionPanelRect.top + s(46)
+            };
+
+            SetTextColor(hdc, RGB(241, 247, 250));
+            DrawTextW(
+                hdc,
+                L"SUSTITUCIONES",
+                -1,
+                &substitutionHeader,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE
+            );
+
+            const int panelGap = s(18);
+            const int innerLeft =
+                state.matchCenter.substitutionPanelRect.left + s(22);
+            const int innerRight =
+                state.matchCenter.substitutionPanelRect.right - s(22);
+            const int columnsWidth =
+                (innerRight - innerLeft - panelGap) / 2;
+
+            RECT outColumn{
+                innerLeft,
+                state.matchCenter.substitutionPanelRect.top + s(54),
+                innerLeft + columnsWidth,
+                state.matchCenter.substitutionPanelRect.bottom - s(20)
+            };
+
+            RECT inColumn{
+                outColumn.right + panelGap,
+                outColumn.top,
+                innerRight,
+                outColumn.bottom
+            };
+
+            drawRoundedPanel(
+                hdc,
+                outColumn,
+                RGB(12, 31, 41),
+                RGB(58, 86, 101),
+                s(12)
+            );
+
+            drawRoundedPanel(
+                hdc,
+                inColumn,
+                RGB(12, 31, 41),
+                RGB(58, 86, 101),
+                s(12)
+            );
+
+            RECT outTitle{
+                outColumn.left + s(12),
+                outColumn.top + s(8),
+                outColumn.right - s(12),
+                outColumn.top + s(34)
+            };
+
+            RECT inTitle{
+                inColumn.left + s(12),
+                inColumn.top + s(8),
+                inColumn.right - s(12),
+                inColumn.top + s(34)
+            };
+
+            SetTextColor(hdc, RGB(230, 150, 138));
+            DrawTextW(
+                hdc,
+                L"SALE",
+                -1,
+                &outTitle,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE
+            );
+
+            SetTextColor(hdc, RGB(132, 220, 173));
+            DrawTextW(
+                hdc,
+                L"ENTRA",
+                -1,
+                &inTitle,
+                DT_LEFT | DT_VCENTER | DT_SINGLELINE
+            );
+
+            const int rowHeight = s(30);
+            const int rowsTop = outColumn.top + s(40);
+            const int maxRows = std::max(
+                1,
+                static_cast<int>(static_cast<int>((outColumn.bottom - rowsTop - s(8)) / rowHeight))
+            );
+
+            const size_t outCount = std::min<size_t>(
+                state.matchCenter.activeXi.size(),
+                static_cast<size_t>(maxRows)
+            );
+
+            for (size_t i = 0; i < outCount; ++i) {
+                const int playerIndex =
+                    state.matchCenter.activeXi[i];
+
+                if (playerIndex < 0 ||
+                    playerIndex >=
+                        static_cast<int>(controlledTeam.players.size())) {
+                    continue;
+                }
+
+                const Player& player =
+                    controlledTeam.players[
+                        static_cast<size_t>(playerIndex)];
+
+                RECT playerRect{
+                    outColumn.left + s(10),
+                    rowsTop + static_cast<int>(i) * rowHeight,
+                    outColumn.right - s(10),
+                    rowsTop + static_cast<int>(i + 1) * rowHeight - s(3)
+                };
+
+                state.matchCenter.substitutionOutRects.push_back(
+                    playerRect
+                );
+
+                const bool selected =
+                    state.matchCenter.pendingPlayerOutIndex ==
+                    playerIndex;
+
+                drawRoundedPanel(
+                    hdc,
+                    playerRect,
+                    selected
+                        ? RGB(78, 46, 42)
+                        : RGB(18, 42, 53),
+                    selected
+                        ? RGB(232, 131, 116)
+                        : RGB(51, 78, 91),
+                    s(7)
+                );
+
+                const std::string label =
+                    player.name +
+                    "  [" + player.position + "]" +
+                    "  FIS " + std::to_string(player.fitness) +
+                    "  MED " + std::to_string(player.skill);
+
+                const std::wstring text =
+                    utf8ToWide(label);
+
+                SetTextColor(
+                    hdc,
+                    selected
+                        ? RGB(255, 239, 235)
+                        : RGB(219, 231, 237)
+                );
+
+                RECT textRect = playerRect;
+                textRect.left += s(8);
+                textRect.right -= s(8);
+
+                DrawTextW(
+                    hdc,
+                    text.c_str(),
+                    -1,
+                    &textRect,
+                    DT_LEFT | DT_VCENTER |
+                        DT_SINGLELINE | DT_END_ELLIPSIS
+                );
+            }
+
+            const size_t inCount = std::min<size_t>(
+                state.matchCenter.availableBench.size(),
+                static_cast<size_t>(maxRows)
+            );
+
+            for (size_t i = 0; i < inCount; ++i) {
+                const int playerIndex =
+                    state.matchCenter.availableBench[i];
+
+                if (playerIndex < 0 ||
+                    playerIndex >=
+                        static_cast<int>(controlledTeam.players.size())) {
+                    continue;
+                }
+
+                const Player& player =
+                    controlledTeam.players[
+                        static_cast<size_t>(playerIndex)];
+
+                RECT playerRect{
+                    inColumn.left + s(10),
+                    rowsTop + static_cast<int>(i) * rowHeight,
+                    inColumn.right - s(10),
+                    rowsTop + static_cast<int>(i + 1) * rowHeight - s(3)
+                };
+
+                state.matchCenter.substitutionInRects.push_back(
+                    playerRect
+                );
+
+                const bool selected =
+                    state.matchCenter.pendingPlayerInIndex ==
+                    playerIndex;
+
+                drawRoundedPanel(
+                    hdc,
+                    playerRect,
+                    selected
+                        ? RGB(31, 72, 55)
+                        : RGB(18, 42, 53),
+                    selected
+                        ? RGB(86, 201, 139)
+                        : RGB(51, 78, 91),
+                    s(7)
+                );
+
+                const std::string label =
+                    player.name +
+                    "  [" + player.position + "]" +
+                    "  FIS " + std::to_string(player.fitness) +
+                    "  MED " + std::to_string(player.skill);
+
+                const std::wstring text =
+                    utf8ToWide(label);
+
+                SetTextColor(
+                    hdc,
+                    selected
+                        ? RGB(235, 255, 244)
+                        : RGB(219, 231, 237)
+                );
+
+                RECT textRect = playerRect;
+                textRect.left += s(8);
+                textRect.right -= s(8);
+
+                DrawTextW(
+                    hdc,
+                    text.c_str(),
+                    -1,
+                    &textRect,
+                    DT_LEFT | DT_VCENTER |
+                        DT_SINGLELINE | DT_END_ELLIPSIS
+                );
+            }
+
+            RECT pendingRect{
+                state.matchCenter.substitutionPanelRect.left + s(24),
+                state.matchCenter.substitutionPanelRect.bottom - s(42),
+                state.matchCenter.substitutionPanelRect.right - s(24),
+                state.matchCenter.substitutionPanelRect.bottom - s(16)
+            };
+
+            SetTextColor(hdc, RGB(157, 186, 199));
+            DrawTextW(
+                hdc,
+                L"CAMBIO PENDIENTE: selecciona quien sale y quien entra",
+                -1,
+                &pendingRect,
+                DT_CENTER | DT_VCENTER | DT_SINGLELINE |
+                    DT_END_ELLIPSIS
+            );
+        }
+        const COLORREF continueFill =
+            state.matchCenter.awaitingDecision
+                ? RGB(24, 111, 77)
+                : RGB(22, 43, 53);
+
+        const COLORREF continueBorder =
+            state.matchCenter.awaitingDecision
+                ? kThemeAccentGreen
+                : RGB(62, 86, 98);
+
+        drawRoundedPanel(
+            hdc,
+            state.matchCenter.continueRect,
+            continueFill,
+            continueBorder,
+            s(12)
+        );
+
+        SetTextColor(
+            hdc,
+            state.matchCenter.awaitingDecision
+                ? RGB(245, 250, 247)
+                : RGB(132, 153, 163)
+        );
+
+        DrawTextW(
+            hdc,
+            L"CONTINUAR",
+            -1,
+            &state.matchCenter.continueRect,
+            DT_CENTER | DT_VCENTER | DT_SINGLELINE
+        );
+
         RECT footerRect{
             shell.left + s(42),
             shell.bottom - s(52),
@@ -3088,7 +3785,9 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
         SetTextColor(hdc, RGB(122, 151, 166));
         DrawTextW(
             hdc,
-            L"El partido esta en curso  •  Match Center",
+            state.matchCenter.paused
+                ? L"PARTIDO EN PAUSA  •  Match Center"
+                : L"El partido esta en curso  •  Match Center",
             -1,
             &footerRect,
             DT_CENTER | DT_VCENTER | DT_SINGLELINE

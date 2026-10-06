@@ -1,3 +1,4 @@
+#include "ai/ai_match_manager.h"
 #include "ai/ai_squad_planner.h"
 #include "ai/ai_transfer_manager.h"
 #include "ai/team_ai.h"
@@ -723,6 +724,58 @@ void testInteractiveMatchAppliesHumanInstructionChange() {
            "Una instruccion humana del minuto 15 debe estar activa en la fase siguiente.");
 }
 
+void testInteractiveMatchAppliesCombinedHumanAdjustments() {
+    Team home = makeTeam(
+        "Ajuste Combinado Local",
+        "primera division",
+        70,
+        3,
+        3,
+        "Balanced",
+        "Equilibrado",
+        700000);
+
+    Team away = makeTeam(
+        "Ajuste Combinado Rival",
+        "primera division",
+        68,
+        3,
+        3,
+        "Counter",
+        "Juego directo",
+        650000);
+
+    bool sawCombinedAdjustmentAtMinute30 = false;
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            if (state.minute == 15) {
+                match_engine::ManagerDecision decision;
+                decision.changeTactics = true;
+                decision.changeInstruction = true;
+                decision.tactics = "Offensive";
+                decision.instruction = "Por bandas";
+                return decision;
+            }
+
+            if (state.minute == 30) {
+                sawCombinedAdjustmentAtMinute30 =
+                    state.currentTactics == "Offensive" &&
+                    state.currentInstruction == "Por bandas";
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false);
+
+    expect(
+        sawCombinedAdjustmentAtMinute30,
+        "Una decision humana debe poder aplicar mentalidad e instruccion en el mismo corte.");
+}
 void testInteractiveMatchRecentEventsAreChronological() {
     Team home = makeTeam("Eventos Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
     Team away = makeTeam("Eventos Rival", "primera division", 68, 3, 3, "Counter", "Juego directo", 650000);
@@ -783,6 +836,89 @@ void testInteractiveMatchRecentEventsAreChronological() {
            "Los eventos recientes deben conservar la decision humana del corte anterior.");
     expect(eventsAreChronological,
            "Los eventos recientes del Match Center deben estar ordenados por minuto.");
+}
+void testInteractiveMatchExposesAiSubstitutionToMatchCenter() {
+    Team home = makeTeam(
+        "Usuario Match Center",
+        "primera division",
+        70,
+        3,
+        3,
+        "Balanced",
+        "Equilibrado",
+        700000
+    );
+
+    Team away = makeTeam(
+        "IA Match Center",
+        "primera division",
+        68,
+        3,
+        3,
+        "Counter",
+        "Juego directo",
+        650000
+    );
+
+    for (Player& player : away.players) {
+        player.fitness = 20;
+        player.fatigueLoad = 100;
+        player.currentForm = 20;
+        ensurePlayerProfile(player, true);
+    }
+
+    bool sawAiSubstitutionDetailed = false;
+    bool sawAiSubstitutionRecent = false;
+    bool sawSaleEntra = false;
+
+    setRandomSeed(424242);
+
+    match_engine::simulateInteractive(
+        home,
+        away,
+        true,
+        [&](const match_engine::InteractiveMatchState& state) {
+            for (const MatchEvent& event :
+                 state.timelineEventsDetailed) {
+
+                if (event.type != MatchEventType::Substitution ||
+                    event.teamName != away.name) {
+                    continue;
+                }
+
+                sawAiSubstitutionDetailed = true;
+
+                if (event.description.find("sale") != string::npos &&
+                    event.description.find("entra") != string::npos) {
+                    sawSaleEntra = true;
+                }
+            }
+
+            for (const string& event : state.recentEvents) {
+                if (event.find(away.name) != string::npos &&
+                    event.find("sale") != string::npos &&
+                    event.find("entra") != string::npos) {
+
+                    sawAiSubstitutionRecent = true;
+                }
+            }
+
+            return match_engine::ManagerDecision{};
+        },
+        true,
+        false
+    );
+
+    resetRandomSeed();
+
+    expect(sawAiSubstitutionDetailed,
+           "El Match Center debe recibir la sustitucion realizada por la IA.");
+
+    expect(sawSaleEntra,
+           "La sustitucion IA recibida por el Match Center debe indicar quien sale y quien entra.");
+
+    expect(sawAiSubstitutionRecent,
+           "La sustitucion IA debe aparecer tambien entre los eventos recientes del Match Center.");
 }
 void testInteractiveMatchAppliesManualSubstitution() {
     Team home = makeTeam("Cambio Local", "primera division", 70, 3, 3, "Balanced", "Equilibrado", 700000);
@@ -3275,6 +3411,88 @@ void testMatchInjuryTriggersRealReplacement() {
            "La cronologia debe reflejar el cambio obligado por lesion.");
 }
 
+void testAiMatchManagerPerformsAndReportsSubstitution() {
+    Team team = makeTeam(
+        "IA Cambios FC",
+        "primera division",
+        70,
+        4,
+        4,
+        "Balanced",
+        "Equilibrado",
+        820000
+    );
+
+    Team opponent = makeTeam(
+        "Rival IA Cambios",
+        "primera division",
+        69,
+        3,
+        3,
+        "Balanced",
+        "Equilibrado",
+        810000
+    );
+
+    vector<int> activeXI = team.getStartingXIIndices();
+    expect(activeXI.size() >= 11,
+           "La prueba de cambios IA necesita un once inicial completo.");
+    expect(team.players.size() > activeXI.size(),
+           "La prueba de cambios IA necesita al menos un suplente disponible.");
+
+    vector<int> participants = activeXI;
+    vector<string> cautionedPlayers;
+    MatchTimeline timeline;
+
+    const int injuredIndex = activeXI.front();
+    Player& injured =
+        team.players[static_cast<size_t>(injuredIndex)];
+
+    injured.injured = true;
+    injured.fitness = 20;
+    injured.fatigueLoad = 100;
+    ensurePlayerProfile(injured, true);
+
+    const size_t participantsBefore = participants.size();
+
+    ai_match_manager::applyInMatchManagement(
+        team,
+        opponent,
+        activeXI,
+        participants,
+        cautionedPlayers,
+        60,
+        0,
+        0,
+        static_cast<int>(opponent.getStartingXIIndices().size()),
+        0,
+        timeline
+    );
+
+    const auto substitutionIt = find_if(
+        timeline.events.begin(),
+        timeline.events.end(),
+        [&](const MatchEvent& event) {
+            return event.type == MatchEventType::Substitution &&
+                   event.teamName == team.name;
+        }
+    );
+
+    expect(substitutionIt != timeline.events.end(),
+           "La IA debe registrar una sustitucion cuando tiene un titular lesionado.");
+
+    expect(find(activeXI.begin(), activeXI.end(), injuredIndex) ==
+               activeXI.end(),
+           "El jugador lesionado debe salir del XI de la IA.");
+
+    expect(participants.size() > participantsBefore,
+           "La IA debe registrar al suplente como nuevo participante.");
+
+    expect(substitutionIt->description.find("sale") != string::npos &&
+               substitutionIt->description.find("entra") != string::npos,
+           "El evento de sustitucion IA debe indicar quien sale y quien entra.");
+}
+
 void testTransferEvaluationPenalizesMedicalRisk() {
     Career career;
     Team buyer = makeTeam("Comprador Saludable", "primera division", 72, 3, 3, "Balanced", "Equilibrado", 900000);
@@ -4321,16 +4539,23 @@ void testCareerRuntimeScopeRestoresContext() {
             const std::string&,
             const match_engine::InteractiveMatchState&) {};
 
+    const LiveMatchDecisionCallback liveMatchDecisionProbe =
+        +[](const match_engine::InteractiveMatchState&) {
+            return match_engine::ManagerDecision{};
+        };
+
     const CareerRuntimeContext previous = currentCareerRuntimeContext();
     setUiMessageCallback(collectRuntimeMessageA);
     setIdleCallback(idleRuntimeProbe);
     setLiveMatchStateCallback(nullptr);
+    setLiveMatchDecisionCallback(nullptr);
     setWeekSimulationPresentation(WeekSimulationPresentation::Compact);
 
     CareerRuntimeContext scoped = currentCareerRuntimeContext();
     scoped.uiMessage = collectRuntimeMessageB;
     scoped.idle = nullptr;
     scoped.liveMatchState = liveMatchProbe;
+    scoped.liveMatchDecision = liveMatchDecisionProbe;
     scoped.presentation = WeekSimulationPresentation::Detailed;
 
     {
@@ -4341,6 +4566,8 @@ void testCareerRuntimeScopeRestoresContext() {
                "El scope debe poder anular callbacks temporales sin tocar el default externo.");
         expect(liveMatchStateCallback() == liveMatchProbe,
                "El scope debe exponer el callback temporal de partido en vivo.");
+        expect(liveMatchDecisionCallback() == liveMatchDecisionProbe,
+               "El scope debe exponer el callback temporal de decisiones del partido.");
         expect(weekSimulationPresentation() == WeekSimulationPresentation::Detailed,
                "La presentacion scoped debe sobreescribir la del runtime base.");
         emitUiMessage("scope");
@@ -4352,6 +4579,8 @@ void testCareerRuntimeScopeRestoresContext() {
            "Al salir del scope debe restaurarse el idle callback previo.");
     expect(liveMatchStateCallback() == nullptr,
            "Al salir del scope debe restaurarse el callback previo de partido en vivo.");
+    expect(liveMatchDecisionCallback() == nullptr,
+           "Al salir del scope debe restaurarse el callback previo de decisiones del partido.");
     expect(weekSimulationPresentation() == WeekSimulationPresentation::Compact,
            "La presentacion previa debe restaurarse tras destruir el scope.");
 
@@ -4364,6 +4593,7 @@ void testCareerRuntimeScopeRestoresContext() {
     setUiMessageCallback(previous.uiMessage);
     setIdleCallback(previous.idle);
     setLiveMatchStateCallback(previous.liveMatchState);
+    setLiveMatchDecisionCallback(previous.liveMatchDecision);
     setIncomingOfferDecisionCallback(previous.incomingOfferDecision);
     setContractRenewalDecisionCallback(previous.contractRenewalDecision);
     setManagerJobSelectionCallback(previous.managerJobSelection);
@@ -5429,7 +5659,9 @@ int main() {
         {"interactive_match_decision_points", testInteractiveMatchInvokesManagerAtDecisionPoints},
         {"interactive_match_tactical_change", testInteractiveMatchAppliesHumanTacticalChange},
         {"interactive_match_instruction_change", testInteractiveMatchAppliesHumanInstructionChange},
+        {"interactive_match_combined_adjustment", testInteractiveMatchAppliesCombinedHumanAdjustments},
         {"interactive_match_recent_events_order", testInteractiveMatchRecentEventsAreChronological},
+        {"interactive_match_ai_substitution_visible", testInteractiveMatchExposesAiSubstitutionToMatchCenter},
         {"interactive_match_manual_substitution", testInteractiveMatchAppliesManualSubstitution},
         {"interactive_match_invalid_substitution", testInteractiveMatchRejectsInvalidSubstitution},
         {"interactive_match_five_substitutions", testInteractiveMatchAllowsFiveManualSubstitutions},
@@ -5514,6 +5746,7 @@ int main() {
         {"late_match_urgency", testLateDeficitRaisesUrgencyInMatchPhase},
         {"instruction_chance_profiles", testMatchInstructionsShapeChanceProfiles},
         {"injury_replacement", testMatchInjuryTriggersRealReplacement},
+        {"ai_match_substitution", testAiMatchManagerPerformsAndReportsSubstitution},
         {"transfer_medical_risk", testTransferEvaluationPenalizesMedicalRisk},
         {"monthly_development", testMonthlyDevelopmentCycleImprovesStableProspects},
         {"match_center_adjustments", testMatchCenterAddsRecommendedAdjustments},

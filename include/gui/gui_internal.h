@@ -9,6 +9,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -24,6 +25,8 @@
 #include <commctrl.h>
 
 namespace gui_win32 {
+
+struct LiveMatchDecisionBridge;
 
 enum ControlId {
     IDC_DIVISION_COMBO = 1001,
@@ -244,6 +247,39 @@ struct PlayerContextMenuState {
     int hoveredIndex = -1;
     std::vector<PlayerContextMenuEntry> entries;
 };
+struct MatchCenterUiState {
+    bool live = false;
+    bool awaitingDecision = false;
+    bool paused = false;
+    int playbackSpeed = 1;
+    int minute = 0;
+    bool userIsHome = true;
+    int substitutionsUsed = 0;
+
+    std::string homeTeam;
+    std::string awayTeam;
+    std::string currentTactics;
+    std::string currentInstruction;
+
+    std::vector<int> activeXi;
+    std::vector<int> availableBench;
+
+    bool substitutionPanelOpen = false;
+    int pendingPlayerOutIndex = -1;
+    int pendingPlayerInIndex = -1;
+
+    RECT substitutionPanelRect{};
+    RECT substitutionConfirmRect{};
+    RECT substitutionCancelRect{};
+    std::vector<RECT> substitutionOutRects;
+    std::vector<RECT> substitutionInRects;
+    RECT pauseRect{};
+    RECT speedRect{};
+    RECT substituteRect{};
+    RECT continueRect{};
+    RECT tacticsRect{};
+    RECT instructionRect{};
+};
 struct AppState {
     HINSTANCE instance = nullptr;
     HWND window = nullptr;
@@ -299,6 +335,8 @@ struct AppState {
     std::string simulationProgressPhase;
     std::string simulationProgressDetail;
     std::vector<std::string> simulationProgressEvents;
+    MatchCenterUiState matchCenter;
+    std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
     std::vector<std::string> saveSlotPaths;
     GuiPageModel currentModel;
     std::vector<InsightHotspot> insightHotspots;
@@ -413,6 +451,7 @@ static const COLORREF kThemeSelection = RGB(64, 91, 109);
 static const UINT kGuiPageTransitionMessage = WM_APP + 17;
 static const UINT kGuiSimulationProgressMessage = WM_APP + 18;
 static const UINT kGuiSimulationCompleteMessage = WM_APP + 19;
+static const UINT kGuiLiveMatchStateMessage = WM_APP + 20;
 
 RECT childRectOnParent(HWND child, HWND parent);
 RECT expandedRect(RECT rect, int dx, int dy);
@@ -505,6 +544,8 @@ void saveCareer(AppState& state);
 void deleteCareerSave(AppState& state);
 void simulateWeek(AppState& state);
 void handleSimulationProgress(AppState& state, LPARAM payload);
+void handleLiveMatchState(AppState& state, LPARAM payload);
+bool handleMatchCenterClick(AppState& state, POINT point);
 void completeSimulationWeek(AppState& state, LPARAM payload);
 void validateSystem(AppState& state);
 void runScoutingAction(AppState& state);
