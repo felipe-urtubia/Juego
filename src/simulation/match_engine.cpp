@@ -504,7 +504,8 @@ if (stats.awayGoals > awayGoalsBefore) {
             const ManagerDecision decision =
                 (*decisionCallback)(interactiveState);
 
-            if (decision.type ==
+            if (decision.changeTactics ||
+                decision.type ==
                     ManagerDecisionType::ChangeTactics) {
 
                 static const vector<string> validTactics = {
@@ -536,8 +537,11 @@ if (stats.awayGoals > awayGoalsBefore) {
 
                     timeline.events.push_back(event);
                 }
-            } else if (decision.type ==
-                       ManagerDecisionType::ChangeInstruction) {
+            }
+
+            if (decision.changeInstruction ||
+                decision.type ==
+                    ManagerDecisionType::ChangeInstruction) {
 
                 static const vector<string> validInstructions = {
                     "Equilibrado",
@@ -572,8 +576,10 @@ if (stats.awayGoals > awayGoalsBefore) {
 
                     timeline.events.push_back(event);
                 }
-            } else if (decision.type ==
-                       ManagerDecisionType::Substitute) {
+            }
+
+            if (decision.type ==
+                    ManagerDecisionType::Substitute) {
 
                 const int substitutionsUsed =
                     match_stats::countSubstitutions(

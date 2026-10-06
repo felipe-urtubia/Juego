@@ -12,12 +12,25 @@
 #include "utils/utils.h"
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <iomanip>
 #include <memory>
+#include <mutex>
 #include <sstream>
 #include <utility>
 
 namespace gui_win32 {
+
+struct LiveMatchDecisionBridge {
+    std::mutex mutex;
+    std::condition_variable condition;
+    match_engine::ManagerDecision decision;
+    bool decisionReady = false;
+    bool cancelled = false;
+    bool paused = false;
+    int playbackSpeed = 1;
+};
 
 namespace {
 
@@ -203,6 +216,7 @@ struct SimulationThreadArgs {
     HWND window = nullptr;
     Career career;
     GameSettings settings;
+    std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
 };
 
 struct SimulationJobResult {
@@ -218,6 +232,13 @@ struct SimulationProgressPayload {
     std::vector<std::string> events;
 };
 
+struct LiveMatchStatePayload {
+    std::string homeTeam;
+    std::string awayTeam;
+    match_engine::InteractiveMatchState state;
+    bool awaitingDecision = false;
+};
+
 struct SimulationWorkerProgressContext {
     HWND window = nullptr;
     GameSettings settings;
@@ -227,6 +248,7 @@ struct SimulationWorkerProgressContext {
     int liveMatchMinute = 0;
     std::string liveHomeTeam;
     std::string liveAwayTeam;
+    std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
 };
 
 thread_local SimulationWorkerProgressContext* g_workerProgressContext = nullptr;
@@ -439,6 +461,23 @@ void postSimulationProgress(HWND window,
     }
 }
 
+void postLiveMatchState(
+    HWND window,
+    const std::string& homeTeam,
+    const std::string& awayTeam,
+    const match_engine::InteractiveMatchState& state,
+    bool awaitingDecision = false) {
+    if (!window || !IsWindow(window)) return;
+    auto* payload = new LiveMatchStatePayload{homeTeam, awayTeam, state, awaitingDecision};
+    if (!PostMessageW(
+            window,
+            kGuiLiveMatchStateMessage,
+            0,
+            reinterpret_cast<LPARAM>(payload))) {
+        delete payload;
+    }
+}
+
 std::string compactSimulationEvent(const std::string& message) {
     std::string event = trim(message);
     if (event.empty()) return {};
@@ -626,6 +665,8 @@ void postWorkerLiveMatchState(
 
     if (!progress.window || !IsWindow(progress.window)) return;
 
+    postLiveMatchState(progress.window, homeTeamName, awayTeamName, state);
+
     const bool newMatch =
         progress.liveHomeTeam != homeTeamName ||
         progress.liveAwayTeam != awayTeamName ||
@@ -728,7 +769,54 @@ void postWorkerLiveMatchState(
             weeklyPercent,
             progress.events);
 
-        Sleep(static_cast<DWORD>(delayMs));
+        int remainingDelayMs = delayMs;
+
+        while (remainingDelayMs > 0) {
+            if (!progress.window || !IsWindow(progress.window)) {
+                return;
+            }
+
+            bool paused = false;
+            bool cancelled = false;
+            int playbackSpeed = 1;
+
+            if (progress.liveMatchDecisionBridge) {
+                std::lock_guard<std::mutex> lock(
+                    progress.liveMatchDecisionBridge->mutex);
+
+                paused =
+                    progress.liveMatchDecisionBridge->paused;
+
+                cancelled =
+                    progress.liveMatchDecisionBridge->cancelled;
+
+                playbackSpeed = clampValue(
+                    progress.liveMatchDecisionBridge->playbackSpeed,
+                    1,
+                    4);
+            }
+
+            if (cancelled) {
+                return;
+            }
+
+            if (paused) {
+                Sleep(40);
+                continue;
+            }
+
+            const int sleepMs = std::min(
+                40,
+                std::max(
+                    1,
+                    (remainingDelayMs + playbackSpeed - 1) /
+                        playbackSpeed));
+
+            Sleep(static_cast<DWORD>(sleepMs));
+
+            remainingDelayMs -=
+                sleepMs * playbackSpeed;
+        }
     }
 
     progress.liveMatchMinute = targetMinute;
@@ -739,6 +827,51 @@ void postWorkerLiveMatchState(
         progress.liveAwayTeam.clear();
         progress.events.clear();
     }
+}
+
+match_engine::ManagerDecision waitForWorkerLiveMatchDecision(
+    const match_engine::InteractiveMatchState& state) {
+    if (!g_workerProgressContext) {
+        return match_engine::ManagerDecision{};
+    }
+
+    SimulationWorkerProgressContext& progress =
+        *g_workerProgressContext;
+
+    auto bridge = progress.liveMatchDecisionBridge;
+    if (!bridge || !progress.window || !IsWindow(progress.window)) {
+        return match_engine::ManagerDecision{};
+    }
+
+    std::unique_lock<std::mutex> lock(bridge->mutex);
+    bridge->decision = match_engine::ManagerDecision{};
+    bridge->decisionReady = false;
+
+    postLiveMatchState(
+        progress.window,
+        progress.liveHomeTeam,
+        progress.liveAwayTeam,
+        state,
+        true);
+
+    while (!bridge->decisionReady && !bridge->cancelled) {
+        bridge->condition.wait_for(
+            lock,
+            std::chrono::milliseconds(100));
+
+        if (!progress.window || !IsWindow(progress.window)) {
+            bridge->cancelled = true;
+            break;
+        }
+    }
+
+    if (bridge->cancelled || !bridge->decisionReady) {
+        return match_engine::ManagerDecision{};
+    }
+
+    match_engine::ManagerDecision decision = bridge->decision;
+    bridge->decisionReady = false;
+    return decision;
 }
 
 void postWorkerSimulationEvent(const std::string& message) {
@@ -784,6 +917,7 @@ DWORD WINAPI simulationThreadProc(LPVOID rawArgs) {
     SimulationWorkerProgressContext progress;
     progress.window = args->window;
     progress.settings = args->settings;
+    progress.liveMatchDecisionBridge = args->liveMatchDecisionBridge;
     g_workerProgressContext = &progress;
     postSimulationProgress(args->window, "Partidos", "Simulando partidos de la semana...", 35);
 
@@ -791,9 +925,11 @@ DWORD WINAPI simulationThreadProc(LPVOID rawArgs) {
     if (game_settings::isDetailedSimulation(args->settings)) {
         runtime.presentation = WeekSimulationPresentation::MatchCenter;
         runtime.liveMatchState = postWorkerLiveMatchState;
+        runtime.liveMatchDecision = waitForWorkerLiveMatchDecision;
     } else {
         runtime.presentation = WeekSimulationPresentation::Compact;
         runtime.liveMatchState = nullptr;
+        runtime.liveMatchDecision = nullptr;
     }
     runtime.uiMessage = postWorkerSimulationEvent;
     runtime.idle = pumpWorkerSimulationProgress;
@@ -1004,7 +1140,13 @@ void simulateWeek(AppState& state) {
     const std::string teamName = managedTeamName(state.career);
     Career workerCareer = state.career;
     relinkCareerPointers(workerCareer, teamName);
-    auto* args = new SimulationThreadArgs{state.window, std::move(workerCareer), state.settings};
+    auto liveMatchDecisionBridge = std::make_shared<LiveMatchDecisionBridge>();
+    state.liveMatchDecisionBridge = liveMatchDecisionBridge;
+    auto* args = new SimulationThreadArgs{
+        state.window,
+        std::move(workerCareer),
+        state.settings,
+        liveMatchDecisionBridge};
 
     state.actionInProgress = true;
     if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simulando...");
@@ -1014,6 +1156,7 @@ void simulateWeek(AppState& state) {
     if (!thread) {
         delete args;
         state.actionInProgress = false;
+        state.liveMatchDecisionBridge.reset();
         if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
         clearSimulationProgress(state);
         refreshAll(state);
@@ -1034,6 +1177,422 @@ void handleSimulationProgress(AppState& state, LPARAM payload) {
     setSimulationProgress(state, progress->phase, progress->detail, progress->percent, progress->events);
 }
 
+void handleLiveMatchState(AppState& state, LPARAM payload) {
+    std::unique_ptr<LiveMatchStatePayload> live(
+        reinterpret_cast<LiveMatchStatePayload*>(payload));
+    if (!live) return;
+
+    state.matchCenter.live = live->state.minute < 90;
+    state.matchCenter.awaitingDecision = live->awaitingDecision;
+    state.matchCenter.minute = live->state.minute;
+    state.matchCenter.userIsHome = live->state.userIsHome;
+    state.matchCenter.substitutionsUsed = live->state.substitutionsUsed;
+    state.matchCenter.homeTeam = live->homeTeam;
+    state.matchCenter.awayTeam = live->awayTeam;
+    state.matchCenter.currentTactics = live->state.currentTactics;
+    state.matchCenter.currentInstruction = live->state.currentInstruction;
+    state.matchCenter.activeXi = live->state.activeXi;
+    state.matchCenter.availableBench = live->state.availableBench;
+
+    if (state.liveMatchDecisionBridge) {
+        std::lock_guard<std::mutex> lock(
+            state.liveMatchDecisionBridge->mutex);
+
+        state.matchCenter.paused =
+            state.liveMatchDecisionBridge->paused;
+
+        state.matchCenter.playbackSpeed =
+            clampValue(
+                state.liveMatchDecisionBridge->playbackSpeed,
+                1,
+                4);
+    }
+
+    if (state.window && IsWindow(state.window)) {
+        InvalidateRect(state.window, nullptr, FALSE);
+    }
+}
+
+bool handleMatchCenterClick(AppState& state, POINT point) {
+    if (!state.simulationProgressActive ||
+        !state.matchCenter.live ||
+        !state.liveMatchDecisionBridge) {
+        return false;
+    }
+
+    if (PtInRect(&state.matchCenter.pauseRect, point)) {
+        auto bridge = state.liveMatchDecisionBridge;
+        bool paused = false;
+
+        {
+            std::lock_guard<std::mutex> lock(bridge->mutex);
+
+            if (bridge->cancelled) {
+                return true;
+            }
+
+            bridge->paused = !bridge->paused;
+            paused = bridge->paused;
+        }
+
+        state.matchCenter.paused = paused;
+        bridge->condition.notify_all();
+
+        if (state.window && IsWindow(state.window)) {
+            InvalidateRect(state.window, nullptr, FALSE);
+        }
+
+        return true;
+    }
+
+    if (PtInRect(&state.matchCenter.speedRect, point)) {
+        auto bridge = state.liveMatchDecisionBridge;
+        int playbackSpeed = 1;
+
+        {
+            std::lock_guard<std::mutex> lock(bridge->mutex);
+
+            if (bridge->cancelled) {
+                return true;
+            }
+
+            if (bridge->playbackSpeed == 1) {
+                bridge->playbackSpeed = 2;
+            } else if (bridge->playbackSpeed == 2) {
+                bridge->playbackSpeed = 4;
+            } else {
+                bridge->playbackSpeed = 1;
+            }
+
+            playbackSpeed = bridge->playbackSpeed;
+        }
+
+        state.matchCenter.playbackSpeed = playbackSpeed;
+        bridge->condition.notify_all();
+
+        if (state.window && IsWindow(state.window)) {
+            InvalidateRect(state.window, nullptr, FALSE);
+        }
+
+        return true;
+    }
+
+    if (!state.matchCenter.awaitingDecision) {
+        return false;
+    }
+    const auto instructionAllowedForTactics =
+        [](const std::string& tactics,
+           const std::string& instruction) {
+            if (tactics == "Defensive") {
+                return instruction == "Equilibrado" ||
+                       instruction == "Bloque bajo" ||
+                       instruction == "Balon parado" ||
+                       instruction == "Juego directo" ||
+                       instruction == "Pausar juego";
+            }
+            if (tactics == "Balanced") {
+                return instruction == "Equilibrado" ||
+                       instruction == "Laterales altos" ||
+                       instruction == "Balon parado" ||
+                       instruction == "Por bandas" ||
+                       instruction == "Juego directo";
+            }
+            if (tactics == "Offensive") {
+                return instruction == "Laterales altos" ||
+                       instruction == "Balon parado" ||
+                       instruction == "Presion final" ||
+                       instruction == "Por bandas" ||
+                       instruction == "Juego directo";
+            }
+            if (tactics == "Pressing") {
+                return instruction == "Laterales altos" ||
+                       instruction == "Presion final" ||
+                       instruction == "Por bandas" ||
+                       instruction == "Juego directo" ||
+                       instruction == "Contra-presion";
+            }
+            if (tactics == "Counter") {
+                return instruction == "Bloque bajo" ||
+                       instruction == "Balon parado" ||
+                       instruction == "Juego directo" ||
+                       instruction == "Contra-presion" ||
+                       instruction == "Pausar juego";
+            }
+            return true;
+        };
+
+    const auto defaultInstructionForTactics =
+        [](const std::string& tactics) -> std::string {
+            if (tactics == "Defensive") return "Bloque bajo";
+            if (tactics == "Offensive") return "Por bandas";
+            if (tactics == "Pressing") return "Contra-presion";
+            if (tactics == "Counter") return "Juego directo";
+            return "Equilibrado";
+        };
+
+    if (state.matchCenter.substitutionPanelOpen &&
+        PtInRect(&state.matchCenter.substitutionPanelRect, point)) {
+
+        for (size_t i = 0;
+             i < state.matchCenter.substitutionOutRects.size() &&
+             i < state.matchCenter.activeXi.size();
+             ++i) {
+
+            if (!PtInRect(
+                    &state.matchCenter.substitutionOutRects[i],
+                    point)) {
+                continue;
+            }
+
+            state.matchCenter.pendingPlayerOutIndex =
+                state.matchCenter.activeXi[i];
+
+            if (state.window && IsWindow(state.window)) {
+                InvalidateRect(state.window, nullptr, FALSE);
+            }
+            return true;
+        }
+
+        for (size_t i = 0;
+             i < state.matchCenter.substitutionInRects.size() &&
+             i < state.matchCenter.availableBench.size();
+             ++i) {
+
+            if (!PtInRect(
+                    &state.matchCenter.substitutionInRects[i],
+                    point)) {
+                continue;
+            }
+
+            state.matchCenter.pendingPlayerInIndex =
+                state.matchCenter.availableBench[i];
+
+            if (state.window && IsWindow(state.window)) {
+                InvalidateRect(state.window, nullptr, FALSE);
+            }
+            return true;
+        }
+
+        return true;
+    }
+    if (PtInRect(&state.matchCenter.tacticsRect, point)) {
+        static const std::array<const char*, 5> tactics = {{
+            "Defensive",
+            "Balanced",
+            "Offensive",
+            "Pressing",
+            "Counter"
+        }};
+
+        const int gap = scaleByDpi(state, 6);
+        const int totalWidth =
+            state.matchCenter.tacticsRect.right -
+            state.matchCenter.tacticsRect.left;
+        const int buttonWidth =
+            (totalWidth - gap * 4) / 5;
+
+        for (size_t i = 0; i < tactics.size(); ++i) {
+            RECT option{
+                state.matchCenter.tacticsRect.left +
+                    static_cast<int>(i) * (buttonWidth + gap),
+                state.matchCenter.tacticsRect.top,
+                state.matchCenter.tacticsRect.left +
+                    static_cast<int>(i) * (buttonWidth + gap) +
+                    buttonWidth,
+                state.matchCenter.tacticsRect.bottom
+            };
+
+            if (!PtInRect(&option, point)) continue;
+
+            auto bridge = state.liveMatchDecisionBridge;
+            {
+                std::lock_guard<std::mutex> lock(bridge->mutex);
+                if (bridge->cancelled || bridge->decisionReady) {
+                    return true;
+                }
+                if (!bridge->decision.changeInstruction &&
+                    bridge->decision.type !=
+                        match_engine::ManagerDecisionType::ChangeInstruction) {
+                    bridge->decision.type =
+                        match_engine::ManagerDecisionType::ChangeTactics;
+                }
+                bridge->decision.changeTactics = true;
+                bridge->decision.tactics = tactics[i];
+
+                if (!instructionAllowedForTactics(
+                        tactics[i],
+                        state.matchCenter.currentInstruction)) {
+                    bridge->decision.changeInstruction = true;
+                    bridge->decision.instruction =
+                        defaultInstructionForTactics(tactics[i]);
+                }
+            }
+
+            state.matchCenter.currentTactics = tactics[i];
+            if (!instructionAllowedForTactics(
+                    tactics[i],
+                    state.matchCenter.currentInstruction)) {
+                state.matchCenter.currentInstruction =
+                    defaultInstructionForTactics(tactics[i]);
+            }
+
+            if (state.window && IsWindow(state.window)) {
+                InvalidateRect(state.window, nullptr, FALSE);
+            }
+            return true;
+        }
+        return true;
+    }
+
+    if (PtInRect(&state.matchCenter.instructionRect, point)) {
+        static const std::array<const char*, 9> instructions = {{
+            "Equilibrado",
+            "Laterales altos",
+            "Bloque bajo",
+            "Balon parado",
+            "Presion final",
+            "Por bandas",
+            "Juego directo",
+            "Contra-presion",
+            "Pausar juego"
+        }};
+
+        const int gap = scaleByDpi(state, 6);
+        const int totalWidth =
+            state.matchCenter.instructionRect.right -
+            state.matchCenter.instructionRect.left;
+        const int totalHeight =
+            state.matchCenter.instructionRect.bottom -
+            state.matchCenter.instructionRect.top;
+        const int buttonWidth = (totalWidth - gap * 2) / 3;
+        const int buttonHeight = (totalHeight - gap * 2) / 3;
+
+        for (size_t i = 0; i < instructions.size(); ++i) {
+            const int row = static_cast<int>(i) / 3;
+            const int column = static_cast<int>(i) % 3;
+            RECT option{
+                state.matchCenter.instructionRect.left +
+                    column * (buttonWidth + gap),
+                state.matchCenter.instructionRect.top +
+                    row * (buttonHeight + gap),
+                state.matchCenter.instructionRect.left +
+                    column * (buttonWidth + gap) +
+                    buttonWidth,
+                state.matchCenter.instructionRect.top +
+                    row * (buttonHeight + gap) +
+                    buttonHeight
+            };
+
+            if (!PtInRect(&option, point)) continue;
+
+            if (!instructionAllowedForTactics(
+                    state.matchCenter.currentTactics,
+                    instructions[i])) {
+                return true;
+            }
+
+            auto bridge = state.liveMatchDecisionBridge;
+            {
+                std::lock_guard<std::mutex> lock(bridge->mutex);
+                if (bridge->cancelled || bridge->decisionReady) {
+                    return true;
+                }
+                if (!bridge->decision.changeTactics &&
+                    bridge->decision.type !=
+                        match_engine::ManagerDecisionType::ChangeTactics) {
+                    bridge->decision.type =
+                        match_engine::ManagerDecisionType::ChangeInstruction;
+                }
+                bridge->decision.changeInstruction = true;
+                bridge->decision.instruction = instructions[i];
+            }
+
+            state.matchCenter.currentInstruction = instructions[i];
+
+            if (state.window && IsWindow(state.window)) {
+                InvalidateRect(state.window, nullptr, FALSE);
+            }
+            return true;
+        }
+        return true;
+    }
+
+    if (PtInRect(&state.matchCenter.substituteRect, point)) {
+        const bool substitutionsAvailable =
+            state.matchCenter.substitutionsUsed < 5 &&
+            !state.matchCenter.activeXi.empty() &&
+            !state.matchCenter.availableBench.empty();
+
+        if (!substitutionsAvailable) {
+            return true;
+        }
+
+        state.matchCenter.substitutionPanelOpen =
+            !state.matchCenter.substitutionPanelOpen;
+
+        if (!state.matchCenter.substitutionPanelOpen) {
+            state.matchCenter.pendingPlayerOutIndex = -1;
+            state.matchCenter.pendingPlayerInIndex = -1;
+        }
+
+        if (state.window && IsWindow(state.window)) {
+            InvalidateRect(state.window, nullptr, FALSE);
+        }
+        return true;
+    }
+
+    if (!PtInRect(&state.matchCenter.continueRect, point)) {
+        return false;
+    }
+
+    auto bridge = state.liveMatchDecisionBridge;
+    {
+        std::lock_guard<std::mutex> lock(bridge->mutex);
+        if (bridge->cancelled || bridge->decisionReady) {
+            return true;
+        }
+
+        const bool hasPendingSubstitution =
+            state.matchCenter.pendingPlayerOutIndex >= 0 &&
+            state.matchCenter.pendingPlayerInIndex >= 0;
+
+        if (hasPendingSubstitution) {
+            bridge->decision.type =
+                match_engine::ManagerDecisionType::Substitute;
+            bridge->decision.playerOutIndex =
+                state.matchCenter.pendingPlayerOutIndex;
+            bridge->decision.playerInIndex =
+                state.matchCenter.pendingPlayerInIndex;
+        }
+
+        const bool hasPendingDecision =
+            hasPendingSubstitution ||
+            bridge->decision.changeTactics ||
+            bridge->decision.changeInstruction ||
+            bridge->decision.type ==
+                match_engine::ManagerDecisionType::ChangeTactics ||
+            bridge->decision.type ==
+                match_engine::ManagerDecisionType::ChangeInstruction;
+
+        if (!hasPendingDecision) {
+            bridge->decision = match_engine::ManagerDecision{};
+        }
+
+        bridge->decisionReady = true;
+    }
+
+    state.matchCenter.awaitingDecision = false;
+    state.matchCenter.substitutionPanelOpen = false;
+    state.matchCenter.pendingPlayerOutIndex = -1;
+    state.matchCenter.pendingPlayerInIndex = -1;
+    bridge->condition.notify_one();
+
+    if (state.window && IsWindow(state.window)) {
+        InvalidateRect(state.window, nullptr, FALSE);
+    }
+    return true;
+}
+
 void completeSimulationWeek(AppState& state, LPARAM payload) {
     std::unique_ptr<SimulationJobResult> job(reinterpret_cast<SimulationJobResult*>(payload));
     if (!job) return;
@@ -1049,6 +1608,8 @@ void completeSimulationWeek(AppState& state, LPARAM payload) {
 
     state.actionInProgress = false;
     if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
+    state.matchCenter = MatchCenterUiState{};
+    state.liveMatchDecisionBridge.reset();
     clearSimulationProgress(state);
     setStatus(state, job->result.messages.empty() ? "Semana simulada." : job->result.messages.back());
 }

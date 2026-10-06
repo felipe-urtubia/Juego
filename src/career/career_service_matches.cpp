@@ -105,15 +105,82 @@ void CareerService::simulateWeekMatches(const vector<pair<int, int>>& matches,
             Team& controlledTeam =
                 userControlsHome ? *home : *away;
 
+            match_engine::InteractiveMatchState lastInteractiveState;
+
             result = simulateInteractiveMatch(
                 &career,
                 *home,
                 *away,
                 userControlsHome,
                 [&](const match_engine::InteractiveMatchState& state) {
-                    if (LiveMatchStateCallback callback =
-                            liveMatchStateCallback()) {
-                        callback(home->name, away->name, state);
+                    lastInteractiveState = state;
+
+                    LiveMatchStateCallback stateCallback =
+                        liveMatchStateCallback();
+
+                    if (stateCallback) {
+                        stateCallback(
+                            home->name,
+                            away->name,
+                            state);
+                    }
+
+                    if (LiveMatchDecisionCallback decisionCallback =
+                            liveMatchDecisionCallback()) {
+
+                        match_engine::ManagerDecision decision =
+                            decisionCallback(state);
+
+                        if ((decision.changeTactics ||
+                             decision.type ==
+                                 match_engine::ManagerDecisionType::ChangeTactics) &&
+                            !decision.tactics.empty()) {
+
+                            lastInteractiveState.currentTactics =
+                                decision.tactics;
+                        }
+
+                        if ((decision.changeInstruction ||
+                             decision.type ==
+                                 match_engine::ManagerDecisionType::ChangeInstruction) &&
+                            !decision.instruction.empty()) {
+
+                            lastInteractiveState.currentInstruction =
+                                decision.instruction;
+                        }
+
+                        if (decision.type ==
+                                match_engine::ManagerDecisionType::Substitute &&
+                            lastInteractiveState.substitutionsUsed < 5) {
+
+                            auto outgoingIt = std::find(
+                                lastInteractiveState.activeXi.begin(),
+                                lastInteractiveState.activeXi.end(),
+                                decision.playerOutIndex);
+
+                            auto incomingIt = std::find(
+                                lastInteractiveState.availableBench.begin(),
+                                lastInteractiveState.availableBench.end(),
+                                decision.playerInIndex);
+
+                            if (outgoingIt !=
+                                    lastInteractiveState.activeXi.end() &&
+                                incomingIt !=
+                                    lastInteractiveState.availableBench.end()) {
+
+                                *outgoingIt = decision.playerInIndex;
+
+                                lastInteractiveState.availableBench.erase(
+                                    incomingIt);
+
+                                ++lastInteractiveState.substitutionsUsed;
+                            }
+                        }
+
+                        return decision;
+                    }
+
+                    if (stateCallback) {
                         return match_engine::ManagerDecision{};
                     }
 
@@ -126,7 +193,8 @@ void CareerService::simulateWeekMatches(const vector<pair<int, int>>& matches,
 
             if (LiveMatchStateCallback callback =
                     liveMatchStateCallback()) {
-                match_engine::InteractiveMatchState finalState;
+                match_engine::InteractiveMatchState finalState =
+                    lastInteractiveState;
                 finalState.minute = 90;
                 finalState.userIsHome = userControlsHome;
                 finalState.homeGoals = result.homeGoals;

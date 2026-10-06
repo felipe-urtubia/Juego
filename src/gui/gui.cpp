@@ -782,6 +782,9 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             if (state) {
                 POINT point{static_cast<LONG>(static_cast<short>(LOWORD(lParam))),
                             static_cast<LONG>(static_cast<short>(HIWORD(lParam)))};
+                if (handleMatchCenterClick(*state, point)) {
+                    return 0;
+                }
                 if (const InsightHotspot* hotspot = hitInsightHotspot(*state, point)) {
                     executeInsightAction(*state, hotspot->action);
                     return 0;
@@ -1353,6 +1356,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
         case kGuiSimulationProgressMessage:
             if (state) {
                 handleSimulationProgress(*state, lParam);
+                return 0;
+            }
+            break;
+        case kGuiLiveMatchStateMessage:
+            if (state) {
+                handleLiveMatchState(*state, lParam);
                 return 0;
             }
             break;

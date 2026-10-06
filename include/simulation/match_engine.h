@@ -33,6 +33,8 @@ enum class ManagerDecisionType {
 
 struct ManagerDecision {
     ManagerDecisionType type = ManagerDecisionType::Continue;
+    bool changeTactics = false;
+    bool changeInstruction = false;
     std::string tactics;
     std::string instruction;
     int playerOutIndex = -1;
