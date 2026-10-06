@@ -8213,3 +8213,33 @@ Rama de trabajo utilizada:
 - [ ] Integrar `feature/live-match-center` en `main` cuando corresponda.
 
 > Nota: cuando existe `liveMatchStateCallback`, la GUI actual recibe el estado del partido y devuelve una `ManagerDecision{}` vacía. Por ello, el Match Center gráfico de esta etapa está orientado a visualización en vivo; las decisiones tácticas interactivas quedan planificadas como mejora posterior.
+
+---
+
+## ✅ Integración final de Live Match Center en main - 2026-10-05
+
+- [x] Rama `feature/live-match-center` publicada en GitHub.
+- [x] Tracking configurado con `origin/feature/live-match-center`.
+- [x] Cambio a la rama `main`.
+- [x] `main` actualizada mediante `git pull --ff-only origin main`.
+- [x] Confirmado que `main` estaba actualizada antes de integrar.
+- [x] Merge fast-forward de `feature/live-match-center` a `main`.
+- [x] Integración realizada sin conflictos.
+- [x] `main` avanzada desde `a8f2234` hasta `dff406e`.
+- [x] Push de `main` completado correctamente.
+- [x] Live Match Center publicado en la rama principal del repositorio.
+- [x] Verificación final: `## main...origin/main`.
+- [x] Working tree limpio después de la integración y publicación.
+
+### Commits integrados
+
+- [x] `f8924fa feat: add live match center`.
+- [x] `dff406e docs: document live match center progress`.
+
+### Estado final
+
+- [x] Implementación terminada.
+- [x] Documentación terminada.
+- [x] Rama de feature publicada.
+- [x] Feature integrada en `main`.
+- [x] `main` publicada y sincronizada con GitHub.
