@@ -8483,3 +8483,65 @@ Rama de trabajo utilizada:
 - [x] Validación visual/manual completada.
 - [x] Feature integrada y publicada en `main`.
 - [x] Rama de trabajo eliminada local y remotamente.
+
+## ✅ Release v0.1.2.0-alpha - 2026-10-06
+
+### Preparación
+- [x] Versión visible actualizada a `v0.1.2.0-alpha`.
+- [x] `CHANGELOG.md` actualizado con las novedades de la versión.
+- [x] Build completo ejecutado correctamente con `cmake --build .\build-ci`.
+- [x] `FootballManager`, `FootballManagerCLI` y `FootballManagerTests` compilados correctamente.
+- [x] Suite automatizada ejecutada con `ctest --test-dir .\build-ci --output-on-failure`.
+- [x] Tests: 100% aprobados.
+- [x] Validación general ejecutada mediante `.\build-ci\bin\FootballManagerCLI.exe --validate`.
+
+Resultado del validador:
+- Divisiones: 5.
+- Equipos revisados: 90.
+- Jugadores crudos: 2200.
+- Errores: 0.
+- Advertencias: 0.
+- Resultado: sin fallas.
+
+- [x] `git diff --check` sin errores.
+- Commit de preparación: `f0ae680 release: preparar v0.1.2.0-alpha`.
+- [x] Release integrada mediante fast-forward a `main`.
+- [x] `main` subida correctamente a GitHub.
+- [x] Tag anotado `v0.1.2.0-alpha` creado y publicado apuntando al commit `f0ae680`.
+
+### Paquete distribuible
+- [x] Creado paquete limpio `FootballManager-v0.1.2.0-alpha`.
+- [x] Incluye `FootballManager.exe`.
+- [x] Incluye `assets`.
+- [x] Incluye `data`.
+- [x] Incluye carpeta `saves` vacía.
+- [x] Incluye `LEEME.txt` actualizado para `v0.1.2.0-alpha`.
+- [x] No incluye `FootballManagerCLI`, `FootballManagerTests` ni partidas personales.
+- [x] Creado `FootballManager-v0.1.2.0-alpha.zip`.
+- Tamaño final: `28238383` bytes.
+- SHA-256: `C4F2C8A183EE19CB064F4ADFA81ED084BFB931F8256018E237097D0B1FC0D94E`.
+- [x] El ejecutable empaquetado coincide por SHA-256 con el ejecutable compilado.
+
+### Publicación
+- [x] GitHub Release publicada como pre-release.
+- Nombre: `Chilean Footballito v0.1.2.0-alpha`.
+- [x] ZIP agregado como asset descargable.
+- [x] Tamaño remoto coincide con el ZIP generado.
+- [x] SHA-256 remoto coincide exactamente con el ZIP local.
+- [x] Descarga pública verificada mediante HTTP `200`.
+- [x] Archivos temporales locales eliminados después de publicar.
+- [x] Rama local `release/v0.1.2.0-alpha` eliminada después de integrar la release.
+- [x] Repositorio limpio al finalizar la publicación.
+
+### Contenido principal de la versión
+- Match Center interactivo con decisiones tácticas en vivo.
+- Cambios de mentalidad e instrucciones durante el partido.
+- Sustituciones manuales y sustituciones de IA visibles.
+- Pausa, reanudación y velocidades `1x`, `2x` y `4x`.
+- Rediseño del menú principal y del flujo de nueva carrera.
+- Rediseño de guardados, configuraciones y créditos.
+- Mejoras del dashboard y KPIs visuales.
+- Salary cap relativo a ingresos.
+- Menú contextual de jugadores.
+- Mayor modularización de `CareerService`.
+- Ampliación de cobertura automatizada del Match Center y runtime.
