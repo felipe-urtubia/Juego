@@ -7985,3 +7985,231 @@ Rama de trabajo utilizada:
 - [x] Integración fast-forward completada en `main`.
 - [x] `main` actualizada desde `d67d05d` hasta `f82f7b1`.
 - [x] Push de `main` completado correctamente.
+
+---
+
+## ✅ Live Match Center para partidos controlables - 2026-10-05
+
+Rama de trabajo utilizada:
+
+`feature/live-match-center`
+
+### Objetivo de la etapa
+
+- [x] Crear una pantalla exclusiva de **Match Center** para los partidos controlables/en vivo.
+- [x] Ocultar completamente dashboard, navegación y controles del club mientras el partido está en curso.
+- [x] Mostrar marcador, minuto, estadísticas y eventos recientes durante la simulación.
+- [x] Mantener el comportamiento existente de simulación compacta cuando no se utiliza el Match Center.
+
+### Runtime y comunicación del partido en vivo
+
+- [x] Agregado `LiveMatchStateCallback`.
+- [x] Agregado `liveMatchState` a `CareerRuntimeContext`.
+- [x] Agregadas las funciones `setLiveMatchStateCallback()` y `liveMatchStateCallback()`.
+- [x] Agregada declaración adelantada de `match_engine::InteractiveMatchState` en `career_runtime.h`.
+- [x] Verificado que `ScopedCareerRuntimeContext` conserva y restaura correctamente el callback temporal.
+- [x] Verificado que `WeekSimulationPresentation::MatchCenter` es aceptado por el runtime.
+- [x] Conservado el aislamiento del contexto temporal durante la simulación.
+
+### Estado detallado del motor de partidos
+
+- [x] Agregado `timelineEventsDetailed` a `InteractiveMatchState`.
+- [x] El motor copia al estado interactivo los `MatchEvent` ocurridos hasta el minuto correspondiente.
+- [x] Conservado `timelineEvents` existente para no romper el comportamiento anterior.
+- [x] Verificado el avance de las fases del motor:
+  - 1-15
+  - 16-30
+  - 31-45
+  - 46-60
+  - 61-75
+  - 76-90
+- [x] Verificado que los callbacks interactivos se generan en los minutos 15, 30, 45, 60 y 75.
+- [x] Verificado que el motor no envía un callback interactivo duplicado en el minuto 90.
+- [x] El estado final de minuto 90 se envía explícitamente desde `career_service_matches.cpp`.
+- [x] Verificado que la condición de reinicio de reproducción del Match Center es segura con la secuencia actual de fases.
+
+### Integración en la simulación semanal
+
+- [x] La simulación detallada utiliza `WeekSimulationPresentation::MatchCenter`.
+- [x] La simulación detallada asigna `postWorkerLiveMatchState` como callback del partido en vivo.
+- [x] La simulación no detallada conserva `WeekSimulationPresentation::Compact`.
+- [x] Durante partidos controlables, el callback gráfico recibe equipo local, equipo visitante y estado del partido.
+- [x] Al terminar el partido se construye y envía un `InteractiveMatchState` final con minuto 90.
+- [x] El estado final incluye marcador, tiros, posesión y timeline detallado.
+- [x] Cuando no existe callback gráfico se mantiene `match_center::showInteractiveFinalSummary()`.
+
+### Reproducción del partido en la GUI
+
+- [x] Agregada lógica para reproducir progresivamente los minutos entre los estados del motor.
+- [x] Agregada velocidad específica del Match Center según la velocidad de simulación:
+  - Relaxed: 5000 ms por minuto.
+  - Standard: 3300 ms por minuto.
+  - Rapid: 1000 ms por minuto.
+- [x] Agregado procesamiento de mensajes de Windows para mantener la interfaz actualizada.
+- [x] Agregado refresco inmediato mediante `UpdateWindow`.
+- [x] Agregado seguimiento del minuto actual del partido.
+- [x] Agregado seguimiento de equipo local y visitante para detectar el comienzo de un partido nuevo.
+- [x] Agregado historial limitado de eventos recientes.
+- [x] Agregado filtrado de eventos relevantes:
+  - tiros
+  - ocasiones claras
+  - goles
+  - fallos
+  - paradas
+  - faltas
+  - tarjetas amarillas
+  - tarjetas rojas
+  - lesiones
+  - córners
+  - fueras de juego
+  - contraataques
+  - cambios tácticos
+  - sustituciones
+- [x] Agregado texto legible de cada evento con minuto, equipo y descripción.
+
+### Estadísticas en vivo
+
+- [x] Agregado cálculo acumulado por minuto para:
+  - goles
+  - tiros
+  - ataques peligrosos
+  - tarjetas amarillas
+  - tarjetas rojas
+  - córners
+  - xG
+- [x] Mostrada posesión local y visitante.
+- [x] Mostrados tiros local-visitante.
+- [x] Mostrado xG con dos decimales.
+- [x] Mostradas tarjetas amarillas.
+- [x] Mostrados córners.
+- [x] Agregado estado `DESCANSO` en el minuto 45.
+- [x] Agregado estado `FINAL` en el minuto 90.
+- [x] Actualizado el porcentaje general de progreso semanal durante el partido.
+
+### Pantalla exclusiva de Match Center
+
+- [x] `drawSimulationProgressOverlay()` detecta las fases que comienzan por `EN VIVO |`.
+- [x] Agregada pantalla exclusiva con fondo propio.
+- [x] Agregado panel principal redondeado.
+- [x] Agregado encabezado `MATCH CENTER • PARTIDO EN VIVO`.
+- [x] Agregado marcador grande con minuto y equipos.
+- [x] Agregada línea de estadísticas del partido.
+- [x] Agregada sección `EVENTOS RECIENTES`.
+- [x] Agregados eventos recientes con límite según espacio disponible.
+- [x] Agregado mensaje de espera cuando todavía no existen eventos.
+- [x] Agregado footer indicando que el partido está en curso.
+
+### Corrección de controles Win32 superpuestos
+
+- [x] Identificado que los controles del dashboard son ventanas hijas `HWND`.
+- [x] Confirmado que los `HWND` podían quedar visualmente por encima del Match Center aunque GDI se dibujara después.
+- [x] Reemplazada la lista parcial de controles ocultos por recorrido completo de ventanas hijas.
+- [x] `hideSimulationProgressCoveredControls()` utiliza `EnumChildWindows`.
+- [x] Cada control hijo se oculta mediante `ShowWindow(hwnd, SW_HIDE)`.
+- [x] Agregada validación de `state.window` con `IsWindow`.
+- [x] `drawSimulationProgressOverlay()` llama directamente a `hideSimulationProgressCoveredControls(state)` mientras la simulación está activa.
+- [x] Eliminados visualmente Plantilla, Tácticas, Calendario, Liga, Fichajes, Finanzas, Cantera, Directiva, Noticias, Guardar, Menú principal y paneles del dashboard durante el partido.
+- [x] Confirmado visualmente que durante el partido solamente queda visible el Match Center.
+
+### Limpieza realizada durante la etapa
+
+- [x] Detectadas variables `clientWidth` y `clientHeight` sin uso dentro de la rama del Match Center.
+- [x] Eliminadas las variables no utilizadas.
+- [x] Durante la limpieza se eliminó accidentalmente otro par de variables necesario para el panel normal.
+- [x] El error fue detectado inmediatamente durante compilación.
+- [x] Restauradas exclusivamente las declaraciones necesarias del panel normal.
+- [x] Recompilado correctamente después de la reparación.
+- [x] Eliminadas definitivamente las advertencias `unused variable 'clientWidth'` y `unused variable 'clientHeight'`.
+- [x] Detectado un espacio final en `gui_layout.cpp` mediante `git diff --check`.
+- [x] Eliminado el `trailing whitespace`.
+- [x] Verificación posterior de whitespace correcta.
+
+### Archivos modificados
+
+- `include/career/career_runtime.h`
+- `include/simulation/match_engine.h`
+- `src/career/career_runtime.cpp`
+- `src/career/career_service_matches.cpp`
+- `src/gui/gui_actions.cpp`
+- `src/gui/gui_layout.cpp`
+- `src/simulation/match_engine.cpp`
+- `tests/project_tests.cpp`
+
+### Revisión individual de código
+
+- [x] `include/career/career_runtime.h`: revisado.
+- [x] `include/simulation/match_engine.h`: revisado.
+- [x] `src/career/career_runtime.cpp`: revisado.
+- [x] `src/career/career_service_matches.cpp`: revisado.
+- [x] `src/gui/gui_actions.cpp`: revisado.
+- [x] `src/gui/gui_layout.cpp`: revisado.
+- [x] `src/simulation/match_engine.cpp`: revisado.
+- [x] `tests/project_tests.cpp`: revisado.
+- [x] No se detectaron cambios accidentales ajenos al Match Center.
+
+### Pruebas automáticas
+
+- [x] Actualizado `testCareerRuntimeScopeRestoresContext()`.
+- [x] Agregado callback de prueba para `LiveMatchStateCallback`.
+- [x] Verificado que el callback scoped se activa dentro del contexto temporal.
+- [x] Verificado que el callback anterior se restaura al destruir el scope.
+- [x] Restaurado el contexto original al terminar la prueba.
+
+### Compilación y validación
+
+- [x] `cmake --build .\build-ci`: compilación completa correcta.
+- [x] `FootballManager`: compilado correctamente.
+- [x] `FootballManagerCLI`: compilado correctamente.
+- [x] `FootballManagerTests`: compilado correctamente.
+- [x] Validación final sin warnings de compilación.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: correcto.
+- [x] Resultado final automático: `1/1` test aprobado.
+- [x] `100% tests passed`.
+- [x] Primera prueba visual del Match Center aprobada.
+- [x] Segunda prueba visual final del Match Center aprobada.
+- [x] Confirmado que no existen controles del dashboard superpuestos.
+- [x] Confirmado marcador, minuto, estadísticas y eventos recientes durante la prueba visual.
+- [x] `git diff --check`: limpio después de corregir whitespace.
+- [x] `git diff --cached --check`: limpio.
+
+### Revisión Git
+
+- [x] Confirmada la rama `feature/live-match-center`.
+- [x] Revisados los ocho archivos mediante `git diff`.
+- [x] Verificado el contenido staged antes del commit.
+- [x] No se incluyeron archivos adicionales.
+- [x] Working tree limpio después del commit.
+
+### Commit de esta etapa
+
+- [x] Commit creado: `f8924fa feat: add live match center`.
+- [x] 8 archivos incluidos.
+- [x] 540 inserciones.
+- [x] 27 eliminaciones.
+- [x] `git status --short` vacío después del commit.
+
+### Estado actual de la etapa
+
+- [x] Live Match Center implementado.
+- [x] Pantalla exclusiva durante partidos controlables funcionando.
+- [x] Simulación visual en vivo funcionando.
+- [x] Estadísticas en vivo funcionando.
+- [x] Eventos recientes funcionando.
+- [x] Problema de controles `HWND` superpuestos resuelto.
+- [x] Código revisado.
+- [x] Compilación limpia.
+- [x] Suite automática aprobada.
+- [x] Prueba visual aprobada.
+- [x] Commit creado y repositorio limpio.
+
+### Mejoras futuras / fuera del alcance actual
+
+- [ ] Agregar controles tácticos interactivos dentro del Match Center gráfico.
+- [ ] Permitir cambios de mentalidad durante el partido desde la GUI.
+- [ ] Permitir cambios de instrucciones desde la GUI.
+- [ ] Permitir sustituciones desde la GUI.
+- [ ] Evaluar controles adicionales como pausa o velocidad del partido directamente desde el Match Center.
+- [ ] Publicar la rama `feature/live-match-center` si todavía no se ha realizado.
+- [ ] Integrar `feature/live-match-center` en `main` cuando corresponda.
+
+> Nota: cuando existe `liveMatchStateCallback`, la GUI actual recibe el estado del partido y devuelve una `ManagerDecision{}` vacía. Por ello, el Match Center gráfico de esta etapa está orientado a visualización en vivo; las decisiones tácticas interactivas quedan planificadas como mejora posterior.
