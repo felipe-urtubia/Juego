@@ -65,7 +65,7 @@ void CareerService::processIncomingOffers() {
     int choice = (offer >= maxOffer || (player.wantsToLeave && offer >= player.value)) ? 1 : 3;
     long long counter = 0;
     if (incomingOfferDecisionCallback()) {
-        IncomingOfferDecision decision = incomingOfferDecisionCallback()(career, player, offer, maxOffer);
+        IncomingOfferDecision decision = incomingOfferDecisionCallback()(career, player, *bidder, offer, maxOffer);
         if (decision.action >= 1 && decision.action <= 3) {
             choice = decision.action;
             counter = decision.counterOffer;

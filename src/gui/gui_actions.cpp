@@ -32,6 +32,14 @@ struct LiveMatchDecisionBridge {
     int playbackSpeed = 1;
 };
 
+struct IncomingOfferDecisionBridge {
+    std::mutex mutex;
+    std::condition_variable condition;
+    IncomingOfferDecision decision{};
+    bool decisionReady = false;
+    bool cancelled = false;
+};
+
 namespace {
 
 bool containsText(const std::string& text, const std::string& needle) {
@@ -217,6 +225,7 @@ struct SimulationThreadArgs {
     Career career;
     GameSettings settings;
     std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
+    std::shared_ptr<IncomingOfferDecisionBridge> incomingOfferDecisionBridge;
 };
 
 struct SimulationJobResult {
@@ -232,6 +241,231 @@ struct SimulationProgressPayload {
     std::vector<std::string> events;
 };
 
+struct IncomingOfferPayload {
+    std::string playerName;
+    std::string bidderName;
+    long long offer = 0;
+    long long maxOffer = 0;
+    long long bidderBudget = 0;
+    long long playerValue = 0;
+};
+
+enum {
+    kOfferAcceptButton = 7401,
+    kOfferNegotiateButton = 7402,
+    kOfferRejectButton = 7403,
+    kOfferCounterEdit = 7404
+};
+
+struct IncomingOfferDialogState {
+    const IncomingOfferPayload* offer = nullptr;
+    IncomingOfferDecision decision{};
+    HWND counterEdit = nullptr;
+    long long counterLimit = 0;
+};
+
+INT_PTR CALLBACK incomingOfferDialogProc(
+    HWND dialog, UINT message, WPARAM wParam, LPARAM lParam) {
+
+    auto* data = reinterpret_cast<IncomingOfferDialogState*>(
+        GetWindowLongPtrW(dialog, DWLP_USER));
+
+    if (message == WM_INITDIALOG) {
+        data = reinterpret_cast<IncomingOfferDialogState*>(lParam);
+        SetWindowLongPtrW(dialog, DWLP_USER, reinterpret_cast<LONG_PTR>(data));
+        SetWindowTextW(dialog, L"Oferta de transferencia");
+
+        RECT client{};
+        GetClientRect(dialog, &client);
+        const int width = client.right - client.left;
+        const int height = client.bottom - client.top;
+        HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+
+        auto addControl = [&](const wchar_t* className,
+                              const std::wstring& label,
+                              DWORD style,
+                              int x, int y, int w, int h,
+                              int id) -> HWND {
+            HWND child = CreateWindowExW(
+                0,
+                className,
+                label.c_str(),
+                WS_CHILD | WS_VISIBLE | style,
+                x, y, w, h,
+                dialog,
+                id ? reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)) : nullptr,
+                reinterpret_cast<HINSTANCE>(
+                    GetWindowLongPtrW(dialog, GWLP_HINSTANCE)),
+                nullptr);
+
+            if (child) {
+                SendMessageW(child, WM_SETFONT,
+                             reinterpret_cast<WPARAM>(font), TRUE);
+            }
+            return child;
+        };
+
+        const IncomingOfferPayload& offer = *data->offer;
+        data->counterLimit = std::min(offer.maxOffer, offer.bidderBudget);
+
+        addControl(L"STATIC",
+                   L"Has recibido una oferta por un jugador.",
+                   SS_LEFT, 18, 14, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Jugador: " + utf8ToWide(offer.playerName),
+                   SS_LEFT, 18, 43, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Club comprador: " + utf8ToWide(offer.bidderName),
+                   SS_LEFT, 18, 70, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Oferta recibida: $" + std::to_wstring(offer.offer),
+                   SS_LEFT, 18, 97, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Valor del jugador: $" + std::to_wstring(offer.playerValue),
+                   SS_LEFT, 18, 124, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Contraoferta máxima: $" +
+                       std::to_wstring(data->counterLimit),
+                   SS_LEFT, 18, 151, width - 36, 22, 0);
+
+        addControl(L"STATIC",
+                   L"Cantidad que deseas negociar:",
+                   SS_LEFT, 18, 184, width - 36, 22, 0);
+
+        data->counterEdit = addControl(
+            L"EDIT",
+            std::to_wstring(data->counterLimit),
+            WS_BORDER | ES_NUMBER | ES_AUTOHSCROLL | WS_TABSTOP,
+            18, 211, width - 36, 27,
+            kOfferCounterEdit);
+
+        const int gap = 9;
+        const int buttonWidth = (width - 36 - 2 * gap) / 3;
+        const int buttonY = height - 48;
+
+        addControl(L"BUTTON", L"Aceptar",
+                   BS_PUSHBUTTON | WS_TABSTOP,
+                   18, buttonY, buttonWidth, 30,
+                   kOfferAcceptButton);
+
+        HWND negotiateButton = addControl(
+            L"BUTTON", L"Negociar",
+            BS_PUSHBUTTON | WS_TABSTOP,
+            18 + buttonWidth + gap, buttonY, buttonWidth, 30,
+            kOfferNegotiateButton);
+
+        addControl(L"BUTTON", L"Rechazar",
+                   BS_PUSHBUTTON | WS_TABSTOP,
+                   18 + (buttonWidth + gap) * 2,
+                   buttonY, buttonWidth, 30,
+                   kOfferRejectButton);
+
+        if (data->counterLimit <= offer.offer) {
+            EnableWindow(data->counterEdit, FALSE);
+            EnableWindow(negotiateButton, FALSE);
+        }
+
+        return TRUE;
+    }
+
+    if (!data) return FALSE;
+
+    if (message == WM_COMMAND) {
+        const int id = LOWORD(wParam);
+
+        if (id == kOfferAcceptButton) {
+            data->decision.action = 1;
+            EndDialog(dialog, IDOK);
+            return TRUE;
+        }
+
+        if (id == kOfferRejectButton || id == IDCANCEL) {
+            data->decision.action = 3;
+            EndDialog(dialog, IDCANCEL);
+            return TRUE;
+        }
+
+        if (id == kOfferNegotiateButton) {
+            wchar_t buffer[64]{};
+            GetWindowTextW(data->counterEdit, buffer, 64);
+
+            long long amount = 0;
+            bool valid = false;
+
+            try {
+                std::wstring input(buffer);
+                size_t parsed = 0;
+                amount = std::stoll(input, &parsed, 10);
+                valid = !input.empty() &&
+                        parsed == input.size() &&
+                        amount > data->offer->offer &&
+                        amount <= data->counterLimit;
+            } catch (...) {
+                valid = false;
+            }
+
+            if (!valid) {
+                MessageBoxW(
+                    dialog,
+                    L"La contraoferta debe superar la oferta actual "
+                    L"y no exceder el máximo permitido.",
+                    L"Cantidad no válida",
+                    MB_OK | MB_ICONWARNING);
+                return TRUE;
+            }
+
+            data->decision.action = 2;
+            data->decision.counterOffer = amount;
+            EndDialog(dialog, IDOK);
+            return TRUE;
+        }
+    }
+
+    if (message == WM_CLOSE) {
+        data->decision.action = 3;
+        EndDialog(dialog, IDCANCEL);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+IncomingOfferDecision showIncomingOfferDialog(
+    AppState& state, const IncomingOfferPayload& offer) {
+
+    struct alignas(DWORD) DialogTemplate {
+        DLGTEMPLATE header{};
+        WORD menu = 0;
+        WORD windowClass = 0;
+        WORD title = 0;
+    };
+
+    DialogTemplate layout{};
+    layout.header.style =
+        WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_MODALFRAME | DS_CENTER;
+    layout.header.cdit = 0;
+    layout.header.cx = 315;
+    layout.header.cy = 205;
+
+    IncomingOfferDialogState data;
+    data.offer = &offer;
+    data.decision.action = 3;
+
+    DialogBoxIndirectParamW(
+        state.instance,
+        &layout.header,
+        state.window,
+        incomingOfferDialogProc,
+        reinterpret_cast<LPARAM>(&data));
+
+    return data.decision;
+}
+
 struct LiveMatchStatePayload {
     std::string homeTeam;
     std::string awayTeam;
@@ -243,13 +477,14 @@ struct SimulationWorkerProgressContext {
     HWND window = nullptr;
     GameSettings settings;
     int spinner = 0;
-    std::string currentPhase = "Partidos";
     std::vector<std::string> events;
     int lastPercent = 35;
+    std::string currentPhase = "Partidos";
     int liveMatchMinute = 0;
     std::string liveHomeTeam;
     std::string liveAwayTeam;
     std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
+    std::shared_ptr<IncomingOfferDecisionBridge> incomingOfferDecisionBridge;
 };
 
 thread_local SimulationWorkerProgressContext* g_workerProgressContext = nullptr;
@@ -830,6 +1065,75 @@ void postWorkerLiveMatchState(
     }
 }
 
+IncomingOfferDecision waitForWorkerIncomingOfferDecision(
+    const Career&,
+    const Player& player,
+    const Team& bidder,
+    long long offer,
+    long long maxOffer) {
+
+    IncomingOfferDecision rejected;
+    rejected.action = 3;
+
+    if (!g_workerProgressContext) {
+        return rejected;
+    }
+
+    SimulationWorkerProgressContext& progress = *g_workerProgressContext;
+    auto bridge = progress.incomingOfferDecisionBridge;
+    HWND window = progress.window;
+
+    if (!bridge || !window || !IsWindow(window)) {
+        return rejected;
+    }
+
+    std::unique_lock<std::mutex> lock(bridge->mutex);
+
+    if (bridge->cancelled) {
+        return rejected;
+    }
+
+    bridge->decision = rejected;
+    bridge->decisionReady = false;
+
+    auto* payload = new IncomingOfferPayload{
+        player.name,
+        bidder.name,
+        offer,
+        maxOffer,
+        bidder.budget,
+        player.value
+    };
+
+    if (!PostMessageW(
+            window,
+            kGuiIncomingOfferMessage,
+            0,
+            reinterpret_cast<LPARAM>(payload))) {
+        delete payload;
+        return rejected;
+    }
+
+    while (!bridge->decisionReady && !bridge->cancelled) {
+        bridge->condition.wait_for(
+            lock,
+            std::chrono::milliseconds(100));
+
+        if (!IsWindow(window)) {
+            bridge->cancelled = true;
+            break;
+        }
+    }
+
+    if (bridge->cancelled || !bridge->decisionReady) {
+        return rejected;
+    }
+
+    IncomingOfferDecision decision = bridge->decision;
+    bridge->decisionReady = false;
+    return decision;
+}
+
 match_engine::ManagerDecision waitForWorkerLiveMatchDecision(
     const match_engine::InteractiveMatchState& state) {
     if (!g_workerProgressContext) {
@@ -923,6 +1227,7 @@ DWORD WINAPI simulationThreadProc(LPVOID rawArgs) {
     progress.window = args->window;
     progress.settings = args->settings;
     progress.liveMatchDecisionBridge = args->liveMatchDecisionBridge;
+    progress.incomingOfferDecisionBridge = args->incomingOfferDecisionBridge;
     g_workerProgressContext = &progress;
     postSimulationProgress(args->window, "Partidos", "Simulando partidos de la semana...", 35);
 
@@ -938,6 +1243,7 @@ DWORD WINAPI simulationThreadProc(LPVOID rawArgs) {
     }
     runtime.uiMessage = postWorkerSimulationEvent;
     runtime.idle = pumpWorkerSimulationProgress;
+    runtime.incomingOfferDecision = waitForWorkerIncomingOfferDecision;
     ScopedCareerRuntimeContext scopedRuntime(runtime);
     ServiceResult result = simulateCareerWeekService(args->career, pumpWorkerSimulationProgress);
     postSimulationProgress(args->window,
@@ -1146,12 +1452,15 @@ void simulateWeek(AppState& state) {
     Career workerCareer = state.career;
     relinkCareerPointers(workerCareer, teamName);
     auto liveMatchDecisionBridge = std::make_shared<LiveMatchDecisionBridge>();
+    auto incomingOfferDecisionBridge = std::make_shared<IncomingOfferDecisionBridge>();
     state.liveMatchDecisionBridge = liveMatchDecisionBridge;
+    state.incomingOfferDecisionBridge = incomingOfferDecisionBridge;
     auto* args = new SimulationThreadArgs{
         state.window,
         std::move(workerCareer),
         state.settings,
-        liveMatchDecisionBridge};
+        liveMatchDecisionBridge,
+        incomingOfferDecisionBridge};
 
     state.actionInProgress = true;
     if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simulando...");
@@ -1162,6 +1471,7 @@ void simulateWeek(AppState& state) {
         delete args;
         state.actionInProgress = false;
         state.liveMatchDecisionBridge.reset();
+        state.incomingOfferDecisionBridge.reset();
         if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
         clearSimulationProgress(state);
         refreshAll(state);
@@ -1180,6 +1490,41 @@ void handleSimulationProgress(AppState& state, LPARAM payload) {
     std::unique_ptr<SimulationProgressPayload> progress(reinterpret_cast<SimulationProgressPayload*>(payload));
     if (!progress) return;
     setSimulationProgress(state, progress->phase, progress->detail, progress->percent, progress->events);
+}
+
+void handleIncomingOfferDecision(AppState& state, LPARAM rawPayload) {
+    std::unique_ptr<IncomingOfferPayload> payload(
+        reinterpret_cast<IncomingOfferPayload*>(rawPayload));
+
+    if (!payload) return;
+
+    auto bridge = state.incomingOfferDecisionBridge;
+    if (!bridge) return;
+
+    bool canShow = false;
+    {
+        std::lock_guard<std::mutex> lock(bridge->mutex);
+        canShow = state.actionInProgress &&
+                  !bridge->cancelled &&
+                  !bridge->decisionReady;
+    }
+
+    IncomingOfferDecision decision{};
+    decision.action = 3;
+
+    if (canShow && IsWindow(state.window)) {
+        decision = showIncomingOfferDialog(state, *payload);
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(bridge->mutex);
+        if (!bridge->cancelled) {
+            bridge->decision = decision;
+            bridge->decisionReady = true;
+        }
+    }
+
+    bridge->condition.notify_all();
 }
 
 void handleLiveMatchState(AppState& state, LPARAM payload) {
@@ -1598,6 +1943,29 @@ bool handleMatchCenterClick(AppState& state, POINT point) {
     return true;
 }
 
+void cancelSimulationDecisionBridges(AppState& state) {
+    auto liveBridge = state.liveMatchDecisionBridge;
+
+    if (liveBridge) {
+        {
+            std::lock_guard<std::mutex> lock(liveBridge->mutex);
+            liveBridge->cancelled = true;
+        }
+
+        liveBridge->condition.notify_all();
+    }
+
+    auto offerBridge = state.incomingOfferDecisionBridge;
+
+    if (offerBridge) {
+        {
+            std::lock_guard<std::mutex> lock(offerBridge->mutex);
+            offerBridge->cancelled = true;
+        }
+
+        offerBridge->condition.notify_all();
+    }
+}
 void completeSimulationWeek(AppState& state, LPARAM payload) {
     std::unique_ptr<SimulationJobResult> job(reinterpret_cast<SimulationJobResult*>(payload));
     if (!job) return;
@@ -1615,6 +1983,7 @@ void completeSimulationWeek(AppState& state, LPARAM payload) {
     if (state.simulateButton) setWindowTextUtf8(state.simulateButton, "Simular");
     state.matchCenter = MatchCenterUiState{};
     state.liveMatchDecisionBridge.reset();
+    state.incomingOfferDecisionBridge.reset();
     clearSimulationProgress(state);
     setStatus(state, job->result.messages.empty() ? "Semana simulada." : job->result.messages.back());
 }

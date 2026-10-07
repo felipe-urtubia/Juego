@@ -315,7 +315,7 @@ void collectRuntimeMessageB(const string& message) {
 
 void idleRuntimeProbe() {}
 
-IncomingOfferDecision acceptIncomingOffer(const Career&, const Player&, long long, long long) {
+IncomingOfferDecision acceptIncomingOffer(const Career&, const Player&, const Team&, long long, long long) {
     IncomingOfferDecision decision;
     decision.action = 1;
     return decision;

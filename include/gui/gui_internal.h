@@ -27,6 +27,7 @@
 namespace gui_win32 {
 
 struct LiveMatchDecisionBridge;
+struct IncomingOfferDecisionBridge;
 
 enum ControlId {
     IDC_DIVISION_COMBO = 1001,
@@ -337,6 +338,7 @@ struct AppState {
     std::vector<std::string> simulationProgressEvents;
     MatchCenterUiState matchCenter;
     std::shared_ptr<LiveMatchDecisionBridge> liveMatchDecisionBridge;
+    std::shared_ptr<IncomingOfferDecisionBridge> incomingOfferDecisionBridge;
     std::vector<std::string> saveSlotPaths;
     GuiPageModel currentModel;
     std::vector<InsightHotspot> insightHotspots;
@@ -452,6 +454,7 @@ static const UINT kGuiPageTransitionMessage = WM_APP + 17;
 static const UINT kGuiSimulationProgressMessage = WM_APP + 18;
 static const UINT kGuiSimulationCompleteMessage = WM_APP + 19;
 static const UINT kGuiLiveMatchStateMessage = WM_APP + 20;
+static const UINT kGuiIncomingOfferMessage = WM_APP + 21;
 
 RECT childRectOnParent(HWND child, HWND parent);
 RECT expandedRect(RECT rect, int dx, int dy);
@@ -545,7 +548,9 @@ void deleteCareerSave(AppState& state);
 void simulateWeek(AppState& state);
 void handleSimulationProgress(AppState& state, LPARAM payload);
 void handleLiveMatchState(AppState& state, LPARAM payload);
+void handleIncomingOfferDecision(AppState& state, LPARAM payload);
 bool handleMatchCenterClick(AppState& state, POINT point);
+void cancelSimulationDecisionBridges(AppState& state);
 void completeSimulationWeek(AppState& state, LPARAM payload);
 void validateSystem(AppState& state);
 void runScoutingAction(AppState& state);

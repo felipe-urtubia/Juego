@@ -1365,6 +1365,12 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 return 0;
             }
             break;
+        case kGuiIncomingOfferMessage:
+            if (state) {
+                handleIncomingOfferDecision(*state, lParam);
+                return 0;
+            }
+            break;
         case kGuiSimulationCompleteMessage:
             if (state) {
                 completeSimulationWeek(*state, lParam);
@@ -1414,6 +1420,7 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             break;
         case WM_DESTROY:
             if (state) {
+                cancelSimulationDecisionBridges(*state);
                 shutdownMenuMusic(*state);
                 if (state->teamLogoImageList) ImageList_Destroy(state->teamLogoImageList);
                 if (state->font) DeleteObject(state->font);

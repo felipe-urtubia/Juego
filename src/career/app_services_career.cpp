@@ -35,6 +35,7 @@ namespace {
 
 IncomingOfferDecision autoOfferDecision(const Career& career,
                                         const Player& player,
+                                        const Team&,
                                         long long offer,
                                         long long maxOffer) {
     IncomingOfferDecision decision;
@@ -277,7 +278,11 @@ ServiceResult saveCareerService(Career& career) {
 
 SeasonStepResult simulateSeasonStepService(Career& career, IdleCallback idleCallback) {
     SeasonFlowController controller(career);
-    return controller.simulateWeek(autoOfferDecision, autoRenewDecision, autoManagerJobDecision, idleCallback);
+    IncomingOfferDecisionCallback offerDecision = incomingOfferDecisionCallback();
+    if (!offerDecision) {
+        offerDecision = autoOfferDecision;
+    }
+    return controller.simulateWeek(offerDecision, autoRenewDecision, autoManagerJobDecision, idleCallback);
 }
 
 ServiceResult simulateCareerWeekService(Career& career, IdleCallback idleCallback) {

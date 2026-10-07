@@ -32,6 +32,7 @@ using LiveMatchDecisionCallback = match_engine::ManagerDecision (*)(
     const match_engine::InteractiveMatchState& state);
 using IncomingOfferDecisionCallback = IncomingOfferDecision (*)(const Career& career,
                                                                 const Player& player,
+                                                                const Team& bidder,
                                                                 long long offer,
                                                                 long long maxOffer);
 using ContractRenewalDecisionCallback = bool (*)(const Career& career,
