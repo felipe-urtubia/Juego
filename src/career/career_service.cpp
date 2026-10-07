@@ -1,11 +1,9 @@
 #include "career/career_service.h"
 
-#include "career/career_reports.h"
 #include "career/week_simulation.h"
 #include "transfers/transfer_market.h"
 
 #include <algorithm>
-#include <cstddef>
 #include <stdexcept>
 
 namespace {
@@ -87,34 +85,6 @@ std::vector<Team*> CareerService::buildJobMarket(bool includeRelegated) {
     return jobs;
 }
 
-void CareerService::generateDevelopmentReports() {
-    if (!career_.myTeam) return;
-
-    const CareerReport report = buildClubReport(career_);
-    for (const auto& block : report.blocks) {
-        if (block.title.find("Entrenamiento") == std::string::npos &&
-            block.title.find("Cantera") == std::string::npos &&
-            block.title.find("Desarrollo") == std::string::npos) {
-            continue;
-        }
-        for (std::size_t i = 0; i < block.lines.size() && i < 2; ++i) {
-            career_.addInboxItem(block.title + " | " + block.lines[i], "Desarrollo");
-        }
-    }
-}
-
-
-void CareerService::generateWeeklyNarrative() {
-    const CareerReport report = buildWeeklyDashboardReport(career_);
-    int added = 0;
-    for (const auto& block : report.blocks) {
-        for (const auto& line : block.lines) {
-            if (line.empty()) continue;
-            career_.addNews(block.title + ": " + line);
-            if (++added >= 3) return;
-        }
-    }
-}
 
 void CareerService::updateManagerReputation(int matchResult) {
     if (matchResult > 0) {
