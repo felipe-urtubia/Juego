@@ -3812,7 +3812,13 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
     SetBkMode(hdc, TRANSPARENT);
     SetTextColor(hdc, RGB(242, 247, 249));
     HGDIOBJ oldFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-    DrawTextW(hdc, L"Simulando semana", -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    const bool postMatchProcessing =
+        state.simulationProgressPercent >= 70 &&
+        state.simulationProgressPhase != "Partidos";
+    const wchar_t* simulationTitle = postMatchProcessing
+        ? L"Procesando actividades posteriores al partido"
+        : L"Simulando semana";
+    DrawTextW(hdc, simulationTitle, -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
     RECT phaseRect{panel.left + s(24), panel.top + s(48), panel.right - s(24), panel.top + s(74)};
     const std::string phase = state.simulationProgressPhase.empty() ? "Procesando" : state.simulationProgressPhase;
@@ -3822,8 +3828,11 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
 
     RECT detailRect{panel.left + s(24), panel.top + s(74), panel.right - s(24), panel.top + s(100)};
     SetTextColor(hdc, RGB(195, 213, 224));
+    const std::string defaultProgressDetail = postMatchProcessing
+        ? "Mercado de transferencias, finanzas, noticias y calendario."
+        : "Actualizando el mundo de la carrera.";
     const std::wstring detailText = utf8ToWide(state.simulationProgressDetail.empty()
-                                                  ? std::string("Actualizando el mundo de la carrera.")
+                                                  ? defaultProgressDetail
                                                   : state.simulationProgressDetail);
     DrawTextW(hdc, detailText.c_str(), -1, &detailRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
 
@@ -3838,7 +3847,7 @@ void drawSimulationProgressOverlay(AppState& state, HDC hdc, const RECT& client)
     const std::array<std::pair<const wchar_t*, int>, 4> steps = {{
         {L"Autosave", 10},
         {L"Partidos", 35},
-        {L"Tabla", 75},
+        {L"Postpartido", 75},
         {L"Final", 100}
     }};
     const int chipGap = s(8);

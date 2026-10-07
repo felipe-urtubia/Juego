@@ -243,6 +243,7 @@ struct SimulationWorkerProgressContext {
     HWND window = nullptr;
     GameSettings settings;
     int spinner = 0;
+    std::string currentPhase = "Partidos";
     std::vector<std::string> events;
     int lastPercent = 35;
     int liveMatchMinute = 0;
@@ -889,6 +890,7 @@ void postWorkerSimulationEvent(const std::string& message) {
     }
 
     const std::string phase = simulationPhaseForEvent(event);
+    progress.currentPhase = phase;
     progress.lastPercent = progressPercentForEventPhase(phase, progress.lastPercent);
     postSimulationProgress(progress.window, phase, event, progress.lastPercent, progress.events);
 }
@@ -901,9 +903,12 @@ void pumpWorkerSimulationProgress() {
     const int percent = std::max(progress.lastPercent, 35 + std::min(35, sweep));
     progress.lastPercent = percent;
     if ((progress.spinner % 8) == 0) {
+        const std::string detail = progress.currentPhase == "Partidos"
+            ? buildSimulationStatus(progress.settings, progress.spinner)
+            : "Procesando actividades posteriores al partido.";
         postSimulationProgress(progress.window,
-                               "Partidos",
-                               buildSimulationStatus(progress.settings, progress.spinner),
+                               progress.currentPhase,
+                               detail,
                                percent,
                                progress.events);
     }
