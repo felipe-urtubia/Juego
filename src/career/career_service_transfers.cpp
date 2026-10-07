@@ -10,6 +10,14 @@
 #include <vector>
 
 using namespace std;
+void CareerService::updatePendingTransfers() {
+    for (auto& transfer : career_.pendingTransfers) {
+        if (transfer.loanWeeks > 0) {
+            transfer.loanWeeks--;
+        }
+    }
+}
+
 void CareerService::processIncomingOffers() {
     Career& career = career_;
     if (!career.myTeam || career.myTeam->players.size() <= 18) return;

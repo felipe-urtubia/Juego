@@ -105,14 +105,6 @@ void CareerService::generateDevelopmentReports() {
 }
 
 
-void CareerService::updatePendingTransfers() {
-    for (auto& transfer : career_.pendingTransfers) {
-        if (transfer.loanWeeks > 0) {
-            transfer.loanWeeks--;
-        }
-    }
-}
-
 void CareerService::generateWeeklyNarrative() {
     const CareerReport report = buildWeeklyDashboardReport(career_);
     int added = 0;
