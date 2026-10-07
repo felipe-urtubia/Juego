@@ -45,7 +45,7 @@ Prioridades:
 
 - Dividir lógica de simulación demasiado concentrada.
 - Dividir módulos de GUI demasiado grandes.
-- Continuar extrayendo lógica de carrera hacia servicios especializados.
+- Mantener `CareerService` modularizado y realizar nuevas extracciones solo cuando un módulo vuelva a concentrar responsabilidades.
 - Reducir código transitorio o de compatibilidad cuando sea seguro.
 - Mantener separada la presentación de la lógica de negocio.
 - Aumentar el uso de APIs estructuradas entre módulos.

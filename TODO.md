@@ -8545,3 +8545,48 @@ Resultado del validador:
 - Menú contextual de jugadores.
 - Mayor modularización de `CareerService`.
 - Ampliación de cobertura automatizada del Match Center y runtime.
+
+---
+
+## Cierre de modularización de CareerService - 2026-10-07
+
+Rama de trabajo: `refactor/career-service-next`.
+
+### Estado
+- [x] Implementación completada y validada en la rama de trabajo.
+- [ ] Integración en `main` pendiente.
+
+### Modularización completada
+- [x] `updatePendingTransfers()` trasladado a `career_service_transfers.cpp`.
+- [x] `generateDevelopmentReports()` y `generateWeeklyNarrative()` trasladados a `career_service_communications.cpp`.
+- [x] `dispatchStaffBriefing()` y `addSquadAlerts()` trasladados a `career_service_communications.cpp`.
+- [x] Creado `career_service_management.cpp` para estado social, estrés, reputación y directiva.
+- [x] Eliminadas las APIs miembro sin uso `CareerService::buildJobMarket()`, `findTeamByNameSafe()` y `validateCareerState()`.
+- [x] Eliminado `src/career/career_service.cpp` después de distribuir todas sus responsabilidades.
+- [x] Todos los módulos especializados registrados correctamente en CMake.
+- [x] Todas las declaraciones de `career_service.h` tienen una única implementación.
+
+### Mejoras funcionales incluidas en la rama
+- [x] Progreso de simulación posterior al partido diferenciado del procesamiento de partidos.
+- [x] Ofertas de transferencias entrantes interactivas en GUI.
+- [x] Acciones de aceptar, rechazar y negociar ofertas.
+- [x] Validación de contraofertas y espera segura de la decisión del usuario.
+
+### Validación final
+- [x] `cmake --build .\build-ci`: correcto para GUI, CLI y tests.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: 100% de pruebas superadas.
+- [x] `FootballManagerCLI.exe --validate`: sin fallas.
+- [x] Auditoría de plantillas: 90 equipos, 2200 jugadores, 0 errores y 0 advertencias.
+- [x] `git diff --check`: sin errores.
+- [x] Auditoría estructural: sin declaraciones sin definición y sin definiciones duplicadas.
+
+### Commits principales
+- `3b0a5f9` Improve post-match simulation progress.
+- `6e48aa6` Add interactive incoming transfer offers.
+- `bc294f1` Move pending transfer updates into transfer service.
+- `8a588de` Move squad communications into communications service.
+- `76c9fc1` Move career reports into communications service.
+- `d8a1486` Extract career management service module.
+- `506de02` Remove obsolete career service base implementation.
+
+> Esta etapa es posterior a `v0.1.2.0-alpha`; mientras no se integre y publique una nueva versión, estos cambios no forman parte del ZIP público de esa release.

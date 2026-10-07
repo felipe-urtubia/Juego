@@ -456,6 +456,21 @@ La migración hacia `CareerService` y servicios relacionados incluye lógica de:
 
 El objetivo es que GUI y CLI consuman APIs estructuradas mientras las reglas de negocio permanecen en servicios testeables.
 
+La implementación ya no depende de un archivo monolítico `src/career/career_service.cpp`.
+Los métodos de `CareerService` se distribuyen actualmente entre módulos especializados:
+
+- `career_service_background.cpp`.
+- `career_service_communications.cpp`.
+- `career_service_contracts.cpp`.
+- `career_service_cup.cpp`.
+- `career_service_finances.cpp`.
+- `career_service_management.cpp`.
+- `career_service_matches.cpp`.
+- `career_service_physical.cpp`.
+- `career_service_transfers.cpp`.
+
+La API pública permanece centralizada en `include/career/career_service.h`, mientras las implementaciones se organizan por responsabilidad.
+
 ---
 
 # Finanzas y salary cap
@@ -601,14 +616,14 @@ Entre los avances arquitectónicos se encuentran:
 - Sistemas específicos de finanzas.
 - Serialización separada.
 - Estado de carrera separado de la GUI.
-- Migración progresiva hacia CareerService.
+- `CareerService` distribuido en módulos especializados por dominio.
 - Servicios independientes para distintos flujos semanales.
 
 ---
 
 # Trabajo arquitectónico pendiente
 
-La migración todavía continúa.
+La modularización base de `CareerService` está cerrada, aunque la evolución arquitectónica del Modo Carrera continúa.
 
 Entre las prioridades futuras se encuentran:
 
