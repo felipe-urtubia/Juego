@@ -48,9 +48,6 @@ public:
     
     // ========== SQUAD MANAGEMENT SERVICES ==========
     
-    // Build job market (available team offers)
-    std::vector<Team*> buildJobMarket(bool includeRelegated = false);
-    
     // Update contract statuses and handle expirations
     void processContractUpdates();
     
@@ -99,12 +96,6 @@ public:
     void handleBoardStatus();
     
     // ========== UTILITY SERVICES ==========
-    
-    // Safely get team by name with bounds checking
-    Team* findTeamByNameSafe(const std::string& name);
-    
-    // Validate career state integrity
-    bool validateCareerState();
     
     // Get underlying event dispatcher
     std::shared_ptr<Events::EventDispatcher> getEventDispatcher() const {
