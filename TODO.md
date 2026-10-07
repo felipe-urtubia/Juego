@@ -8554,7 +8554,7 @@ Rama de trabajo: `refactor/career-service-next`.
 
 ### Estado
 - [x] Implementación completada y validada en la rama de trabajo.
-- [ ] Integración en `main` pendiente.
+- [x] Integración en `main` completada mediante fast-forward.
 
 ### Modularización completada
 - [x] `updatePendingTransfers()` trasladado a `career_service_transfers.cpp`.
