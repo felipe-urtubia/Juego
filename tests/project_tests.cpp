@@ -1907,6 +1907,78 @@ void testSeasonTransitionPromotesByStandingsNotSquadValue() {
            "Un club mas caro no debe ascender si su rendimiento fue inferior.");
 }
 
+void testPrimeraBPromotionAppearsInPrimeraNextSeason() {
+    Career career;
+    career.currentSeason = 5;
+    career.currentWeek = 34;
+    career.managerName = "Promotion Sync Manager";
+
+    career.allTeams.push_back(makeTeam("Primera Lider Sync", "primera division", 74, 3, 3, "Balanced", "Equilibrado", 900000));
+    career.allTeams.push_back(makeTeam("Primera Medio Sync", "primera division", 71, 3, 3, "Balanced", "Equilibrado", 800000));
+    career.allTeams.push_back(makeTeam("Primera Riesgo Sync", "primera division", 67, 2, 2, "Defensive", "Bloque bajo", 520000));
+    career.allTeams.push_back(makeTeam("Primera Descenso Sync", "primera division", 65, 2, 2, "Defensive", "Pausar juego", 480000));
+
+    career.allTeams.push_back(makeTeam("Primera B Campeon Sync", "primera b", 70, 3, 3, "Balanced", "Equilibrado", 430000));
+    career.allTeams.push_back(makeTeam("Primera B Liguilla Sync", "primera b", 68, 3, 3, "Balanced", "Equilibrado", 400000));
+    career.allTeams.push_back(makeTeam("Primera B Medio Sync", "primera b", 64, 2, 2, "Balanced", "Equilibrado", 350000));
+    career.allTeams.push_back(makeTeam("Primera B Fondo Sync", "primera b", 61, 2, 2, "Defensive", "Bloque bajo", 300000));
+
+    auto setStanding = [](Team* team, int points, int wins, int draws, int goalsFor, int goalsAgainst) {
+        expect(team != nullptr, "La prueba de sincronizacion de ascenso necesita equipos existentes.");
+        if (!team) return;
+        team->points = points;
+        team->wins = wins;
+        team->draws = draws;
+        team->losses = max(0, 30 - wins - draws);
+        team->goalsFor = goalsFor;
+        team->goalsAgainst = goalsAgainst;
+    };
+
+    setStanding(career.findTeamByName("Primera Lider Sync"), 70, 22, 4, 56, 22);
+    setStanding(career.findTeamByName("Primera Medio Sync"), 54, 16, 6, 43, 30);
+    setStanding(career.findTeamByName("Primera Riesgo Sync"), 29, 7, 8, 27, 45);
+    setStanding(career.findTeamByName("Primera Descenso Sync"), 20, 5, 5, 20, 51);
+
+    setStanding(career.findTeamByName("Primera B Campeon Sync"), 68, 21, 5, 53, 23);
+    setStanding(career.findTeamByName("Primera B Liguilla Sync"), 57, 17, 6, 44, 30);
+    setStanding(career.findTeamByName("Primera B Medio Sync"), 39, 10, 9, 32, 37);
+    setStanding(career.findTeamByName("Primera B Fondo Sync"), 19, 4, 7, 19, 49);
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Primera Lider Sync");
+    expect(career.myTeam != nullptr, "El club usuario de la prueba debe existir.");
+    career.leagueTable.sortTable();
+
+    SeasonTransitionSummary summary = endSeason(career);
+    expect(!summary.lines.empty(), "El cierre de temporada debe producir un resumen.");
+
+    Team* promoted = career.findTeamByName("Primera B Campeon Sync");
+    Team* relegated = career.findTeamByName("Primera Descenso Sync");
+
+    expect(promoted != nullptr && promoted->division == "primera division",
+           "El campeon de Primera B debe quedar asignado a Primera Division.");
+    expect(relegated != nullptr && relegated->division == "primera b",
+           "El equipo descendido de Primera debe quedar asignado a Primera B.");
+
+    auto containsTeam = [](const vector<Team*>& teams, const string& name) {
+        return any_of(teams.begin(), teams.end(), [&](const Team* team) {
+            return team && team->name == name;
+        });
+    };
+
+    const vector<Team*> primeraTeams = career.getDivisionTeams("primera division");
+    expect(containsTeam(primeraTeams, "Primera B Campeon Sync"),
+           "El ascendido de Primera B debe aparecer entre los equipos de Primera Division.");
+    expect(!containsTeam(primeraTeams, "Primera Descenso Sync"),
+           "El descendido no debe seguir apareciendo entre los equipos de Primera Division.");
+
+    expect(career.activeDivision == "primera division",
+           "La carrera debe seguir mostrando Primera Division si el club usuario permanece en ella.");
+    expect(containsTeam(career.leagueTable.teams, "Primera B Campeon Sync"),
+           "La tabla activa usada por la interfaz debe incluir al equipo ascendido.");
+    expect(!containsTeam(career.leagueTable.teams, "Primera Descenso Sync"),
+           "La tabla activa usada por la interfaz no debe incluir al equipo descendido.");
+}
 void testSeasonServiceReturnsStructuredWeekResult() {
     Career career;
     career.currentSeason = 3;
@@ -5687,6 +5759,7 @@ int main() {
         {"transfer_negotiation", testTransferNegotiationBuildsStructuredDeal},
         {"season_transition", testSeasonTransitionAdvancesCareerWithoutUiDependencies},
         {"season_transition_standings", testSeasonTransitionPromotesByStandingsNotSquadValue},
+        {"primera_b_promotion_sync", testPrimeraBPromotionAppearsInPrimeraNextSeason},
         {"season_service", testSeasonServiceReturnsStructuredWeekResult},
         {"opponent_report", testOpponentReportExplainsNextFixture},
         {"match_analysis_store", testMatchAnalysisStoreProducesStructuredCareerData},
