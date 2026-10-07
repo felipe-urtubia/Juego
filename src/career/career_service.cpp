@@ -1,7 +1,6 @@
 #include "career/career_service.h"
 
 #include "career/career_reports.h"
-#include "career/staff_service.h"
 #include "career/week_simulation.h"
 #include "transfers/transfer_market.h"
 
@@ -114,41 +113,6 @@ void CareerService::generateWeeklyNarrative() {
             career_.addNews(block.title + ": " + line);
             if (++added >= 3) return;
         }
-    }
-}
-
-void CareerService::dispatchStaffBriefing() {
-    for (const auto& line : staff_service::buildWeeklyStaffBriefingLines(career_, 4)) {
-        career_.addInboxItem(line, "Staff");
-    }
-}
-
-void CareerService::addSquadAlerts() {
-    if (!career_.myTeam) return;
-
-    int injuredPlayers = 0;
-    int lowFitnessPlayers = 0;
-    int expiringContracts = 0;
-    for (const auto& player : career_.myTeam->players) {
-        if (player.injured || player.injuryWeeks > 0) injuredPlayers++;
-        if (player.fitness < 55) lowFitnessPlayers++;
-        if (player.contractWeeks > 0 && player.contractWeeks <= 8) expiringContracts++;
-    }
-
-    if (injuredPlayers > 0) {
-        career_.addInboxItem("Plantel | " + std::to_string(injuredPlayers) +
-                                 " jugador(es) lesionado(s) requieren seguimiento.",
-                             "Medical");
-    }
-    if (lowFitnessPlayers >= 3) {
-        career_.addInboxItem("Plantel | " + std::to_string(lowFitnessPlayers) +
-                                 " jugador(es) llegan con condicion baja.",
-                             "Staff");
-    }
-    if (expiringContracts > 0) {
-        career_.addInboxItem("Contratos | " + std::to_string(expiringContracts) +
-                                 " renovacion(es) entran en zona urgente.",
-                             "Directiva");
     }
 }
 
