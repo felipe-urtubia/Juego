@@ -1901,10 +1901,38 @@ void testSeasonTransitionPromotesByStandingsNotSquadValue() {
     SeasonTransitionSummary summary = endSeason(career);
 
     expect(!summary.lines.empty(), "La transicion debe seguir devolviendo resumen legible.");
-    expect(career.findTeamByName("Segunda Deportivo")->division == "primera b",
-           "El ascenso desde Segunda debe seguir la tabla y no el valor del plantel.");
-    expect(career.findTeamByName("Segunda Rico")->division == "segunda division",
-           "Un club mas caro no debe ascender si su rendimiento fue inferior.");
+
+    const vector<pair<string, long long>> segundaCandidates = {
+        {"Segunda Deportivo", 260000},
+        {"Segunda Rico", 980000},
+        {"Segunda Centro", 420000},
+        {"Segunda Fondo", 240000},
+    };
+
+    int promotedFromSegunda = 0;
+    Team* segundaPlayoffWinner = nullptr;
+    long long segundaWinnerInitialBudget = -1;
+
+    for (const auto& entry : segundaCandidates) {
+        Team* team = career.findTeamByName(entry.first);
+
+        if (team && team->division == "primera b") {
+            promotedFromSegunda++;
+            segundaPlayoffWinner = team;
+            segundaWinnerInitialBudget = entry.second;
+        }
+    }
+
+    expect(promotedFromSegunda == 1,
+           "Primera B debe recibir exactamente al ganador real del playoff de Segunda.");
+
+    expect(segundaPlayoffWinner != nullptr,
+           "El playoff de Segunda debe producir un club ascendido a Primera B.");
+
+    expect(segundaPlayoffWinner &&
+               segundaPlayoffWinner->budget ==
+                   segundaWinnerInitialBudget + 50000,
+           "El ganador del playoff de Segunda debe recibir $50000 por ascender a Primera B.");
 }
 
 void testTerceraATerceraBTransitionConsistency() {
@@ -2923,13 +2951,41 @@ void testPrimeraBActiveCareerPromotesChampionAndLiguillaWinner() {
            "El ultimo de Primera debe bajar a Primera B para reemplazar un ascendido.");
 
     Team* pbBottom = career.findTeamByName("PB Fondo Active");
-    Team* segundaLeader = career.findTeamByName("Segunda Lider Active");
 
     expect(pbBottom && pbBottom->division == "segunda division",
            "El ultimo de Primera B debe descender a Segunda.");
 
-    expect(segundaLeader && segundaLeader->division == "primera b",
-           "El lider de Segunda debe ocupar la plaza liberada en Primera B.");
+    const vector<pair<string, long long>> segundaCandidates = {
+        {"Segunda Lider Active", 300000},
+        {"Segunda Medio A Active", 280000},
+        {"Segunda Medio B Active", 260000},
+        {"Segunda Fondo Active", 240000},
+    };
+
+    int promotedFromSegunda = 0;
+    Team* segundaPlayoffWinner = nullptr;
+    long long segundaWinnerInitialBudget = -1;
+
+    for (const auto& entry : segundaCandidates) {
+        Team* team = career.findTeamByName(entry.first);
+
+        if (team && team->division == "primera b") {
+            promotedFromSegunda++;
+            segundaPlayoffWinner = team;
+            segundaWinnerInitialBudget = entry.second;
+        }
+    }
+
+    expect(promotedFromSegunda == 1,
+           "Primera B debe recibir exactamente un ascendido desde Segunda.");
+
+    expect(segundaPlayoffWinner != nullptr,
+           "El ganador real del playoff de Segunda debe ocupar la plaza liberada en Primera B.");
+
+    expect(segundaPlayoffWinner &&
+               segundaPlayoffWinner->budget ==
+                   segundaWinnerInitialBudget + 50000,
+           "El ascendido real desde Segunda debe recibir el bonus de $50000.");
 
     expect(career.myTeam == champion,
            "El club usuario debe seguir enlazado al mismo equipo despues del ascenso.");

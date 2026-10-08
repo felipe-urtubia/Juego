@@ -837,6 +837,20 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
     SeasonTransitionSummary summary;
     addLine(summary, "Fin de temporada (Segunda Division)");
 
+    int idx = divisionIndex(career.activeDivision);
+    string higher = (idx > 0) ? kDivisions[static_cast<size_t>(idx - 1)].id : "";
+    string lower = (idx >= 0 && idx + 1 < static_cast<int>(kDivisions.size()))
+                       ? kDivisions[static_cast<size_t>(idx + 1)].id
+                       : "";
+
+    const bool higherIsPrimeraB = higher == "primera b";
+    PrimeraBSeasonOutcome higherPrimeraBOutcome;
+
+    if (higherIsPrimeraB) {
+        vector<Team*> higherTable = rankedDivisionTeams(career, higher);
+        higherPrimeraBOutcome = resolvePrimeraBSeason(higherTable, summary);
+    }
+
     if (career.groupNorthIdx.empty() || career.groupSouthIdx.empty()) {
         career.buildSegundaGroups();
     }
@@ -863,17 +877,22 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
 
     vector<Team*> relegate =
         segundaOutcome.relegated;
-    int idx = divisionIndex(career.activeDivision);
-    string higher = (idx > 0) ? kDivisions[static_cast<size_t>(idx - 1)].id : "";
-    string lower = (idx >= 0 && idx + 1 < static_cast<int>(kDivisions.size()))
-                       ? kDivisions[static_cast<size_t>(idx + 1)].id
-                       : "";
 
     vector<Team*> promote;
     if (!higher.empty() && champion) promote.push_back(champion);
 
-    vector<Team*> fromHigher =
-        higher.empty() ? vector<Team*>() : bottomByStandings(career, higher, static_cast<int>(promote.size()));
+    vector<Team*> fromHigher;
+
+    if (!higher.empty()) {
+        if (higherIsPrimeraB) {
+            if (higherPrimeraBOutcome.relegated && !promote.empty()) {
+                fromHigher.push_back(higherPrimeraBOutcome.relegated);
+            }
+        } else {
+            fromHigher =
+                bottomByStandings(career, higher, static_cast<int>(promote.size()));
+        }
+    }
 
     vector<Team*> fromLower;
     if (!lower.empty()) {
@@ -908,6 +927,11 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
     }
     for (Team* team : fromHigher) {
         team->division = career.activeDivision;
+
+        if (higherIsPrimeraB) {
+            team->budget = max(0LL, team->budget - 20000);
+        }
+
         team->morale = 45;
     }
     for (Team* team : fromLower) {
@@ -950,6 +974,13 @@ SeasonTransitionSummary endSeasonPrimeraB(Career& career) {
                        ? kDivisions[static_cast<size_t>(idx + 1)].id
                        : "";
 
+    const bool lowerIsSegunda = lower == "segunda division";
+    SegundaSeasonOutcome lowerSegundaOutcome;
+
+    if (lowerIsSegunda) {
+        lowerSegundaOutcome = inferSegundaSeasonFromStandings(career);
+    }
+
     vector<Team*> promote;
     if (!higher.empty() && champion) promote.push_back(champion);
     if (!higher.empty() && liguillaWinner &&
@@ -962,8 +993,18 @@ SeasonTransitionSummary endSeasonPrimeraB(Career& career) {
 
     vector<Team*> fromHigher =
         higher.empty() ? vector<Team*>() : bottomByStandings(career, higher, static_cast<int>(promote.size()));
-    vector<Team*> fromLower =
-        lower.empty() ? vector<Team*>() : topByStandings(career, lower, static_cast<int>(relegate.size()));
+    vector<Team*> fromLower;
+
+    if (!lower.empty()) {
+        if (lowerIsSegunda) {
+            if (lowerSegundaOutcome.champion && !relegate.empty()) {
+                fromLower.push_back(lowerSegundaOutcome.champion);
+            }
+        } else {
+            fromLower =
+                topByStandings(career, lower, static_cast<int>(relegate.size()));
+        }
+    }
 
     for (Team* team : promote) {
         if (!higher.empty()) {
@@ -985,6 +1026,11 @@ SeasonTransitionSummary endSeasonPrimeraB(Career& career) {
     }
     for (Team* team : fromLower) {
         team->division = career.activeDivision;
+
+        if (lowerIsSegunda) {
+            team->budget += 50000;
+        }
+
         team->morale = 55;
     }
 
@@ -1026,6 +1072,24 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
     SegundaSeasonOutcome higherSegundaOutcome;
 
     if (higherIsSegunda) {
+        int segundaIdx = divisionIndex(higher);
+
+        if (segundaIdx > 0) {
+            const string& primeraBDivision =
+                kDivisions[static_cast<size_t>(segundaIdx - 1)].id;
+
+            if (getCompetitionConfig(primeraBDivision).seasonHandler ==
+                CompetitionSeasonHandler::PrimeraB) {
+                vector<Team*> primeraBTable =
+                    rankedDivisionTeams(career, primeraBDivision);
+
+                SeasonTransitionSummary ignoredPrimeraBSummary;
+                resolvePrimeraBSeason(
+                    primeraBTable,
+                    ignoredPrimeraBSummary);
+            }
+        }
+
         higherSegundaOutcome =
             inferSegundaSeasonFromStandings(career);
     }
@@ -1311,10 +1375,19 @@ SeasonTransitionSummary endSeason(Career& career) {
 
         if (!segundaDivision.empty() && pbOutcome.relegated) {
             primeraBRelegatedToSegunda.push_back(pbOutcome.relegated);
-            segundaPromotedToPrimeraB =
-                topByStandings(career,
-                               segundaDivision,
-                               static_cast<int>(primeraBRelegatedToSegunda.size()));
+
+            SegundaSeasonOutcome segundaOutcome =
+                inferSegundaSeasonFromStandings(career);
+
+            if (segundaOutcome.champion) {
+                segundaPromotedToPrimeraB.push_back(segundaOutcome.champion);
+            }
+
+            if (segundaPromotedToPrimeraB.size() >
+                primeraBRelegatedToSegunda.size()) {
+                segundaPromotedToPrimeraB.resize(
+                    primeraBRelegatedToSegunda.size());
+            }
         }
     } else {
         fromLower =
@@ -1358,6 +1431,7 @@ SeasonTransitionSummary endSeason(Career& career) {
     for (Team* team : segundaPromotedToPrimeraB) {
         if (!lower.empty()) {
             team->division = lower;
+            team->budget += 50000;
             team->morale = 55;
         }
     }
