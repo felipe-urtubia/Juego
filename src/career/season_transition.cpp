@@ -1042,7 +1042,16 @@ SeasonTransitionSummary endSeason(Career& career) {
     SeasonTransitionSummary summary;
     addLine(summary, "Fin de temporada");
 
-    Team* champion = career.leagueTable.teams.empty() ? nullptr : career.leagueTable.teams.front();
+    vector<Team*> table = career.leagueTable.teams;
+    Team* champion = table.empty() ? nullptr : table.front();
+
+    if (config.seasonHandler == CompetitionSeasonHandler::PrimeraDivision &&
+        table.size() >= 2 &&
+        table[0]->points == table[1]->points) {
+        champion =
+            simulateSingleLegKnockout(table[0], table[1], "Final por el titulo", summary, true);
+    }
+
     if (champion) {
         summary.champion = champion->name;
         addLine(summary, "Campeon: " + champion->name);
@@ -1054,7 +1063,6 @@ SeasonTransitionSummary endSeason(Career& career) {
                        ? kDivisions[static_cast<size_t>(idx + 1)].id
                        : "";
 
-    vector<Team*> table = career.leagueTable.teams;
     int n = static_cast<int>(table.size());
     vector<Team*> promote;
     vector<Team*> relegate;
@@ -1129,6 +1137,11 @@ SeasonTransitionSummary endSeason(Career& career) {
     }
     for (Team* team : fromLower) {
         team->division = career.activeDivision;
+        if (!lower.empty() &&
+            config.seasonHandler == CompetitionSeasonHandler::PrimeraDivision &&
+            getCompetitionConfig(lower).seasonHandler == CompetitionSeasonHandler::PrimeraB) {
+            team->budget += 50000;
+        }
         team->morale = 55;
     }
 

@@ -2038,7 +2038,7 @@ void testPrimeraAndPrimeraBFullPromotionRelegationSync() {
     };
 
     setStanding(career.findTeamByName("Primera Lider Full"), 70, 22, 4, 56, 21);
-    setStanding(career.findTeamByName("Primera Medio Full"), 55, 16, 7, 43, 31);
+    setStanding(career.findTeamByName("Primera Medio Full"), 70, 21, 7, 43, 31);
     setStanding(career.findTeamByName("Primera Riesgo Full"), 27, 7, 6, 25, 46);
     setStanding(career.findTeamByName("Primera Fondo Full"), 18, 4, 6, 19, 53);
 
@@ -2067,6 +2067,20 @@ void testPrimeraAndPrimeraBFullPromotionRelegationSync() {
     expect(!summary.lines.empty(),
            "El cierre completo debe producir un resumen de temporada.");
 
+    bool sawPrimeraTitleFinal = false;
+    for (const string& line : summary.lines) {
+        if (line.find("Final por el titulo") != string::npos) {
+            sawPrimeraTitleFinal = true;
+            break;
+        }
+    }
+
+    expect(sawPrimeraTitleFinal,
+           "Primera Division debe disputar una final por el titulo si los dos primeros empatan en puntos.");
+    expect(summary.champion == "Primera Lider Full" ||
+               summary.champion == "Primera Medio Full",
+           "El campeon de Primera debe ser uno de los dos clubes que disputaron la final.");
+
     Team* primeraRiesgo = career.findTeamByName("Primera Riesgo Full");
     Team* primeraFondo = career.findTeamByName("Primera Fondo Full");
     expect(primeraRiesgo && primeraRiesgo->division == "primera b",
@@ -2079,10 +2093,15 @@ void testPrimeraAndPrimeraBFullPromotionRelegationSync() {
            "El campeon de Primera B debe ascender a Primera Division.");
 
     int promotedFromPrimeraB = 0;
-    for (const string& name : primeraBNames) {
-        Team* team = career.findTeamByName(name);
+    for (size_t i = 0; i < primeraBNames.size(); ++i) {
+        Team* team = career.findTeamByName(primeraBNames[i]);
         if (team && team->division == "primera division") {
             promotedFromPrimeraB++;
+
+            const long long initialBudget =
+                430000 - static_cast<long long>(i) * 10000;
+            expect(team->budget == initialBudget + 50000,
+                   "Todo ascendido desde Primera B debe recibir el bonus economico aunque la division activa sea Primera.");
         }
     }
     expect(promotedFromPrimeraB == 2,
