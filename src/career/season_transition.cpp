@@ -472,6 +472,22 @@ Team* simulateTerceraAPlayoff(const vector<Team*>& table, SeasonTransitionSummar
     return winner;
 }
 
+vector<Team*> resolveTerceraAPromotions(const vector<Team*>& table,
+                                        SeasonTransitionSummary& summary) {
+    vector<Team*> promoted;
+    if (table.empty()) return promoted;
+
+    Team* champion = table.front();
+    if (champion) promoted.push_back(champion);
+
+    Team* playoffWinner = simulateTerceraAPlayoff(table, summary);
+    if (playoffWinner &&
+        find(promoted.begin(), promoted.end(), playoffWinner) == promoted.end()) {
+        promoted.push_back(playoffWinner);
+    }
+
+    return promoted;
+}
 Team* simulateSegundaPlayoff(const vector<Team*>& seeds, SeasonTransitionSummary& summary) {
     if (seeds.empty()) return nullptr;
     if (seeds.size() == 1) return seeds.front();
@@ -739,8 +755,23 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
 
     vector<Team*> fromHigher =
         higher.empty() ? vector<Team*>() : bottomByStandings(career, higher, static_cast<int>(promote.size()));
-    vector<Team*> fromLower =
-        lower.empty() ? vector<Team*>() : topByStandings(career, lower, static_cast<int>(relegate.size()));
+
+    vector<Team*> fromLower;
+    if (!lower.empty()) {
+        const CompetitionConfig& lowerConfig = getCompetitionConfig(lower);
+
+        if (lowerConfig.seasonHandler == CompetitionSeasonHandler::TerceraA) {
+            vector<Team*> lowerTable = rankedDivisionTeams(career, lower);
+            fromLower = resolveTerceraAPromotions(lowerTable, summary);
+
+            if (fromLower.size() > relegate.size()) {
+                fromLower.resize(relegate.size());
+            }
+        } else {
+            fromLower =
+                topByStandings(career, lower, static_cast<int>(relegate.size()));
+        }
+    }
 
     for (Team* team : promote) {
         if (!higher.empty()) {
@@ -762,6 +793,12 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
     }
     for (Team* team : fromLower) {
         team->division = career.activeDivision;
+
+        if (!lower.empty() &&
+            getCompetitionConfig(lower).seasonHandler == CompetitionSeasonHandler::TerceraA) {
+            team->budget += 40000;
+        }
+
         team->morale = 55;
     }
 
@@ -852,7 +889,7 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
         addLine(summary, "Ascenso directo a Segunda: " + champion->name);
     }
 
-    Team* playoffWinner = simulateTerceraAPlayoff(table, summary);
+    vector<Team*> promotionOutcome = resolveTerceraAPromotions(table, summary);
 
     vector<Team*> promotionTeamsA;
     vector<Team*> directRelegated;
@@ -894,10 +931,8 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
                        : "";
 
     vector<Team*> promote;
-    if (!higher.empty() && champion) promote.push_back(champion);
-    if (!higher.empty() && playoffWinner &&
-        find(promote.begin(), promote.end(), playoffWinner) == promote.end()) {
-        promote.push_back(playoffWinner);
+    if (!higher.empty()) {
+        promote = promotionOutcome;
     }
 
     vector<Team*> fromHigher =

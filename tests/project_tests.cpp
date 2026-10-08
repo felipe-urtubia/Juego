@@ -1907,6 +1907,214 @@ void testSeasonTransitionPromotesByStandingsNotSquadValue() {
            "Un club mas caro no debe ascender si su rendimiento fue inferior.");
 }
 
+void testSegundaUsesTerceraAChampionAndPlayoffWinner() {
+    Career career;
+    career.currentSeason = 9;
+    career.currentWeek = 30;
+    career.managerName = "Segunda Tercera A Sync Manager";
+
+    for (int i = 0; i < 4; ++i) {
+        career.allTeams.push_back(
+            makeTeam("Primera B Segunda Sync " + to_string(i + 1),
+                     "primera b",
+                     66 - i,
+                     3,
+                     3,
+                     "Balanced",
+                     "Equilibrado",
+                     500000 - i * 20000));
+    }
+
+    for (int i = 0; i < 14; ++i) {
+        career.allTeams.push_back(
+            makeTeam("Segunda Tercera Sync " + to_string(i + 1),
+                     "segunda division",
+                     64 - (i % 7),
+                     3,
+                     3,
+                     "Balanced",
+                     "Equilibrado",
+                     360000 - i * 5000));
+    }
+
+    const vector<pair<string, long long>> terceraATeams = {
+        {"Tercera A Campeon Sync", 300000},
+        {"Tercera A Segundo Sync", 295000},
+        {"Tercera A Tercero Sync", 290000},
+        {"Tercera A Cuarto Sync", 285000},
+        {"Tercera A Quinto Sync", 280000},
+        {"Tercera A Sexto Sync", 275000},
+        {"Tercera A Septimo Sync", 270000},
+        {"Tercera A Octavo Sync", 265000},
+        {"Tercera A Noveno Sync", 260000},
+        {"Tercera A Decimo Sync", 255000},
+        {"Tercera A Once Sync", 250000},
+        {"Tercera A Doce Sync", 245000},
+        {"Tercera A Trece Sync", 240000},
+        {"Tercera A Catorce Sync", 235000},
+        {"Tercera A Quince Sync", 230000},
+        {"Tercera A Dieciseis Sync", 225000},
+    };
+
+    for (size_t i = 0; i < terceraATeams.size(); ++i) {
+        int skill = 67;
+
+        if (i == 0) skill = 72;
+        if (i == 1) skill = 35;
+        if (i == 2) skill = 90;
+        if (i == 3) skill = 88;
+        if (i == 4) skill = 86;
+
+        career.allTeams.push_back(
+            makeTeam(terceraATeams[i].first,
+                     "tercera division a",
+                     skill,
+                     3,
+                     3,
+                     "Balanced",
+                     "Equilibrado",
+                     terceraATeams[i].second));
+    }
+
+    auto setStanding = [](Team* team,
+                          int points,
+                          int wins,
+                          int draws,
+                          int goalsFor,
+                          int goalsAgainst) {
+        expect(team != nullptr,
+               "La prueba Segunda/Tercera A necesita equipos existentes.");
+
+        if (!team) return;
+
+        team->points = points;
+        team->wins = wins;
+        team->draws = draws;
+        team->losses = max(0, 30 - wins - draws);
+        team->goalsFor = goalsFor;
+        team->goalsAgainst = goalsAgainst;
+    };
+
+    for (int i = 0; i < 4; ++i) {
+        setStanding(
+            career.findTeamByName("Primera B Segunda Sync " + to_string(i + 1)),
+            60 - i * 10,
+            18 - i * 2,
+            6,
+            45 - i * 3,
+            24 + i * 5);
+    }
+
+    for (int i = 0; i < 7; ++i) {
+        setStanding(
+            career.findTeamByName("Segunda Tercera Sync " + to_string(i + 1)),
+            70 - i * 6,
+            20 - i,
+            5,
+            48 - i * 2,
+            22 + i * 3);
+
+        setStanding(
+            career.findTeamByName("Segunda Tercera Sync " + to_string(i + 8)),
+            68 - i * 6,
+            19 - i,
+            5,
+            46 - i * 2,
+            23 + i * 3);
+    }
+
+    for (size_t i = 0; i < terceraATeams.size(); ++i) {
+        setStanding(
+            career.findTeamByName(terceraATeams[i].first),
+            82 - static_cast<int>(i) * 4,
+            max(3, 24 - static_cast<int>(i)),
+            4,
+            58 - static_cast<int>(i),
+            18 + static_cast<int>(i) * 2);
+    }
+
+    career.setActiveDivision("segunda division");
+    career.myTeam = nullptr;
+
+    const int startingSeason = career.currentSeason;
+
+    setRandomSeed(20261008);
+    SeasonTransitionSummary summary = endSeason(career);
+    resetRandomSeed();
+
+    const string playoffPrefix = "Ganador playoff Tercera A: ";
+    string playoffWinnerName;
+
+    for (const string& line : summary.lines) {
+        if (line.rfind(playoffPrefix, 0) == 0) {
+            playoffWinnerName = line.substr(playoffPrefix.size());
+            break;
+        }
+    }
+
+    expect(!playoffWinnerName.empty(),
+           "Con Segunda activa debe disputarse realmente el playoff de Tercera A.");
+
+    expect(playoffWinnerName != "Tercera A Segundo Sync",
+           "La semilla de regresion debe producir un ganador distinto del segundo de la tabla.");
+
+    Team* champion = career.findTeamByName("Tercera A Campeon Sync");
+    Team* second = career.findTeamByName("Tercera A Segundo Sync");
+    Team* playoffWinner = career.findTeamByName(playoffWinnerName);
+
+    expect(champion && champion->division == "segunda division",
+           "El campeon de Tercera A debe ascender a Segunda.");
+
+    expect(playoffWinner && playoffWinner->division == "segunda division",
+           "El ganador real del playoff de Tercera A debe ascender a Segunda.");
+
+    expect(second && second->division == "tercera division a",
+           "El segundo de Tercera A no debe ascender si pierde el playoff.");
+
+    long long playoffInitialBudget = -1;
+
+    for (const auto& entry : terceraATeams) {
+        if (entry.first == playoffWinnerName) {
+            playoffInitialBudget = entry.second;
+            break;
+        }
+    }
+
+    expect(playoffInitialBudget >= 0,
+           "Debe poder recuperarse el presupuesto inicial del ganador del playoff.");
+
+    expect(champion && champion->budget == 340000,
+           "El campeon de Tercera A debe recibir $40000 por ascender a Segunda.");
+
+    expect(playoffWinner &&
+               playoffWinner->budget == playoffInitialBudget + 40000,
+           "El ganador del playoff debe recibir el mismo bono de ascenso.");
+
+    int promotedFromTerceraA = 0;
+
+    for (const auto& entry : terceraATeams) {
+        Team* team = career.findTeamByName(entry.first);
+
+        if (team && team->division == "segunda division") {
+            promotedFromTerceraA++;
+        }
+    }
+
+    expect(promotedFromTerceraA == 2,
+           "Segunda debe recibir exactamente dos clubes desde Tercera A.");
+
+    expect(career.getDivisionTeams("segunda division").size() == 14,
+           "Segunda debe conservar 14 clubes tras los intercambios.");
+
+    expect(career.getDivisionTeams("tercera division a").size() == 16,
+           "Tercera A debe conservar 16 clubes tras dos ascensos y dos descensos.");
+
+    expect(career.activeDivision == "segunda division",
+           "Sin club usuario la carrera debe conservar Segunda como division activa.");
+
+    expect(career.currentSeason == startingSeason + 1,
+           "La transicion Segunda/Tercera A debe avanzar una temporada.");
+}
 void testPrimeraBPromotionAppearsInPrimeraNextSeason() {
     Career career;
     career.currentSeason = 5;
@@ -6165,6 +6373,7 @@ int main() {
         {"transfer_negotiation", testTransferNegotiationBuildsStructuredDeal},
         {"season_transition", testSeasonTransitionAdvancesCareerWithoutUiDependencies},
         {"season_transition_standings", testSeasonTransitionPromotesByStandingsNotSquadValue},
+        {"segunda_tercera_a_promotion_sync", testSegundaUsesTerceraAChampionAndPlayoffWinner},
         {"primera_b_promotion_sync", testPrimeraBPromotionAppearsInPrimeraNextSeason},
         {"primera_b_active_full_promotion_sync", testPrimeraBActiveCareerPromotesChampionAndLiguillaWinner},
         {"primera_full_promotion_relegation_sync", testPrimeraAndPrimeraBFullPromotionRelegationSync},
