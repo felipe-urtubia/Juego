@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.1.2.1-alpha - 2026-10-08
+
+### Guardados
+- Cada carrera nueva utiliza ahora un archivo de guardado independiente.
+- Los nombres de archivo se generan a partir del manager y el club.
+- Si un nombre ya existe, se agregan sufijos para evitar sobrescribir otra carrera.
+- Guardar una carrera existente continúa actualizando solamente su propio archivo.
+
+### Competiciones y cambios de categoría
+- Corregido el flujo completo de ascensos y descensos entre Primera División y Primera B.
+- Corregida la definición del título de Primera División cuando existe empate en puntos.
+- Primera B utiliza ahora su campeón, liguilla y definición de descenso reales.
+- Segunda División utiliza el campeón real de su playoff para ascender a Primera B.
+- Los cuartos de final, semifinales y final del playoff de Segunda se disputan a ida y vuelta.
+- El repechaje de los cuartos lugares de Segunda se mantiene a partido único.
+- El Grupo Descenso de Segunda determina correctamente los dos clubes que bajan a Tercera A.
+- Sincronizados los ascensos y descensos entre Segunda División y Tercera A.
+- Sincronizadas las transiciones entre Tercera A y Tercera B.
+- Corregidos premios y penalizaciones económicas asociados a los cambios de categoría.
+- Los resultados especiales permanecen consistentes independientemente de la división activa del usuario.
+
+### Calidad y regresiones
+- Ampliada la cobertura automática de las transiciones entre divisiones.
+- Agregadas regresiones deterministas para Segunda División y Tercera A.
+- Actualizadas pruebas antiguas que asumían ascensos basados únicamente en la posición de tabla.
+- Auditados los usos restantes de `topByStandings()` y `bottomByStandings()`.
+- Revisado el cambio a una nueva temporada, la reconstrucción de calendarios y los grupos regionales.
+- Revisados envejecimiento de jugadores, generación juvenil y simulación de divisiones inactivas.
+
 ## v0.1.2.0-alpha - 2026-10-06
 
 ### Match Center interactivo

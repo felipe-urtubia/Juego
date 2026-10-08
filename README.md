@@ -4,7 +4,7 @@
 
 ### Simulador de gestión futbolística desarrollado en C++17
 
-**Versión actual: `v0.1.2.0-alpha`**
+**Versión actual: `v0.1.2.1-alpha`**
 
 Motor de simulación propio • Arquitectura modular • IA táctica • Match Center interactivo • Modo Carrera
 
@@ -39,11 +39,11 @@ La arquitectura continúa evolucionando para separar responsabilidades entre mot
 
 La versión pública actual es:
 
-## `v0.1.2.0-alpha`
+## `v0.1.2.1-alpha`
 
 Release:
 
-https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.0-alpha
+https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.1-alpha
 
 ### Cambios principales
 
@@ -100,7 +100,7 @@ Actualmente dispone de:
 - ✅ Interfaz Win32.
 - ✅ Frontend CLI.
 
-La release `v0.1.2.0-alpha` fue verificada con:
+La release `v0.1.2.1-alpha` fue verificada con:
 
 - Build completo correcto.
 - 100% de los tests configurados aprobados.
@@ -710,7 +710,7 @@ La release para Windows contiene únicamente lo necesario para jugar.
 Estructura:
 
 ```text
-FootballManager-v0.1.2.0-alpha/
+FootballManager-v0.1.2.1-alpha/
 ├── assets/
 ├── data/
 ├── saves/

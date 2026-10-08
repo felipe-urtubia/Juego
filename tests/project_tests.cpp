@@ -3157,12 +3157,28 @@ void testPrimeraAndPrimeraBFullPromotionRelegationSync() {
     Team* pbBottom = career.findTeamByName("PB Fondo Full");
     expect(pbBottom && pbBottom->division == "segunda division",
            "El ultimo de Primera B debe descender a Segunda aunque la division activa sea Primera.");
+    const vector<pair<string, long long>> segundaCandidates = {
+        {"Segunda Lider Full", 300000},
+        {"Segunda Medio A Full", 270000},
+        {"Segunda Medio B Full", 250000},
+        {"Segunda Fondo Full", 220000}
+    };
 
-    Team* segundaLeader = career.findTeamByName("Segunda Lider Full");
-    expect(segundaLeader && segundaLeader->division == "primera b",
-           "Primera B debe recibir un ascendido desde Segunda aunque la division activa sea Primera.");
+    int promotedFromSegunda = 0;
+    for (const auto& candidate : segundaCandidates) {
+        Team* team = career.findTeamByName(candidate.first);
+        expect(team != nullptr,
+               "La prueba completa debe conservar todos los equipos de Segunda.");
+        if (team && team->division == "primera b") {
+            promotedFromSegunda++;
+            expect(team->budget == candidate.second + 50000,
+                   "El campeon real de Segunda debe recibir el bonus economico al ascender a Primera B.");
+        }
+    }
 
-    expect(career.getDivisionTeams("primera division").size() == 4,
+    expect(promotedFromSegunda == 1,
+           "Primera B debe recibir exactamente al campeon real del playoff de Segunda aunque la division activa sea Primera.");
+expect(career.getDivisionTeams("primera division").size() == 4,
            "Primera Division debe conservar su cantidad de clubes tras dos ascensos y dos descensos.");
     expect(career.getDivisionTeams("primera b").size() == 10,
            "Primera B debe conservar su cantidad de clubes tras todos los intercambios.");

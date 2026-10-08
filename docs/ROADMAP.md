@@ -1,8 +1,8 @@
 # Roadmap
 
-## Base actual: v0.1.2.0-alpha
+## Base actual: v0.1.2.1-alpha
 
-La versión `v0.1.2.0-alpha` establece una base funcional sobre la que continuará el desarrollo del proyecto.
+La versión `v0.1.2.1-alpha` establece una base funcional sobre la que continuará el desarrollo del proyecto.
 
 Entre los sistemas ya implementados se encuentran:
 
@@ -509,4 +509,4 @@ El desarrollo futuro de Chilean Footballito busca profundizar tres pilares:
 
 Este roadmap parte del estado alcanzado en:
 
-**Chilean Footballito `v0.1.2.0-alpha`**
+**Chilean Footballito `v0.1.2.1-alpha`**

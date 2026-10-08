@@ -3971,7 +3971,7 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         RECT versionBottom{versionBadge.left + s(10), versionBadge.top + s(25), versionBadge.right - s(10), versionBadge.bottom - s(4)};
         SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
         SetTextColor(hdc, RGB(73, 210, 145));
-        DrawTextW(hdc, L"v0.1.2.0-alpha", -1, &versionTop, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+        DrawTextW(hdc, L"v0.1.2.1-alpha", -1, &versionTop, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         SelectObject(hdc, state.font ? state.font : static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
         SetTextColor(hdc, kThemeMuted);
         DrawTextW(hdc, L"EN DESARROLLO", -1, &versionBottom, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
