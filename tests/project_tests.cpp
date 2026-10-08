@@ -4305,6 +4305,76 @@ void testTeamsTxtFolderAliasesDoNotTriggerOrphanWarnings() {
            "Los nombres de carpeta configurados explicitamente en teams.txt deben evitar falsos positivos de integridad.");
 }
 
+void testNewCareersUseIndependentSaveFiles() {
+    Career catalog;
+    catalog.initializeLeague(true);
+
+    string divisionId;
+    string teamName;
+    for (const auto& division : catalog.divisions) {
+        vector<Team*> teams = catalog.getDivisionTeams(division.id);
+        if (!teams.empty() && teams.front()) {
+            divisionId = division.id;
+            teamName = teams.front()->name;
+            break;
+        }
+    }
+
+    expect(!divisionId.empty() && !teamName.empty(),
+           "La prueba de saves independientes necesita una division y club validos.");
+    if (divisionId.empty() || teamName.empty()) return;
+
+    Career career;
+    const string managerName = "Manager Save Isolation";
+
+    ServiceResult firstStart = startCareerService(career, divisionId, teamName, managerName);
+    expect(firstStart.ok, "La primera carrera de la prueba debe iniciarse correctamente.");
+    if (!firstStart.ok) return;
+
+    const string firstSave = career.saveFile;
+    expect(firstSave != "saves/career_save.txt",
+           "Una carrera nueva debe recibir un archivo propio y no el save legacy compartido.");
+    career.currentWeek = 4;
+    expect(career.saveCareer(), "La primera carrera debe guardarse correctamente.");
+    expect(pathExists(firstSave), "El primer archivo de carrera debe existir en disco.");
+
+    ServiceResult secondStart = startCareerService(career, divisionId, teamName, managerName);
+    expect(secondStart.ok, "La segunda carrera de la prueba debe iniciarse correctamente.");
+    if (!secondStart.ok) {
+        std::remove(resolveProjectPath(firstSave).c_str());
+        std::remove((resolveProjectPath(firstSave) + ".bak").c_str());
+        return;
+    }
+
+    const string secondSave = career.saveFile;
+    expect(secondSave != firstSave,
+           "Una nueva carrera no debe reutilizar ni sobrescribir el archivo de la carrera anterior.");
+    career.currentWeek = 1;
+    expect(career.saveCareer(), "La segunda carrera debe guardarse correctamente.");
+    expect(pathExists(secondSave), "El segundo archivo de carrera debe existir en disco.");
+    expect(pathExists(firstSave),
+           "Guardar la segunda carrera no debe eliminar ni reemplazar el primer archivo.");
+
+    Career firstLoaded;
+    firstLoaded.saveFile = firstSave;
+    expect(firstLoaded.loadCareer(), "La primera carrera debe seguir siendo cargable.");
+    expect(firstLoaded.currentWeek == 4,
+           "La primera carrera debe conservar su progreso después de guardar otra distinta.");
+
+    Career secondLoaded;
+    secondLoaded.saveFile = secondSave;
+    expect(secondLoaded.loadCareer(), "La segunda carrera debe ser cargable desde su propio archivo.");
+    expect(secondLoaded.currentWeek == 1,
+           "La segunda carrera debe conservar su propio progreso independiente.");
+
+    const string firstResolved = resolveProjectPath(firstSave);
+    const string secondResolved = resolveProjectPath(secondSave);
+    std::remove(firstResolved.c_str());
+    std::remove((firstResolved + ".bak").c_str());
+    std::remove(secondResolved.c_str());
+    std::remove((secondResolved + ".bak").c_str());
+}
+
 void testSaveCareerCreatesBackup() {
     const string savePath = processScopedTestPath("saves/test_backup_save.txt");
     Career career;
@@ -5826,6 +5896,7 @@ int main() {
         {"ignored_archived_folders", testIgnoredArchivedFoldersConfigSuppressesKnownWarnings},
         {"teams_txt_folder_aliases", testTeamsTxtFolderAliasesDoNotTriggerOrphanWarnings},
         {"negotiation_agent_costs", testNegotiationTracksAgentCosts},
+        {"multiple_save_games", testNewCareersUseIndependentSaveFiles},
         {"save_backup", testSaveCareerCreatesBackup},
         {"save_overwrite_structure", testSaveCareerOverwriteDoesNotKeepTrailingBlocks},
         {"save_nested_directory", testSaveCareerCreatesNestedDirectory},

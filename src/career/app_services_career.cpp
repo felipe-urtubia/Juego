@@ -133,6 +133,54 @@ void appendPostWeekActionDigest(Career& career, ServiceResult& result) {
     career.addNews("Centro semanal post-simulacion: " + decision + ".");
 }
 
+string careerSaveToken(const string& value) {
+    string token;
+    bool separatorPending = false;
+
+    for (unsigned char ch : value) {
+        char normalized = '\0';
+        if (ch >= 'A' && ch <= 'Z') {
+            normalized = static_cast<char>('a' + (ch - 'A'));
+        } else if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9')) {
+            normalized = static_cast<char>(ch);
+        }
+
+        if (normalized != '\0') {
+            if (separatorPending && !token.empty() && token.back() != '_') token.push_back('_');
+            token.push_back(normalized);
+            separatorPending = false;
+        } else if (!token.empty()) {
+            separatorPending = true;
+        }
+    }
+
+    while (!token.empty() && token.back() == '_') token.pop_back();
+    if (token.empty()) token = "partida";
+
+    constexpr size_t kMaxTokenLength = 28;
+    if (token.size() > kMaxTokenLength) token.resize(kMaxTokenLength);
+    while (!token.empty() && token.back() == '_') token.pop_back();
+    if (token.empty()) token = "partida";
+    return token;
+}
+
+string buildUniqueCareerSavePath(const string& managerName, const string& teamName) {
+    const string baseName =
+        "career_" + careerSaveToken(managerName) + "_" + careerSaveToken(teamName);
+
+    auto isAvailable = [](const string& path) {
+        return !pathExists(path) && !pathExists(path + ".bak");
+    };
+
+    string candidate = joinPath("saves", baseName + ".txt");
+    if (isAvailable(candidate)) return candidate;
+
+    for (int suffix = 2;; ++suffix) {
+        candidate = joinPath("saves", baseName + "_" + to_string(suffix) + ".txt");
+        if (isAvailable(candidate)) return candidate;
+    }
+}
+
 }  // namespace
 
 ServiceResult startCareerService(Career& career,
@@ -144,7 +192,6 @@ ServiceResult startCareerService(Career& career,
     // Construir la nueva carrera fuera del estado activo. De esta forma,
     // cualquier error de validacion deja intacta la carrera que ya existe.
     Career candidate;
-    candidate.saveFile = career.saveFile;
     candidate.initializeLeague(true);
 
     if (candidate.divisions.empty()) {
@@ -174,6 +221,7 @@ ServiceResult startCareerService(Career& career,
 
     candidate.myTeam = selectedTeam;
     candidate.managerName = managerName.empty() ? "Manager" : managerName;
+    candidate.saveFile = buildUniqueCareerSavePath(candidate.managerName, candidate.myTeam->name);
     candidate.managerReputation = 50;
     candidate.clearHumanManagers();
     candidate.addHumanManager(candidate.managerName,
