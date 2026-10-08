@@ -2454,6 +2454,257 @@ void testSegundaUsesTerceraAChampionAndPlayoffWinner() {
     expect(career.currentSeason == startingSeason + 1,
            "La transicion Segunda/Tercera A debe avanzar una temporada.");
 }
+void testSegundaTerceraARelegationConsistency() {
+    auto populateCareer = [](Career& career) {
+        career.currentSeason = 12;
+        career.currentWeek = 30;
+        career.managerName =
+            "Segunda Relegation Sync Manager";
+
+        for (int i = 0; i < 4; ++i) {
+            career.allTeams.push_back(
+                makeTeam(
+                    "Primera B Relegation Sync " +
+                        to_string(i + 1),
+                    "primera b",
+                    68 - i,
+                    3,
+                    3,
+                    "Balanced",
+                    "Equilibrado",
+                    520000 - i * 20000));
+        }
+
+        for (int i = 0; i < 14; ++i) {
+            int skill = 60;
+
+            if (i == 6 || i == 13) skill = 95;
+            if (i == 4 || i == 11) skill = 20;
+            if (i == 5 || i == 12) skill = 30;
+
+            career.allTeams.push_back(
+                makeTeam(
+                    "Segunda Relegation Sync " +
+                        to_string(i + 1),
+                    "segunda division",
+                    skill,
+                    3,
+                    3,
+                    "Balanced",
+                    "Equilibrado",
+                    400000 - i * 5000));
+        }
+
+        for (int i = 0; i < 16; ++i) {
+            int skill = 68 - (i % 5);
+
+            if (i == 0) skill = 80;
+            if (i == 1) skill = 45;
+            if (i == 2) skill = 88;
+            if (i == 3) skill = 86;
+            if (i == 4) skill = 84;
+
+            career.allTeams.push_back(
+                makeTeam(
+                    "Tercera A Relegation Sync " +
+                        to_string(i + 1),
+                    "tercera division a",
+                    skill,
+                    3,
+                    3,
+                    "Balanced",
+                    "Equilibrado",
+                    300000 - i * 4000));
+        }
+
+        auto setStanding =
+            [](Team* team,
+               int points,
+               int wins,
+               int draws,
+               int goalsFor,
+               int goalsAgainst,
+               int matches) {
+                expect(
+                    team != nullptr,
+                    "La prueba Segunda/Tercera A necesita equipos existentes.");
+
+                if (!team) return;
+
+                team->points = points;
+                team->wins = wins;
+                team->draws = draws;
+                team->losses =
+                    max(
+                        0,
+                        matches - wins - draws);
+                team->goalsFor = goalsFor;
+                team->goalsAgainst = goalsAgainst;
+            };
+
+        for (int i = 0; i < 4; ++i) {
+            setStanding(
+                career.findTeamByName(
+                    "Primera B Relegation Sync " +
+                    to_string(i + 1)),
+                60 - i * 10,
+                18 - i * 2,
+                6,
+                46 - i * 3,
+                22 + i * 5,
+                30);
+        }
+
+        for (int i = 0; i < 7; ++i) {
+            setStanding(
+                career.findTeamByName(
+                    "Segunda Relegation Sync " +
+                    to_string(i + 1)),
+                30 - i * 3,
+                max(2, 9 - i),
+                3,
+                35 - i * 2,
+                18 + i * 3,
+                12);
+
+            setStanding(
+                career.findTeamByName(
+                    "Segunda Relegation Sync " +
+                    to_string(i + 8)),
+                29 - i * 3,
+                max(2, 9 - i),
+                2,
+                34 - i * 2,
+                19 + i * 3,
+                12);
+        }
+
+        for (int i = 0; i < 16; ++i) {
+            setStanding(
+                career.findTeamByName(
+                    "Tercera A Relegation Sync " +
+                    to_string(i + 1)),
+                76 - i * 3,
+                max(3, 22 - i),
+                4,
+                54 - i,
+                20 + i * 2,
+                30);
+        }
+    };
+
+    auto collectRelegated = [](Career& career) {
+        vector<string> names;
+
+        for (int i = 0; i < 14; ++i) {
+            const string name =
+                "Segunda Relegation Sync " +
+                to_string(i + 1);
+
+            Team* team =
+                career.findTeamByName(name);
+
+            if (team &&
+                team->division ==
+                    "tercera division a") {
+                names.push_back(name);
+            }
+        }
+
+        sort(names.begin(), names.end());
+        return names;
+    };
+
+    auto populateDeterministically = [&](Career& career) {
+        setRandomSeed(20261007);
+        populateCareer(career);
+        resetRandomSeed();
+    };
+
+    Career activeSegunda;
+    populateDeterministically(activeSegunda);
+    activeSegunda.setActiveDivision(
+        "segunda division");
+    activeSegunda.myTeam = nullptr;
+
+    setRandomSeed(20261008);
+    SeasonTransitionSummary summarySegunda =
+        endSeason(activeSegunda);
+    resetRandomSeed();
+
+    vector<string> expectedRelegated =
+        collectRelegated(activeSegunda);
+
+    expect(
+        expectedRelegated.size() == 2,
+        "Segunda activa debe producir exactamente dos descendidos.");
+
+    const bool onlyInitialBottomTwo =
+        find(
+            expectedRelegated.begin(),
+            expectedRelegated.end(),
+            "Segunda Relegation Sync 7") !=
+            expectedRelegated.end() &&
+        find(
+            expectedRelegated.begin(),
+            expectedRelegated.end(),
+            "Segunda Relegation Sync 14") !=
+            expectedRelegated.end();
+
+    expect(
+        !onlyInitialBottomTwo,
+        "La regresion debe distinguir el Grupo Descenso de tomar simplemente los dos ultimos iniciales.");
+
+    expect(
+        summarySegunda.relegatedTeams.size() == 2,
+        "El resumen de Segunda activa debe registrar sus dos descensos.");
+
+    Career activeTerceraA;
+    populateDeterministically(activeTerceraA);
+    activeTerceraA.setActiveDivision(
+        "tercera division a");
+    activeTerceraA.myTeam = nullptr;
+
+    setRandomSeed(20261008);
+    SeasonTransitionSummary summaryTerceraA =
+        endSeason(activeTerceraA);
+    resetRandomSeed();
+
+    vector<string> mirrorRelegated =
+        collectRelegated(activeTerceraA);
+
+    expect(
+        mirrorRelegated == expectedRelegated,
+        "Los descendidos de Segunda deben coincidir con Segunda o Tercera A activa.");
+
+    for (int i = 0; i < 14; ++i) {
+        const string name =
+            "Segunda Relegation Sync " +
+            to_string(i + 1);
+
+        Team* team =
+            activeTerceraA.findTeamByName(name);
+
+        if (!team ||
+            team->division !=
+                "tercera division a") {
+            continue;
+        }
+
+        const long long initialBudget =
+            400000LL -
+            static_cast<long long>(i) * 5000LL;
+
+        expect(
+            team->budget ==
+                initialBudget - 20000,
+            "El descenso desde Segunda debe aplicar la misma penalizacion de $20000 con Tercera A activa.");
+    }
+
+    expect(
+        !summaryTerceraA.lines.empty(),
+        "La transicion espejo de Tercera A debe seguir generando resumen.");
+}
 void testPrimeraBPromotionAppearsInPrimeraNextSeason() {
     Career career;
     career.currentSeason = 5;
@@ -6713,6 +6964,7 @@ int main() {
         {"season_transition", testSeasonTransitionAdvancesCareerWithoutUiDependencies},
         {"season_transition_standings", testSeasonTransitionPromotesByStandingsNotSquadValue},
         {"segunda_tercera_a_promotion_sync", testSegundaUsesTerceraAChampionAndPlayoffWinner},
+        {"segunda_tercera_a_relegation_sync", testSegundaTerceraARelegationConsistency},
         {"tercera_a_b_transition_consistency", testTerceraATerceraBTransitionConsistency},
         {"primera_b_promotion_sync", testPrimeraBPromotionAppearsInPrimeraNextSeason},
         {"primera_b_active_full_promotion_sync", testPrimeraBActiveCareerPromotesChampionAndLiguillaWinner},

@@ -367,6 +367,11 @@ struct TerceraARelegationOutcome {
     vector<Team*> directRelegated;
 };
 
+struct SegundaSeasonOutcome {
+    Team* champion = nullptr;
+    vector<Team*> relegated;
+};
+
 TerceraBSeasonOutcome resolveTerceraBSeason(const vector<Team*>& northRanked,
                                             const vector<Team*>& southRanked,
                                             bool usePlayoffLosersForPromotion,
@@ -494,6 +499,196 @@ Team* simulateSegundaPlayoff(const vector<Team*>& seeds, SeasonTransitionSummary
     return champion;
 }
 
+SegundaSeasonOutcome resolveSegundaSeason(Career& career,
+                                          const LeagueTable& north,
+                                          const LeagueTable& south,
+                                          SeasonTransitionSummary& summary) {
+    SegundaSeasonOutcome out;
+
+    vector<Team*> playoffTeams;
+    for (int pos = 1; pos <= 3; ++pos) {
+        if (Team* team = teamAtPos(north, pos)) playoffTeams.push_back(team);
+        if (Team* team = teamAtPos(south, pos)) playoffTeams.push_back(team);
+    }
+
+    Team* north4 = teamAtPos(north, 4);
+    Team* south4 = teamAtPos(south, 4);
+    Team* playoffExtra = nullptr;
+    Team* descensoExtra = nullptr;
+
+    if (north4 && south4) {
+        Team* winner =
+            simulateSingleLegKnockout(
+                north4,
+                south4,
+                "Repechaje 4°",
+                summary);
+
+        playoffExtra = winner;
+        descensoExtra = (winner == north4) ? south4 : north4;
+    } else if (north4 || south4) {
+        playoffExtra = north4 ? north4 : south4;
+    }
+
+    if (playoffExtra &&
+        find(playoffTeams.begin(), playoffTeams.end(), playoffExtra) ==
+            playoffTeams.end()) {
+        playoffTeams.push_back(playoffExtra);
+    }
+
+    vector<Team*> descensoTeams;
+
+    for (int pos = 5; pos <= 7; ++pos) {
+        if (Team* team = teamAtPos(north, pos)) descensoTeams.push_back(team);
+        if (Team* team = teamAtPos(south, pos)) descensoTeams.push_back(team);
+    }
+
+    if (descensoExtra) descensoTeams.push_back(descensoExtra);
+
+    vector<Team*> playoffSeeds = playoffTeams;
+
+    if (!playoffSeeds.empty()) {
+        LeagueTable seedTable;
+
+        for (Team* team : playoffSeeds) {
+            seedTable.addTeam(team);
+        }
+
+        seedTable.sortTable();
+        playoffSeeds = seedTable.teams;
+    }
+
+    for (Team* team : north.teams) {
+        if (team) team->resetSeasonStats();
+    }
+
+    for (Team* team : south.teams) {
+        if (team) team->resetSeasonStats();
+    }
+
+    out.champion =
+        simulateSegundaPlayoff(playoffSeeds, summary);
+
+    LeagueTable descensoTable;
+
+    if (!descensoTeams.empty()) {
+        for (Team* team : descensoTeams) {
+            team->resetSeasonStats();
+        }
+
+        auto schedule =
+            buildRoundRobinIndexSchedule(
+                static_cast<int>(descensoTeams.size()),
+                false);
+
+        for (const auto& roundMatches : schedule) {
+            for (const auto& match : roundMatches) {
+                Team* home =
+                    descensoTeams[
+                        static_cast<size_t>(match.first)];
+
+                Team* away =
+                    descensoTeams[
+                        static_cast<size_t>(match.second)];
+
+                team_ai::adjustCpuTactics(
+                    *home,
+                    *away,
+                    career.myTeam);
+
+                team_ai::adjustCpuTactics(
+                    *away,
+                    *home,
+                    career.myTeam);
+
+                playMatch(*home, *away, false, true);
+            }
+
+            for (Team* team : descensoTeams) {
+                healInjuries(*team, false);
+                recoverFitness(*team, 7);
+                player_dev::applyWeeklyTrainingPlan(*team);
+            }
+        }
+
+        descensoTable.title = "Grupo Descenso";
+
+        for (Team* team : descensoTeams) {
+            descensoTable.addTeam(team);
+        }
+
+        descensoTable.sortTable();
+    }
+
+    if (!descensoTable.teams.empty()) {
+        int count =
+            min(
+                2,
+                static_cast<int>(
+                    descensoTable.teams.size()));
+
+        for (int i = 0; i < count; ++i) {
+            out.relegated.push_back(
+                descensoTable.teams[
+                    descensoTable.teams.size() -
+                    1 -
+                    static_cast<size_t>(i)]);
+        }
+    }
+
+    return out;
+}
+
+SegundaSeasonOutcome inferSegundaSeasonFromStandings(Career& career) {
+    vector<Team*> teams =
+        career.getDivisionTeams("segunda division");
+
+    vector<Team*> northTeams;
+    vector<Team*> southTeams;
+
+    int groupSize =
+        getCompetitionConfig(
+            "segunda division").groups.groupSize;
+
+    if (groupSize <= 0) {
+        groupSize =
+            max(
+                1,
+                static_cast<int>(teams.size()) / 2);
+    }
+
+    for (size_t i = 0; i < teams.size(); ++i) {
+        if (static_cast<int>(i) < groupSize) {
+            northTeams.push_back(teams[i]);
+        } else {
+            southTeams.push_back(teams[i]);
+        }
+    }
+
+    LeagueTable north =
+        buildRankedTable(
+            northTeams,
+            competitionGroupTitle(
+                "segunda division",
+                true),
+            "segunda division");
+
+    LeagueTable south =
+        buildRankedTable(
+            southTeams,
+            competitionGroupTitle(
+                "segunda division",
+                false),
+            "segunda division");
+
+    SeasonTransitionSummary ignoredSummary;
+
+    return resolveSegundaSeason(
+        career,
+        north,
+        south,
+        ignoredSummary);
+}
 Team* liguillaAscensoPrimeraB(const vector<Team*>& table, SeasonTransitionSummary& summary) {
     if (table.size() < 2) return table.empty() ? nullptr : table.front();
 
@@ -645,88 +840,29 @@ SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
     if (career.groupNorthIdx.empty() || career.groupSouthIdx.empty()) {
         career.buildSegundaGroups();
     }
-    LeagueTable north = buildCompetitionGroupTable(career, true);
-    LeagueTable south = buildCompetitionGroupTable(career, false);
 
-    vector<Team*> playoffTeams;
-    for (int pos = 1; pos <= 3; ++pos) {
-        if (Team* team = teamAtPos(north, pos)) playoffTeams.push_back(team);
-        if (Team* team = teamAtPos(south, pos)) playoffTeams.push_back(team);
-    }
+    LeagueTable north =
+        buildCompetitionGroupTable(career, true);
 
-    Team* north4 = teamAtPos(north, 4);
-    Team* south4 = teamAtPos(south, 4);
-    Team* playoffExtra = nullptr;
-    Team* descensoExtra = nullptr;
-    if (north4 && south4) {
-        Team* winner = simulateSingleLegKnockout(north4, south4, "Repechaje 4°", summary);
-        playoffExtra = winner;
-        descensoExtra = (winner == north4) ? south4 : north4;
-    } else if (north4 || south4) {
-        playoffExtra = north4 ? north4 : south4;
-    }
-    if (playoffExtra && find(playoffTeams.begin(), playoffTeams.end(), playoffExtra) == playoffTeams.end()) {
-        playoffTeams.push_back(playoffExtra);
-    }
+    LeagueTable south =
+        buildCompetitionGroupTable(career, false);
 
-    vector<Team*> descensoTeams;
-    for (int pos = 5; pos <= 7; ++pos) {
-        if (Team* team = teamAtPos(north, pos)) descensoTeams.push_back(team);
-        if (Team* team = teamAtPos(south, pos)) descensoTeams.push_back(team);
-    }
-    if (descensoExtra) descensoTeams.push_back(descensoExtra);
+    SegundaSeasonOutcome segundaOutcome =
+        resolveSegundaSeason(
+            career,
+            north,
+            south,
+            summary);
 
-    vector<Team*> playoffSeeds = playoffTeams;
-    if (!playoffSeeds.empty()) {
-        LeagueTable seedTable;
-        for (Team* team : playoffSeeds) seedTable.addTeam(team);
-        seedTable.sortTable();
-        playoffSeeds = seedTable.teams;
-    }
+    Team* champion = segundaOutcome.champion;
 
-    for (int i = 0; i < career.getActiveTeamCount(); ++i) {
-        if (Team* team = career.getActiveTeamAt(i)) {
-            team->resetSeasonStats();
-        }
-    }
-
-    Team* champion = simulateSegundaPlayoff(playoffSeeds, summary);
     if (champion) {
         summary.champion = champion->name;
         addLine(summary, "Campeon playoff: " + champion->name);
     }
 
-    LeagueTable descensoTable;
-    if (!descensoTeams.empty()) {
-        for (Team* team : descensoTeams) team->resetSeasonStats();
-        auto schedule = buildRoundRobinIndexSchedule(static_cast<int>(descensoTeams.size()), false);
-        for (const auto& roundMatches : schedule) {
-            for (const auto& match : roundMatches) {
-                Team* home = descensoTeams[static_cast<size_t>(match.first)];
-                Team* away = descensoTeams[static_cast<size_t>(match.second)];
-                team_ai::adjustCpuTactics(*home, *away, career.myTeam);
-                team_ai::adjustCpuTactics(*away, *home, career.myTeam);
-                playMatch(*home, *away, false, true);
-            }
-            for (Team* team : descensoTeams) {
-                healInjuries(*team, false);
-                recoverFitness(*team, 7);
-                player_dev::applyWeeklyTrainingPlan(*team);
-            }
-        }
-        descensoTable.title = "Grupo Descenso";
-        for (Team* team : descensoTeams) descensoTable.addTeam(team);
-        descensoTable.sortTable();
-    }
-
-    vector<Team*> relegate;
-    if (!descensoTable.teams.empty()) {
-        int count = min(2, static_cast<int>(descensoTable.teams.size()));
-        for (int i = 0; i < count; ++i) {
-            relegate.push_back(descensoTable.teams[descensoTable.teams.size() - 1 - i]);
-        }
-    }
-
+    vector<Team*> relegate =
+        segundaOutcome.relegated;
     int idx = divisionIndex(career.activeDivision);
     string higher = (idx > 0) ? kDivisions[static_cast<size_t>(idx - 1)].id : "";
     string lower = (idx >= 0 && idx + 1 < static_cast<int>(kDivisions.size()))
@@ -872,7 +1008,30 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
         addLine(summary, "Ascenso directo a Segunda: " + champion->name);
     }
 
-    vector<Team*> promotionOutcome = resolveTerceraAPromotions(table, summary);
+    int idx = divisionIndex(career.activeDivision);
+    string higher =
+        (idx > 0)
+            ? kDivisions[static_cast<size_t>(idx - 1)].id
+            : "";
+
+    string lower =
+        (idx >= 0 &&
+         idx + 1 < static_cast<int>(kDivisions.size()))
+            ? kDivisions[static_cast<size_t>(idx + 1)].id
+            : "";
+
+    const bool higherIsSegunda =
+        higher == "segunda division";
+
+    SegundaSeasonOutcome higherSegundaOutcome;
+
+    if (higherIsSegunda) {
+        higherSegundaOutcome =
+            inferSegundaSeasonFromStandings(career);
+    }
+
+    vector<Team*> promotionOutcome =
+        resolveTerceraAPromotions(table, summary);
 
     vector<Team*> promotionTeamsA;
     vector<Team*> directRelegated;
@@ -907,19 +1066,29 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
         }
     }
 
-    int idx = divisionIndex(career.activeDivision);
-    string higher = (idx > 0) ? kDivisions[static_cast<size_t>(idx - 1)].id : "";
-    string lower = (idx >= 0 && idx + 1 < static_cast<int>(kDivisions.size()))
-                       ? kDivisions[static_cast<size_t>(idx + 1)].id
-                       : "";
-
     vector<Team*> promote;
     if (!higher.empty()) {
         promote = promotionOutcome;
     }
 
-    vector<Team*> fromHigher =
-        higher.empty() ? vector<Team*>() : bottomByStandings(career, higher, static_cast<int>(promote.size()));
+    vector<Team*> fromHigher;
+
+    if (!higher.empty()) {
+        if (higherIsSegunda) {
+            fromHigher =
+                higherSegundaOutcome.relegated;
+
+            if (fromHigher.size() > promote.size()) {
+                fromHigher.resize(promote.size());
+            }
+        } else {
+            fromHigher =
+                bottomByStandings(
+                    career,
+                    higher,
+                    static_cast<int>(promote.size()));
+        }
+    }
     vector<Team*> fromLower = lowerOutcome.directPromoted;
 
     for (Team* team : promote) {
@@ -931,6 +1100,14 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
     }
     for (Team* team : fromHigher) {
         team->division = career.activeDivision;
+
+        if (higherIsSegunda) {
+            team->budget =
+                max(
+                    0LL,
+                    team->budget - 20000);
+        }
+
         team->morale = 45;
     }
     for (Team* team : directRelegated) {
