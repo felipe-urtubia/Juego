@@ -8894,3 +8894,65 @@ Commit:
 - [x] Working tree limpio.
 - [x] Cadena revisada y sincronizada: Primera División ↔ Primera B ↔ Segunda División ↔ Tercera A ↔ Tercera B.
 - [x] Juego listo para revisión manual mediante `FootballManager.exe`.
+---
+
+## ✅ Release v0.1.2.1-alpha - 2026-10-08
+
+### Preparación y validación
+
+- [x] Versión visible actualizada a `v0.1.2.1-alpha`.
+- [x] `CHANGELOG.md` actualizado.
+- [x] README, INDEX, arquitectura y roadmap actualizados.
+- [x] Corregida la expectativa obsoleta de `primera_full_promotion_relegation_sync`.
+- [x] Build completo aprobado.
+- [x] `FootballManager`, `FootballManagerCLI` y `FootballManagerTests` compilados.
+- [x] CTest: 100% de pruebas superadas.
+- [x] Validador general aprobado.
+- [x] 5 divisiones validadas.
+- [x] 90 equipos revisados.
+- [x] 2200 jugadores auditados.
+- [x] 0 errores.
+- [x] 0 advertencias.
+- [x] `git diff --check` limpio.
+
+### Contenido principal
+
+- [x] Guardados independientes para carreras diferentes.
+- [x] Flujo Primera División ↔ Primera B corregido.
+- [x] Campeón y liguilla reales de Primera B.
+- [x] Campeón real del playoff de Segunda utilizado para ascender.
+- [x] Playoff de Segunda a ida y vuelta desde cuartos hasta la final.
+- [x] Grupo Descenso real de Segunda.
+- [x] Sincronización Segunda División ↔ Tercera A.
+- [x] Sincronización Tercera A ↔ Tercera B.
+- [x] Premios y penalizaciones económicas de cambios de categoría corregidos.
+- [x] Cobertura automática ampliada.
+
+### Paquete distribuible
+
+- [x] Creado `FootballManager-v0.1.2.1-alpha`.
+- [x] Incluye `FootballManager.exe`.
+- [x] Incluye `assets`.
+- [x] Incluye `data`.
+- [x] Incluye `saves` vacía.
+- [x] Incluye `LEEME.txt`.
+- [x] No incluye `FootballManagerCLI.exe`.
+- [x] No incluye `FootballManagerTests.exe`.
+- [x] No incluye partidas personales.
+- [x] ZIP: `FootballManager-v0.1.2.1-alpha.zip`.
+- [x] Tamaño: `28245738` bytes.
+- [x] SHA-256: `D409FB57CB75C3F340B4C70BD99A89F8B8FD839805E71FDA108F661AC587CC35`.
+- [x] Ejecutable empaquetado verificado contra el build.
+
+### Publicación
+
+- [x] Commit de preparación: `07aa667f355754e06cfa188fb0bf221d39330abb`.
+- [x] Integración fast-forward en `main`.
+- [x] `main` publicada en GitHub.
+- [x] Tag anotado `v0.1.2.1-alpha` creado y publicado.
+- [x] GitHub Release publicada como pre-release.
+- [x] ZIP publicado como asset.
+- [x] Descarga pública verificada.
+- [x] Tamaño remoto verificado.
+- [x] SHA-256 remoto verificado.
+- [x] Release: https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.1-alpha.
