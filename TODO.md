@@ -8733,3 +8733,164 @@ Commits principales:
 - [x] Working tree limpio.
 - [x] No quedaron ramas temporales de las últimas pruebas y correcciones.
 - [x] El trabajo posterior a `v0.1.2.0-alpha` está en `main`, pero no modifica retroactivamente el ZIP público ya publicado de esa release.
+---
+
+## ✅ Sincronización completa de ascensos y descensos - 2026-10-08
+
+### Objetivo de esta etapa
+
+- [x] Revisar de extremo a extremo el cambio de temporada entre las cinco divisiones.
+- [x] Sustituir ascensos y descensos genéricos por los resultados reales de cada competición cuando corresponde.
+- [x] Mantener sincronizados los movimientos independientemente de cuál sea la división activa del usuario.
+- [x] Aplicar correctamente premios y penalizaciones económicas asociados a los cambios de categoría.
+- [x] Añadir y ampliar pruebas de regresión para evitar resultados distintos según la división activa.
+
+### Primera División
+
+- [x] Corregido el flujo de ascenso y descenso entre Primera División y Primera B.
+- [x] Confirmados dos descendidos desde Primera hacia Primera B.
+- [x] Confirmado que Primera recibe al campeón y al ganador real de la liguilla de Primera B.
+- [x] Implementada definición del título a partido único cuando los dos primeros terminan igualados en puntos.
+- [x] Corregida la economía de los clubes que ascienden.
+- [x] Verificada la reconstrucción de la tabla de Primera después del cambio de categoría.
+- [x] Verificado que el club del usuario continúa enlazado correctamente después de ascender o descender.
+
+Commits:
+- `8a6fe82` Fix Primera promotion and relegation flow.
+- `2cf7208` Fix Primera title playoff and promotion budget.
+
+### Primera B
+
+- [x] Verificado el campeón directo de Primera B.
+- [x] Verificada la liguilla real de ascenso.
+- [x] Confirmado que el campeón no vuelve a entrar como seed de la liguilla.
+- [x] Primera ronda, semifinales y final de liguilla resueltas mediante llaves de ida y vuelta.
+- [x] Verificada la definición especial de descenso cuando existe empate en el fondo de la tabla.
+- [x] Confirmado que el descendido real pasa a Segunda División.
+- [x] Confirmado que el campeón real de Segunda ocupa la plaza liberada en Primera B.
+- [x] Eliminada la dependencia incorrecta del simple líder de tabla de Segunda.
+- [x] Premio de `$50000` aplicado al ascendido real desde Segunda.
+- [x] Penalización de `$20000` aplicada al descendido desde Primera B a Segunda.
+- [x] Actualizadas pruebas antiguas que asumían que el líder de Segunda ascendía automáticamente.
+
+Commits:
+- `0bace6a` Test complete Primera B promotion flow.
+- `fe3665b` Fix Primera B and Segunda transition sync.
+
+### Segunda División
+
+- [x] Unificado el resultado real de Segunda mediante `SegundaSeasonOutcome`.
+- [x] Playoff de ascenso construido con los clasificados reales de los grupos Norte y Sur.
+- [x] Posiciones 1 a 3 de cada grupo clasifican al playoff.
+- [x] Repechaje entre los dos cuartos lugares mantenido a partido único.
+- [x] Ganador del repechaje ingresa al playoff.
+- [x] Perdedor del repechaje ingresa al Grupo Descenso.
+- [x] Cuartos de final del playoff disputados a ida y vuelta.
+- [x] Semifinales disputadas a ida y vuelta.
+- [x] Final del playoff disputada a ida y vuelta.
+- [x] Campeón real de Segunda utilizado para el ascenso a Primera B.
+- [x] Grupo Descenso resuelto con partidos reales.
+- [x] Los dos últimos reales del Grupo Descenso bajan a Tercera A.
+- [x] Eliminado el descenso incorrecto basado solamente en los últimos de las tablas iniciales.
+- [x] Resultado de Segunda sincronizado cuando la división activa es Segunda, Primera B, Primera o Tercera A.
+- [x] Orden de consumo RNG alineado entre las distintas perspectivas para obtener resultados deterministas en regresión.
+- [x] Premio de `$50000` aplicado al campeón que asciende a Primera B.
+- [x] Penalización de `$20000` aplicada a los clubes que descienden a Tercera A.
+
+Commits:
+- `5746f3a` Fix Segunda playoff two-leg format.
+- `bf723ca` Fix Segunda and Tercera A relegation sync.
+- `fe3665b` Fix Primera B and Segunda transition sync.
+
+### Segunda División ↔ Tercera A
+
+- [x] Segunda utiliza los ascendidos reales de Tercera A.
+- [x] Sincronizados campeón y ganador de playoff de Tercera A.
+- [x] Sincronizados los dos descendidos reales de Segunda.
+- [x] El resultado es consistente tanto con Segunda activa como con Tercera A activa.
+- [x] Agregadas regresiones deterministas mediante semillas controladas.
+- [x] Verificado que la prueba distingue el Grupo Descenso real de tomar simplemente los últimos iniciales.
+- [x] Economía de ascensos y descensos sincronizada.
+
+Commits:
+- `b338673` Fix Segunda and Tercera A promotion sync.
+- `bf723ca` Fix Segunda and Tercera A relegation sync.
+
+### Tercera A ↔ Tercera B
+
+- [x] Sincronizada la transición completa entre Tercera A y Tercera B.
+- [x] Utilizados los resultados reales de Tercera B en lugar de tomar posiciones genéricas.
+- [x] Campeones correspondientes de Tercera B ascienden correctamente.
+- [x] Movimientos de descenso desde Tercera A sincronizados.
+- [x] Presupuestos de ascenso y descenso ajustados.
+- [x] Añadida regresión de consistencia entre ambas divisiones.
+
+Commit:
+- `4cf5d40` Fix Tercera A and B transition consistency.
+
+### Cobertura automática de transiciones
+
+- [x] `season_transition_standings`.
+- [x] `segunda_tercera_a_promotion_sync`.
+- [x] `segunda_tercera_a_relegation_sync`.
+- [x] `tercera_a_b_transition_consistency`.
+- [x] `primera_b_promotion_sync`.
+- [x] `primera_b_active_full_promotion_sync`.
+- [x] `primera_full_promotion_relegation_sync`.
+- [x] Actualizadas expectativas antiguas para comprobar el ganador real del playoff de Segunda en vez de un líder fijo de tabla.
+- [x] Verificado el bonus de `$50000` del ascendido real desde Segunda.
+
+### Validación final de esta etapa
+
+- [x] Build completo mediante `cmake --build .\build-ci`.
+- [x] `FootballManager` compilado.
+- [x] `FootballManagerCLI` compilado.
+- [x] `FootballManagerTests` compilado.
+- [x] Build final sin warnings.
+- [x] Suite completa de `FootballManagerTests` aprobada.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: `100% tests passed`.
+- [x] `FootballManagerCLI.exe --validate`: sin fallas.
+- [x] Auditoría de plantillas: 5 divisiones, 90 equipos y 2200 jugadores.
+- [x] Errores del validador: 0.
+- [x] Advertencias del validador: 0.
+- [x] `git diff --check`: limpio.
+
+### Auditoría posterior de cambio de temporada
+
+- [x] Revisados todos los usos restantes de `topByStandings()` y `bottomByStandings()`.
+- [x] Confirmado que los formatos especiales interceptan las transiciones que requieren resolvers específicos.
+- [x] Los usos genéricos restantes corresponden a rutas fallback.
+- [x] Revisado el dispatcher de `endSeason()`.
+- [x] Confirmados handlers especializados para Primera B, Segunda, Tercera A y Tercera B.
+- [x] Confirmado tratamiento especial de Primera División dentro de la ruta general.
+- [x] Revisado `advanceToNextSeason()`.
+- [x] Confirmado incremento de temporada.
+- [x] Confirmado reinicio a semana 1.
+- [x] Confirmado seguimiento automático de la división real del club del usuario.
+- [x] Confirmada reconstrucción de calendario para la nueva temporada.
+- [x] Confirmada reconstrucción de grupos regionales cuando corresponde.
+- [x] Detectada reconstrucción redundante de calendario entre `setActiveDivision()` y `resetSeason()`, sin impacto funcional y sin necesidad de modificación.
+
+### Auditoría de planteles, envejecimiento y juveniles
+
+- [x] Revisado `Career::agePlayers()`.
+- [x] Todos los jugadores del mundo envejecen una temporada.
+- [x] A partir de los 30 años se reduce skill y stamina según la lógica existente.
+- [x] Confirmado que actualmente no existe retiro automático por edad.
+- [x] Revisada la generación de juveniles al inicio de temporada.
+- [x] `generateYouthIntake()` respeta `maxSquadSize`.
+- [x] No existe crecimiento ilimitado de plantilla por la incorporación anual de juveniles.
+- [x] Revisada la simulación semanal de divisiones inactivas.
+- [x] Las divisiones inactivas disputan partidos mediante `simulateBackgroundDivisionWeek()`.
+- [x] La simulación de fondo puede promocionar juveniles en clubes CPU.
+- [x] La promoción juvenil de fondo también respeta `maxSquadSize`.
+- [x] No se detectó un bug bloqueante en este subsistema durante la auditoría.
+
+### Estado final antes de esta actualización documental
+
+- [x] Commit funcional más reciente: `fe3665b` Fix Primera B and Segunda transition sync.
+- [x] Rama activa: `main`.
+- [x] `main` sincronizada con `origin/main`.
+- [x] Working tree limpio.
+- [x] Cadena revisada y sincronizada: Primera División ↔ Primera B ↔ Segunda División ↔ Tercera A ↔ Tercera B.
+- [x] Juego listo para revisión manual mediante `FootballManager.exe`.
