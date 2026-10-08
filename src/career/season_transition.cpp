@@ -240,23 +240,6 @@ vector<vector<pair<int, int>>> buildRoundRobinIndexSchedule(int teamCount, bool 
     return out;
 }
 
-Team* simulatePlayoffMatch(Team* home, Team* away, const string& label, SeasonTransitionSummary& summary) {
-    if (!home) return away;
-    if (!away) return home;
-
-    Team h1 = *home;
-    Team a1 = *away;
-    MatchResult result = playMatch(h1, a1, false, true);
-    addLine(summary, label + ": " + home->name + " " + to_string(result.homeGoals) + "-" +
-                         to_string(result.awayGoals) + " " + away->name);
-    if (result.homeGoals > result.awayGoals) return home;
-    if (result.awayGoals > result.homeGoals) return away;
-
-    Team* winner = (teamPenaltyStrength(*home) >= teamPenaltyStrength(*away)) ? home : away;
-    addLine(summary, label + " definido por penales: " + winner->name);
-    return winner;
-}
-
 Team* simulateSingleLegKnockout(Team* home,
                                 Team* away,
                                 const string& label,
@@ -500,13 +483,13 @@ Team* simulateSegundaPlayoff(const vector<Team*>& seeds, SeasonTransitionSummary
     Team* s6 = seeds.size() > 5 ? seeds[5] : nullptr;
     Team* s7 = seeds.size() > 6 ? seeds[6] : nullptr;
 
-    Team* q1 = simulatePlayoffMatch(s2, s7, "Cuartos 1", summary);
-    Team* q2 = simulatePlayoffMatch(s3, s6, "Cuartos 2", summary);
-    Team* q3 = simulatePlayoffMatch(s4, s5, "Cuartos 3", summary);
+    Team* q1 = simulateTwoLegAggregateTie(s2, s7, "Cuartos 1", summary);
+    Team* q2 = simulateTwoLegAggregateTie(s3, s6, "Cuartos 2", summary);
+    Team* q3 = simulateTwoLegAggregateTie(s4, s5, "Cuartos 3", summary);
 
-    Team* semi1 = simulatePlayoffMatch(s1, q3, "Semifinal 1", summary);
-    Team* semi2 = simulatePlayoffMatch(q1, q2, "Semifinal 2", summary);
-    Team* champion = simulatePlayoffMatch(semi1, semi2, "Final playoff", summary);
+    Team* semi1 = simulateTwoLegAggregateTie(s1, q3, "Semifinal 1", summary);
+    Team* semi2 = simulateTwoLegAggregateTie(q1, q2, "Semifinal 2", summary);
+    Team* champion = simulateTwoLegAggregateTie(semi1, semi2, "Final playoff", summary);
     if (champion) addLine(summary, "Ganador playoff Segunda: " + champion->name);
     return champion;
 }

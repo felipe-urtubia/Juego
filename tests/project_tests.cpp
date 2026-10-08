@@ -2348,6 +2348,38 @@ void testSegundaUsesTerceraAChampionAndPlayoffWinner() {
     setRandomSeed(20261008);
     SeasonTransitionSummary summary = endSeason(career);
     resetRandomSeed();
+    auto hasSummaryPrefix = [&](const string& prefix) {
+        return any_of(
+            summary.lines.begin(),
+            summary.lines.end(),
+            [&](const string& line) {
+                return line.rfind(prefix, 0) == 0;
+            });
+    };
+
+    auto expectTwoLegSegundaTie = [&](const string& label) {
+        expect(hasSummaryPrefix(label + " ida: "),
+               label + " debe registrar partido de ida.");
+        expect(hasSummaryPrefix(label + " vuelta: "),
+               label + " debe registrar partido de vuelta.");
+        expect(hasSummaryPrefix(label + " global: "),
+               label + " debe registrar marcador global.");
+    };
+
+    expect(hasSummaryPrefix("Repechaje 4°: "),
+           "El repechaje 4° vs 4° debe seguir jugandose a partido unico.");
+
+    expect(!hasSummaryPrefix("Repechaje 4° ida: ") &&
+               !hasSummaryPrefix("Repechaje 4° vuelta: ") &&
+               !hasSummaryPrefix("Repechaje 4° global: "),
+           "El repechaje 4° vs 4° no debe transformarse en llave ida/vuelta.");
+
+    expectTwoLegSegundaTie("Cuartos 1");
+    expectTwoLegSegundaTie("Cuartos 2");
+    expectTwoLegSegundaTie("Cuartos 3");
+    expectTwoLegSegundaTie("Semifinal 1");
+    expectTwoLegSegundaTie("Semifinal 2");
+    expectTwoLegSegundaTie("Final playoff");
 
     const string playoffPrefix = "Ganador playoff Tercera A: ";
     string playoffWinnerName;
