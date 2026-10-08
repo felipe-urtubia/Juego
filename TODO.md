@@ -8590,3 +8590,146 @@ Rama de trabajo: `refactor/career-service-next`.
 - `506de02` Remove obsolete career service base implementation.
 
 > Esta etapa es posterior a `v0.1.2.0-alpha`; mientras no se integre y publique una nueva versión, estos cambios no forman parte del ZIP público de esa release.
+
+---
+
+## ✅ Registro consolidado del trabajo realizado en esta conversación - 2026-10-08
+
+> Este bloque se agrega al final como registro consolidado. No reemplaza ni modifica las secciones históricas anteriores de `TODO.md`.
+
+### Modularización semanal de CareerService
+
+- [x] Extracción de la simulación de copa de temporada hacia `CareerService`.
+- [x] Extracción de comunicaciones semanales del staff.
+- [x] Extracción de alertas semanales del plantel.
+- [x] Extracción de narrativas semanales.
+- [x] Extracción de eventos semanales de carrera del manager.
+- [x] Extracción de actualización semanal de reputación del manager.
+- [x] Extracción de lógica semanal de despido y cambio de club.
+- [x] Trabajo realizado sobre `feature/career-week-services` e integrado posteriormente en `main`.
+
+Commits principales de esta etapa:
+- `7d1208a` refactor(career): extract season cup simulation into CareerService.
+- `41f2ba3` refactor(career): extract weekly staff communications into CareerService.
+- `fff046b` refactor(career): extract weekly squad news alerts into CareerService.
+- `8f36d45` refactor(career): extract weekly narratives into CareerService.
+- `c9f7740` refactor(career): extract weekly manager career events into CareerService.
+- `b61f433` refactor(career): extract weekly manager reputation into CareerService.
+- `ebc7544` refactor(career): extract weekly manager dismissal into CareerService.
+- `d67d05d` docs: documentar modularizacion de CareerService en TODO.
+
+### Rediseño de interfaz y flujo de carrera
+
+- [x] Rediseño de la pantalla de guardados.
+- [x] Rediseño de configuraciones.
+- [x] Rediseño de créditos.
+- [x] Rediseño del flujo de creación de nueva carrera.
+- [x] Integración y documentación de los cambios de interfaz.
+
+Commits principales:
+- `f82f7b1` feat: redisenar guardados configuraciones y creditos.
+- `3af508c` docs: registrar cierre del rediseno de interfaz.
+- `68ad468` feat: redisenar flujo de nueva carrera.
+
+### Match Center interactivo
+
+- [x] Decisiones tácticas durante el partido.
+- [x] Cambio de mentalidad durante el partido.
+- [x] Cambio de instrucciones durante el partido.
+- [x] Compatibilidad entre mentalidades e instrucciones.
+- [x] Sustituciones manuales.
+- [x] Sustituciones de la IA visibles en el Match Center.
+- [x] Pausa y reanudación.
+- [x] Velocidades `1x`, `2x` y `4x`.
+- [x] Botón `CONTINUAR` y cortes de decisión interactivos.
+- [x] Bridge seguro entre GUI y worker de simulación.
+- [x] Pruebas automáticas y validación manual del Match Center.
+
+Commits de integración registrados:
+- `827c77f` feat: add match center controls and substitutions.
+- `d2b6d37` merge: integrate match center controls.
+
+### Release pública v0.1.2.0-alpha
+
+- [x] Preparada y publicada la versión `v0.1.2.0-alpha`.
+- [x] Commit de release `f0ae680`.
+- [x] Tag anotado `v0.1.2.0-alpha` publicado.
+- [x] ZIP distribuible generado y publicado como GitHub pre-release.
+- [x] Descarga pública comprobada.
+- [x] Build completo aprobado.
+- [x] Tests automáticos al 100%.
+- [x] Auditoría CLI: 5 divisiones, 90 equipos, 2200 jugadores, 0 errores y 0 advertencias.
+
+### Mejoras posteriores a v0.1.2.0-alpha
+
+- [x] Mejorado el progreso visual de la simulación posterior al partido.
+- [x] Implementadas ofertas de transferencias entrantes interactivas.
+- [x] Posibilidad de aceptar, rechazar o negociar ofertas recibidas.
+- [x] Validación de contraofertas.
+- [x] Movimiento de actualizaciones de transferencias pendientes al servicio especializado.
+- [x] Movimiento de comunicaciones del plantel al servicio de comunicaciones.
+- [x] Movimiento de reportes de carrera al servicio de comunicaciones.
+- [x] Extracción del módulo especializado `career_service_management.cpp`.
+- [x] Eliminación de la implementación base obsoleta `career_service.cpp`.
+- [x] `CareerService` quedó distribuido en módulos especializados.
+
+Commits principales:
+- `3b0a5f9` Improve post-match simulation progress.
+- `6e48aa6` Add interactive incoming transfer offers.
+- `bc294f1` Move pending transfer updates into transfer service.
+- `8a588de` Move squad communications into communications service.
+- `76c9fc1` Move career reports into communications service.
+- `d8a1486` Extract career management service module.
+- `506de02` Remove obsolete career service base implementation.
+- `1e2410e` Document CareerService modularization completion.
+- `f1c3144` Document CareerService integration into main.
+
+### Verificación de ascensos Primera B -> Primera División
+
+- [x] Revisada la lógica real de ascenso y descenso al finalizar temporada.
+- [x] Confirmado que el campeón de Primera B pasa a `primera division`.
+- [x] Confirmado que los equipos descendidos de Primera pasan a Primera B.
+- [x] Confirmado que `getDivisionTeams("primera division")` refleja los cambios de categoría.
+- [x] Confirmado que la tabla activa utilizada por la GUI se reconstruye con los equipos ascendidos y sin los descendidos.
+- [x] Agregada regresión automática `primera_b_promotion_sync`.
+- [x] Build completo aprobado.
+- [x] Suite automática aprobada al 100%.
+- [x] Cambio integrado mediante fast-forward en `main`.
+- [x] Commit `ba7357d` Test Primera B promotion synchronization.
+- [x] Commit publicado en GitHub.
+- [x] Rama temporal `test/primera-b-promotion-sync` eliminada después de integrar.
+
+### Corrección de múltiples partidas guardadas
+
+- [x] Detectado que cada `Career` utilizaba inicialmente `saves/career_save.txt`.
+- [x] Detectado que `startCareerService()` heredaba `career.saveFile` al crear una carrera nueva.
+- [x] Esto provocaba que una segunda carrera pudiera reemplazar el archivo de la primera.
+- [x] Implementado `buildUniqueCareerSavePath()` para asignar un archivo independiente a cada carrera nueva.
+- [x] Los nombres de guardado utilizan manager y club como base.
+- [x] Si el nombre ya existe se generan sufijos `_2`, `_3`, etc.
+- [x] Guardar nuevamente una carrera existente sigue actualizando únicamente su propio archivo.
+- [x] El navegador de guardados continúa descubriendo los archivos `.txt` dentro de `saves/`.
+- [x] Agregada prueba automática `multiple_save_games`.
+- [x] La prueba comprueba que dos carreras distintas conservan archivos independientes.
+- [x] La prueba comprueba que guardar la segunda carrera no elimina ni reemplaza la primera.
+- [x] La prueba comprueba que ambas partidas pueden cargarse nuevamente con su progreso propio.
+- [x] `FootballManager`, `FootballManagerCLI` y `FootballManagerTests` compilados correctamente.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: 100% aprobado.
+- [x] `FootballManagerCLI.exe --validate`: sin fallas.
+- [x] Auditoría: 5 divisiones, 90 equipos, 2200 jugadores, 0 errores y 0 advertencias.
+- [x] `git diff --check`: limpio.
+- [x] Commit `c5b5600` Fix independent save files for new careers.
+- [x] Integrado mediante fast-forward en `main`.
+- [x] Publicado correctamente en `origin/main`.
+- [x] Rama `fix/multiple-save-games` eliminada después de integrar.
+- [x] Verificación manual realizada desde `FootballManager.exe`.
+- [x] Confirmado manualmente que dos carreras distintas aparecen y funcionan como guardados separados.
+
+### Estado final del repositorio al cerrar esta revisión
+
+- [x] Rama activa final: `main`.
+- [x] `main` sincronizada con `origin/main`.
+- [x] HEAD final antes de esta actualización documental: `c5b5600`.
+- [x] Working tree limpio.
+- [x] No quedaron ramas temporales de las últimas pruebas y correcciones.
+- [x] El trabajo posterior a `v0.1.2.0-alpha` está en `main`, pero no modifica retroactivamente el ZIP público ya publicado de esa release.
