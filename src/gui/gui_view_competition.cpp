@@ -261,14 +261,25 @@ GuiPageModel buildLeagueModel(AppState& state) {
                                         "Puesto " + std::to_string(state.career.currentCompetitiveRank())});
         LeagueTable table = selectedLeagueTable(state);
         Team* leader = table.teams.empty() ? nullptr : table.teams.front();
-        Team* bottom = table.teams.empty() ? nullptr : table.teams.back();
+        const int relegationSlots = state.career.activeDivision == "primera division" ? 2 : 1;
         if (leader) {
             model.secondary.rows.push_back({"Lider", leader->name, std::to_string(leader->points),
                                             "Media " + std::to_string(leader->getAverageSkill())});
         }
-        if (bottom) {
-            model.secondary.rows.push_back({"Descenso", bottom->name, std::to_string(bottom->points),
-                                            "Moral " + std::to_string(bottom->morale)});
+        const int visibleRelegationSlots =
+            std::min(relegationSlots, static_cast<int>(table.teams.size()));
+        for (int i = visibleRelegationSlots; i > 0; --i) {
+            const size_t index = table.teams.size() - static_cast<size_t>(i);
+            Team* relegationTeam = table.teams[index];
+            if (!relegationTeam) continue;
+
+            model.secondary.rows.push_back({
+                "Descenso",
+                relegationTeam->name,
+                std::to_string(relegationTeam->points),
+                "Puesto " + std::to_string(index + 1) +
+                    " | Moral " + std::to_string(relegationTeam->morale)
+            });
         }
     }
     for (auto it = state.career.history.rbegin(); it != state.career.history.rend() && model.footer.rows.size() < 6; ++it) {

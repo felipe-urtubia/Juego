@@ -1979,6 +1979,130 @@ void testPrimeraBPromotionAppearsInPrimeraNextSeason() {
     expect(!containsTeam(career.leagueTable.teams, "Primera Descenso Sync"),
            "La tabla activa usada por la interfaz no debe incluir al equipo descendido.");
 }
+void testPrimeraAndPrimeraBFullPromotionRelegationSync() {
+    Career career;
+    career.currentSeason = 8;
+    career.currentWeek = 34;
+    career.managerName = "Full Promotion Sync Manager";
+
+    career.allTeams.push_back(makeTeam("Primera Lider Full", "primera division", 74, 3, 3, "Balanced", "Equilibrado", 900000));
+    career.allTeams.push_back(makeTeam("Primera Medio Full", "primera division", 71, 3, 3, "Balanced", "Equilibrado", 800000));
+    career.allTeams.push_back(makeTeam("Primera Riesgo Full", "primera division", 66, 2, 2, "Defensive", "Bloque bajo", 500000));
+    career.allTeams.push_back(makeTeam("Primera Fondo Full", "primera division", 64, 2, 2, "Defensive", "Pausar juego", 470000));
+
+    const vector<string> primeraBNames = {
+        "PB Campeon Full",
+        "PB Segundo Full",
+        "PB Tercero Full",
+        "PB Cuarto Full",
+        "PB Quinto Full",
+        "PB Sexto Full",
+        "PB Septimo Full",
+        "PB Octavo Full",
+        "PB Noveno Full",
+        "PB Fondo Full"
+    };
+
+    for (size_t i = 0; i < primeraBNames.size(); ++i) {
+        career.allTeams.push_back(
+            makeTeam(primeraBNames[i],
+                     "primera b",
+                     70 - static_cast<int>(i),
+                     3,
+                     3,
+                     "Balanced",
+                     "Equilibrado",
+                     430000 - static_cast<long long>(i) * 10000));
+    }
+
+    career.allTeams.push_back(makeTeam("Segunda Lider Full", "segunda division", 68, 3, 3, "Balanced", "Equilibrado", 300000));
+    career.allTeams.push_back(makeTeam("Segunda Medio A Full", "segunda division", 64, 2, 2, "Balanced", "Equilibrado", 270000));
+    career.allTeams.push_back(makeTeam("Segunda Medio B Full", "segunda division", 62, 2, 2, "Balanced", "Equilibrado", 250000));
+    career.allTeams.push_back(makeTeam("Segunda Fondo Full", "segunda division", 59, 2, 2, "Defensive", "Bloque bajo", 220000));
+
+    auto setStanding = [](Team* team,
+                          int points,
+                          int wins,
+                          int draws,
+                          int goalsFor,
+                          int goalsAgainst) {
+        expect(team != nullptr,
+               "La prueba completa de ascensos y descensos necesita equipos existentes.");
+        if (!team) return;
+        team->points = points;
+        team->wins = wins;
+        team->draws = draws;
+        team->losses = max(0, 30 - wins - draws);
+        team->goalsFor = goalsFor;
+        team->goalsAgainst = goalsAgainst;
+    };
+
+    setStanding(career.findTeamByName("Primera Lider Full"), 70, 22, 4, 56, 21);
+    setStanding(career.findTeamByName("Primera Medio Full"), 55, 16, 7, 43, 31);
+    setStanding(career.findTeamByName("Primera Riesgo Full"), 27, 7, 6, 25, 46);
+    setStanding(career.findTeamByName("Primera Fondo Full"), 18, 4, 6, 19, 53);
+
+    const vector<int> pbPoints = {72, 63, 58, 54, 49, 44, 39, 34, 25, 16};
+    for (size_t i = 0; i < primeraBNames.size(); ++i) {
+        setStanding(career.findTeamByName(primeraBNames[i]),
+                    pbPoints[i],
+                    max(3, pbPoints[i] / 3),
+                    4,
+                    52 - static_cast<int>(i) * 2,
+                    22 + static_cast<int>(i) * 3);
+    }
+
+    setStanding(career.findTeamByName("Segunda Lider Full"), 66, 20, 6, 50, 24);
+    setStanding(career.findTeamByName("Segunda Medio A Full"), 48, 14, 6, 39, 31);
+    setStanding(career.findTeamByName("Segunda Medio B Full"), 36, 10, 6, 31, 38);
+    setStanding(career.findTeamByName("Segunda Fondo Full"), 19, 4, 7, 20, 49);
+
+    career.setActiveDivision("primera division");
+    career.myTeam = career.findTeamByName("Primera Lider Full");
+    expect(career.myTeam != nullptr,
+           "El club usuario de la prueba completa debe existir.");
+    career.leagueTable.sortTable();
+
+    SeasonTransitionSummary summary = endSeason(career);
+    expect(!summary.lines.empty(),
+           "El cierre completo debe producir un resumen de temporada.");
+
+    Team* primeraRiesgo = career.findTeamByName("Primera Riesgo Full");
+    Team* primeraFondo = career.findTeamByName("Primera Fondo Full");
+    expect(primeraRiesgo && primeraRiesgo->division == "primera b",
+           "El penultimo de Primera debe descender a Primera B.");
+    expect(primeraFondo && primeraFondo->division == "primera b",
+           "El ultimo de Primera debe descender a Primera B.");
+
+    Team* pbChampion = career.findTeamByName("PB Campeon Full");
+    expect(pbChampion && pbChampion->division == "primera division",
+           "El campeon de Primera B debe ascender a Primera Division.");
+
+    int promotedFromPrimeraB = 0;
+    for (const string& name : primeraBNames) {
+        Team* team = career.findTeamByName(name);
+        if (team && team->division == "primera division") {
+            promotedFromPrimeraB++;
+        }
+    }
+    expect(promotedFromPrimeraB == 2,
+           "Primera Division debe recibir exactamente dos equipos desde Primera B.");
+
+    Team* pbBottom = career.findTeamByName("PB Fondo Full");
+    expect(pbBottom && pbBottom->division == "segunda division",
+           "El ultimo de Primera B debe descender a Segunda aunque la division activa sea Primera.");
+
+    Team* segundaLeader = career.findTeamByName("Segunda Lider Full");
+    expect(segundaLeader && segundaLeader->division == "primera b",
+           "Primera B debe recibir un ascendido desde Segunda aunque la division activa sea Primera.");
+
+    expect(career.getDivisionTeams("primera division").size() == 4,
+           "Primera Division debe conservar su cantidad de clubes tras dos ascensos y dos descensos.");
+    expect(career.getDivisionTeams("primera b").size() == 10,
+           "Primera B debe conservar su cantidad de clubes tras todos los intercambios.");
+    expect(career.getDivisionTeams("segunda division").size() == 4,
+           "Segunda debe conservar su cantidad de clubes tras el intercambio con Primera B.");
+}
 void testSeasonServiceReturnsStructuredWeekResult() {
     Career career;
     career.currentSeason = 3;
@@ -5830,6 +5954,7 @@ int main() {
         {"season_transition", testSeasonTransitionAdvancesCareerWithoutUiDependencies},
         {"season_transition_standings", testSeasonTransitionPromotesByStandingsNotSquadValue},
         {"primera_b_promotion_sync", testPrimeraBPromotionAppearsInPrimeraNextSeason},
+        {"primera_full_promotion_relegation_sync", testPrimeraAndPrimeraBFullPromotionRelegationSync},
         {"season_service", testSeasonServiceReturnsStructuredWeekResult},
         {"opponent_report", testOpponentReportExplainsNextFixture},
         {"match_analysis_store", testMatchAnalysisStoreProducesStructuredCareerData},

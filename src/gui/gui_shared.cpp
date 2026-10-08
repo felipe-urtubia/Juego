@@ -1362,7 +1362,8 @@ LRESULT handleListCustomDraw(AppState& state, LPNMHDR header) {
         if (titleMatches(state.currentModel.primary.title, "LeagueTableView")) {
             int totalRows = ListView_GetItemCount(state.tableList);
             int position = std::atoi(first.c_str());
-            int relegationStart = std::max(1, totalRows - 1);
+            int relegationSlots = state.career.activeDivision == "primera b" ? 1 : 2;
+            int relegationStart = std::max(1, totalRows - relegationSlots + 1);
             int continentalSpots = std::max(1, totalRows / 4);
             if (second.find('*') != std::string::npos) {
                 bg = RGB(24, 71, 54);

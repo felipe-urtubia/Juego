@@ -566,6 +566,79 @@ Team* liguillaAscensoPrimeraB(const vector<Team*>& table, SeasonTransitionSummar
     return winner;
 }
 
+struct PrimeraBSeasonOutcome {
+    Team* champion = nullptr;
+    Team* liguillaWinner = nullptr;
+    Team* relegated = nullptr;
+};
+
+PrimeraBSeasonOutcome resolvePrimeraBSeason(const vector<Team*>& table,
+                                            SeasonTransitionSummary& summary) {
+    PrimeraBSeasonOutcome outcome;
+    vector<Team*> seeded = table;
+
+    if (!table.empty()) {
+        if (table.size() >= 2) {
+            int topPts = table[0]->points;
+            int tiedCount = 0;
+            for (Team* team : table) {
+                if (team->points == topPts) tiedCount++;
+                else break;
+            }
+
+            if (tiedCount >= 2) {
+                Team* a = table[0];
+                Team* b = table[1];
+                outcome.champion =
+                    simulateSingleLegKnockout(a, b, "Final por el titulo", summary, true);
+
+                if (outcome.champion && outcome.champion != seeded[0]) {
+                    auto it = find(seeded.begin(), seeded.end(), outcome.champion);
+                    if (it != seeded.end()) {
+                        Team* oldFirst = seeded[0];
+                        size_t pos = static_cast<size_t>(it - seeded.begin());
+                        seeded[pos] = oldFirst;
+                        seeded[0] = outcome.champion;
+                    }
+                }
+            } else {
+                outcome.champion = table[0];
+            }
+        } else {
+            outcome.champion = table[0];
+        }
+    }
+
+    if (outcome.champion) {
+        addLine(summary, "Campeon fase regular Primera B: " + outcome.champion->name);
+    }
+
+    outcome.liguillaWinner = liguillaAscensoPrimeraB(seeded, summary);
+
+    if (!table.empty()) {
+        int n = static_cast<int>(table.size());
+        int bottomPts = table[static_cast<size_t>(n - 1)]->points;
+        int tiedCount = 0;
+
+        for (int i = n - 1; i >= 0; --i) {
+            if (table[static_cast<size_t>(i)]->points == bottomPts) tiedCount++;
+            else break;
+        }
+
+        if (tiedCount >= 2 && n >= 2) {
+            Team* a = table[static_cast<size_t>(n - 1)];
+            Team* b = table[static_cast<size_t>(n - 2)];
+            Team* winner =
+                simulateSingleLegKnockout(a, b, "Definicion descenso Primera B", summary, true);
+            outcome.relegated = (winner == a) ? b : a;
+        } else {
+            outcome.relegated = table[static_cast<size_t>(n - 1)];
+        }
+    }
+
+    return outcome;
+}
+
 SeasonTransitionSummary endSeasonSegundaDivision(Career& career) {
     SeasonTransitionSummary summary;
     addLine(summary, "Fin de temporada (Segunda Division)");
@@ -706,60 +779,13 @@ SeasonTransitionSummary endSeasonPrimeraB(Career& career) {
     addLine(summary, "Fin de temporada (Primera B)");
 
     vector<Team*> table = career.leagueTable.teams;
-    vector<Team*> seeded = table;
-    Team* champion = nullptr;
-    if (!table.empty()) {
-        if (table.size() >= 2) {
-            int topPts = table[0]->points;
-            int tiedCount = 0;
-            for (Team* team : table) {
-                if (team->points == topPts) tiedCount++;
-                else break;
-            }
-            if (tiedCount >= 2) {
-                Team* a = table[0];
-                Team* b = table[1];
-                champion = simulateSingleLegKnockout(a, b, "Final por el titulo", summary, true);
-                if (champion && champion != seeded[0]) {
-                    auto it = find(seeded.begin(), seeded.end(), champion);
-                    if (it != seeded.end()) {
-                        Team* oldFirst = seeded[0];
-                        size_t pos = static_cast<size_t>(it - seeded.begin());
-                        seeded[pos] = oldFirst;
-                        seeded[0] = champion;
-                    }
-                }
-            } else {
-                champion = table[0];
-            }
-        } else {
-            champion = table[0];
-        }
-    }
+    PrimeraBSeasonOutcome primeraBOutcome = resolvePrimeraBSeason(table, summary);
+    Team* champion = primeraBOutcome.champion;
+    Team* liguillaWinner = primeraBOutcome.liguillaWinner;
+    Team* relegated = primeraBOutcome.relegated;
+
     if (champion) {
         summary.champion = champion->name;
-        addLine(summary, "Campeon fase regular: " + champion->name);
-    }
-
-    Team* liguillaWinner = liguillaAscensoPrimeraB(seeded, summary);
-
-    Team* relegated = nullptr;
-    if (!table.empty()) {
-        int n = static_cast<int>(table.size());
-        int bottomPts = table[n - 1]->points;
-        int tied = 0;
-        for (int i = n - 1; i >= 0; --i) {
-            if (table[static_cast<size_t>(i)]->points == bottomPts) tied++;
-            else break;
-        }
-        if (tied >= 2 && n >= 2) {
-            Team* a = table[static_cast<size_t>(n - 1)];
-            Team* b = table[static_cast<size_t>(n - 2)];
-            Team* winner = simulateSingleLegKnockout(a, b, "Definicion descenso", summary, true);
-            relegated = (winner == a) ? b : a;
-        } else {
-            relegated = table[static_cast<size_t>(n - 1)];
-        }
     }
 
     int idx = divisionIndex(career.activeDivision);
@@ -1049,16 +1075,40 @@ SeasonTransitionSummary endSeason(Career& career) {
     vector<Team*> fromHigher =
         higher.empty() ? vector<Team*>() : bottomByStandings(career, higher, actualPromote);
     vector<Team*> fromLower;
+    vector<Team*> primeraBRelegatedToSegunda;
+    vector<Team*> segundaPromotedToPrimeraB;
+    string segundaDivision;
+
     if (!lower.empty() && config.seasonHandler == CompetitionSeasonHandler::PrimeraDivision &&
         getCompetitionConfig(lower).seasonHandler == CompetitionSeasonHandler::PrimeraB) {
         vector<Team*> pbTable = rankedDivisionTeams(career, lower);
-        Team* regularChampion = pbTable.empty() ? nullptr : pbTable.front();
-        Team* pbPlayoff = liguillaAscensoPrimeraB(pbTable, summary);
-        if (regularChampion) fromLower.push_back(regularChampion);
-        if (pbPlayoff && pbPlayoff != regularChampion) fromLower.push_back(pbPlayoff);
-        if (static_cast<int>(fromLower.size()) > relegateCount) fromLower.resize(static_cast<size_t>(relegateCount));
+        PrimeraBSeasonOutcome pbOutcome = resolvePrimeraBSeason(pbTable, summary);
+
+        if (pbOutcome.champion) fromLower.push_back(pbOutcome.champion);
+        if (pbOutcome.liguillaWinner &&
+            pbOutcome.liguillaWinner != pbOutcome.champion) {
+            fromLower.push_back(pbOutcome.liguillaWinner);
+        }
+
+        if (static_cast<int>(fromLower.size()) > relegateCount) {
+            fromLower.resize(static_cast<size_t>(relegateCount));
+        }
+
+        int pbIdx = divisionIndex(lower);
+        if (pbIdx >= 0 && pbIdx + 1 < static_cast<int>(kDivisions.size())) {
+            segundaDivision = kDivisions[static_cast<size_t>(pbIdx + 1)].id;
+        }
+
+        if (!segundaDivision.empty() && pbOutcome.relegated) {
+            primeraBRelegatedToSegunda.push_back(pbOutcome.relegated);
+            segundaPromotedToPrimeraB =
+                topByStandings(career,
+                               segundaDivision,
+                               static_cast<int>(primeraBRelegatedToSegunda.size()));
+        }
     } else {
-        fromLower = lower.empty() ? vector<Team*>() : topByStandings(career, lower, relegateCount);
+        fromLower =
+            lower.empty() ? vector<Team*>() : topByStandings(career, lower, relegateCount);
     }
 
     for (Team* team : promote) {
@@ -1080,6 +1130,32 @@ SeasonTransitionSummary endSeason(Career& career) {
     for (Team* team : fromLower) {
         team->division = career.activeDivision;
         team->morale = 55;
+    }
+
+    for (Team* team : primeraBRelegatedToSegunda) {
+        if (!segundaDivision.empty()) {
+            team->division = segundaDivision;
+            team->budget = max(0LL, team->budget - 20000);
+            team->morale = 40;
+        }
+    }
+
+    for (Team* team : segundaPromotedToPrimeraB) {
+        if (!lower.empty()) {
+            team->division = lower;
+            team->morale = 55;
+        }
+    }
+
+    if (!primeraBRelegatedToSegunda.empty()) {
+        addLine(summary,
+                "Descenso Primera B a Segunda: " +
+                    joinTeamNames(primeraBRelegatedToSegunda));
+    }
+    if (!segundaPromotedToPrimeraB.empty()) {
+        addLine(summary,
+                "Ascenso Segunda a Primera B: " +
+                    joinTeamNames(segundaPromotedToPrimeraB));
     }
 
     addMovementLines(summary, "Ascensos", promote, "Descensos", relegate);
