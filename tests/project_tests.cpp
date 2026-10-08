@@ -1907,6 +1907,313 @@ void testSeasonTransitionPromotesByStandingsNotSquadValue() {
            "Un club mas caro no debe ascender si su rendimiento fue inferior.");
 }
 
+void testTerceraATerceraBTransitionConsistency() {
+    auto populateWorld = [](Career& career) {
+        career.currentSeason = 12;
+        career.currentWeek = 30;
+        career.managerName = "Tercera A B Sync Manager";
+
+        for (int i = 0; i < 4; ++i) {
+            career.allTeams.push_back(
+                makeTeam("Segunda AB " + to_string(i + 1),
+                         "segunda division",
+                         67 - i,
+                         3,
+                         3,
+                         "Balanced",
+                         "Equilibrado",
+                         520000 - i * 20000));
+        }
+
+        for (int i = 0; i < 16; ++i) {
+            int skill = 64;
+
+            if (i == 12) skill = 30;
+            if (i == 13) skill = 29;
+            if (i == 14) skill = 55;
+            if (i == 15) skill = 54;
+
+            career.allTeams.push_back(
+                makeTeam("Tercera A AB " + to_string(i + 1),
+                         "tercera division a",
+                         skill,
+                         3,
+                         3,
+                         "Balanced",
+                         "Equilibrado",
+                         400000 - i * 5000));
+        }
+
+        for (int i = 0; i < 14; ++i) {
+            int skill = 62;
+
+            if (i == 0) skill = 82;
+            if (i == 1) skill = 92;
+            if (i == 2) skill = 91;
+
+            career.allTeams.push_back(
+                makeTeam("Tercera B Norte AB " + to_string(i + 1),
+                         "tercera division b",
+                         skill,
+                         3,
+                         3,
+                         "Balanced",
+                         "Equilibrado",
+                         220000 - i * 1000));
+        }
+
+        for (int i = 0; i < 14; ++i) {
+            int skill = 62;
+
+            if (i == 0) skill = 83;
+            if (i == 1) skill = 93;
+            if (i == 2) skill = 90;
+
+            career.allTeams.push_back(
+                makeTeam("Tercera B Sur AB " + to_string(i + 1),
+                         "tercera division b",
+                         skill,
+                         3,
+                         3,
+                         "Balanced",
+                         "Equilibrado",
+                         230000 - i * 1000));
+        }
+
+        auto setStanding = [](Team* team,
+                              int points,
+                              int wins,
+                              int draws,
+                              int goalsFor,
+                              int goalsAgainst) {
+            expect(team != nullptr,
+                   "La prueba Tercera A/B necesita todos sus equipos.");
+
+            if (!team) return;
+
+            team->points = points;
+            team->wins = wins;
+            team->draws = draws;
+            team->losses = max(0, 30 - wins - draws);
+            team->goalsFor = goalsFor;
+            team->goalsAgainst = goalsAgainst;
+        };
+
+        for (int i = 0; i < 4; ++i) {
+            setStanding(
+                career.findTeamByName("Segunda AB " + to_string(i + 1)),
+                65 - i * 12,
+                19 - i * 3,
+                5,
+                48 - i * 4,
+                23 + i * 6);
+        }
+
+        for (int i = 0; i < 16; ++i) {
+            setStanding(
+                career.findTeamByName("Tercera A AB " + to_string(i + 1)),
+                90 - i * 4,
+                max(2, 25 - i),
+                4,
+                60 - i,
+                18 + i * 2);
+        }
+
+        for (int i = 0; i < 14; ++i) {
+            setStanding(
+                career.findTeamByName("Tercera B Norte AB " + to_string(i + 1)),
+                82 - i * 4,
+                max(2, 23 - i),
+                4,
+                55 - i,
+                18 + i * 2);
+
+            setStanding(
+                career.findTeamByName("Tercera B Sur AB " + to_string(i + 1)),
+                81 - i * 4,
+                max(2, 22 - i),
+                5,
+                54 - i,
+                19 + i * 2);
+        }
+    };
+
+    auto containsName = [](const vector<string>& names, const string& name) {
+        return find(names.begin(), names.end(), name) != names.end();
+    };
+
+    Career activeB;
+    populateWorld(activeB);
+    activeB.setActiveDivision("tercera division b");
+    activeB.myTeam = activeB.findTeamByName("Tercera B Norte AB 1");
+
+    expect(activeB.myTeam != nullptr,
+           "La prueba necesita un club usuario en Tercera B.");
+
+    const int startingSeason = activeB.currentSeason;
+
+    const long long southChampionInitialBudget =
+        activeB.findTeamByName("Tercera B Sur AB 1")->budget;
+
+    const long long a13InitialBudget =
+        activeB.findTeamByName("Tercera A AB 13")->budget;
+    const long long a14InitialBudget =
+        activeB.findTeamByName("Tercera A AB 14")->budget;
+    const long long a15InitialBudget =
+        activeB.findTeamByName("Tercera A AB 15")->budget;
+    const long long a16InitialBudget =
+        activeB.findTeamByName("Tercera A AB 16")->budget;
+
+    setRandomSeed(20261008);
+    SeasonTransitionSummary summaryB = endSeason(activeB);
+    resetRandomSeed();
+
+    Team* northChampion =
+        activeB.findTeamByName("Tercera B Norte AB 1");
+    Team* southChampion =
+        activeB.findTeamByName("Tercera B Sur AB 1");
+
+    expect(northChampion &&
+               northChampion->division == "tercera division a" &&
+               northChampion->morale == 50,
+           "El campeon Norte debe ascender y comenzar la nueva temporada con moral normalizada en 50.");
+
+    expect(southChampion &&
+               southChampion->division == "tercera division a" &&
+               southChampion->morale == 50,
+           "El campeon Sur debe ascender y comenzar la nueva temporada con moral normalizada en 50.");
+
+    expect(southChampion &&
+               southChampion->budget == southChampionInitialBudget + 25000,
+           "El campeon zonal fuera del grupo del usuario debe recibir exactamente $25000.");
+
+    Team* a13 = activeB.findTeamByName("Tercera A AB 13");
+    Team* a14 = activeB.findTeamByName("Tercera A AB 14");
+    Team* a15 = activeB.findTeamByName("Tercera A AB 15");
+    Team* a16 = activeB.findTeamByName("Tercera A AB 16");
+
+    expect(a15 &&
+               a15->division == "tercera division b" &&
+               a15->budget == a15InitialBudget - 15000 &&
+               a15->morale == 50,
+           "El 15 de Tercera A debe bajar con penalizacion y moral normalizada al iniciar la nueva temporada.");
+
+    expect(a16 &&
+               a16->division == "tercera division b" &&
+               a16->budget == a16InitialBudget - 15000 &&
+               a16->morale == 50,
+           "El 16 de Tercera A debe bajar con penalizacion y moral normalizada al iniciar la nueva temporada.");
+
+    expect(a13 &&
+               a13->division == "tercera division b" &&
+               a13->budget == a13InitialBudget - 15000 &&
+               a13->morale == 50,
+           "El 13 de Tercera A debe bajar al perder la promocion y comenzar la nueva temporada con moral 50.");
+
+    expect(a14 &&
+               a14->division == "tercera division b" &&
+               a14->budget == a14InitialBudget - 15000 &&
+               a14->morale == 50,
+           "El 14 de Tercera A debe bajar al perder la promocion y comenzar la nueva temporada con moral 50.");
+
+    vector<string> promotionPool = {
+        "Tercera B Norte AB 2",
+        "Tercera B Norte AB 3",
+        "Tercera B Sur AB 2",
+        "Tercera B Sur AB 3",
+    };
+
+    int promotionWinners = 0;
+
+    for (const string& name : promotionPool) {
+        Team* team = activeB.findTeamByName(name);
+
+        if (team && team->division == "tercera division a") {
+            promotionWinners++;
+            expect(team->morale == 50,
+                   "El ganador de promocion debe comenzar la nueva temporada con moral normalizada en 50.");
+        }
+    }
+
+    expect(promotionWinners == 2,
+           "La semilla de regresion debe producir dos ganadores de promocion desde Tercera B.");
+
+    expect(summaryB.promotedTeams.size() == 4,
+           "El resumen de Tercera B debe registrar dos ascensos directos y dos por promocion.");
+
+    expect(summaryB.relegatedTeams.size() == 4,
+           "El resumen de Tercera B debe registrar los cuatro clubes que bajan desde Tercera A.");
+
+    expect(containsName(summaryB.relegatedTeams, "Tercera A AB 13") &&
+               containsName(summaryB.relegatedTeams, "Tercera A AB 14") &&
+               containsName(summaryB.relegatedTeams, "Tercera A AB 15") &&
+               containsName(summaryB.relegatedTeams, "Tercera A AB 16"),
+           "El resumen debe incluir descensos directos y descensos por promocion.");
+
+    expect(!activeB.history.empty(),
+           "La temporada de Tercera B debe quedar guardada en el historial.");
+
+    expect(activeB.history.back().relegated.find("Tercera A AB 13") != string::npos &&
+               activeB.history.back().relegated.find("Tercera A AB 14") != string::npos &&
+               activeB.history.back().relegated.find("Tercera A AB 15") != string::npos &&
+               activeB.history.back().relegated.find("Tercera A AB 16") != string::npos,
+           "El historial debe guardar todos los descensos desde Tercera A.");
+
+    expect(activeB.getDivisionTeams("tercera division a").size() == 16,
+           "Tercera A debe conservar 16 clubes tras el intercambio completo.");
+
+    expect(activeB.getDivisionTeams("tercera division b").size() == 28,
+           "Tercera B debe conservar 28 clubes tras el intercambio completo.");
+
+    expect(activeB.myTeam == northChampion &&
+               activeB.activeDivision == "tercera division a",
+           "La carrera debe seguir al club usuario cuando asciende desde Tercera B.");
+
+    expect(activeB.currentSeason == startingSeason + 1 &&
+               activeB.currentWeek == 1,
+           "El cierre de Tercera B debe avanzar correctamente la temporada.");
+
+    Career activeA;
+    populateWorld(activeA);
+    activeA.setActiveDivision("tercera division a");
+    activeA.myTeam = activeA.findTeamByName("Tercera A AB 1");
+    activeA.leagueTable.sortTable();
+
+    Team* mirrorNorthChampion =
+        activeA.findTeamByName("Tercera B Norte AB 1");
+    Team* mirrorSouthChampion =
+        activeA.findTeamByName("Tercera B Sur AB 1");
+
+    expect(mirrorNorthChampion && mirrorSouthChampion,
+           "La prueba espejo necesita ambos campeones zonales.");
+
+    const long long mirrorNorthBudget = mirrorNorthChampion->budget;
+    const long long mirrorSouthBudget = mirrorSouthChampion->budget;
+
+    setRandomSeed(20261008);
+    SeasonTransitionSummary summaryA = endSeason(activeA);
+    resetRandomSeed();
+
+    mirrorNorthChampion =
+        activeA.findTeamByName("Tercera B Norte AB 1");
+    mirrorSouthChampion =
+        activeA.findTeamByName("Tercera B Sur AB 1");
+
+    expect(mirrorNorthChampion &&
+               mirrorNorthChampion->division == "tercera division a" &&
+               mirrorNorthChampion->budget == mirrorNorthBudget + 25000 &&
+               mirrorNorthChampion->morale == 50,
+           "Con Tercera A activa el campeon Norte debe recibir el mismo bono y terminar el reinicio con moral 50.");
+
+    expect(mirrorSouthChampion &&
+               mirrorSouthChampion->division == "tercera division a" &&
+               mirrorSouthChampion->budget == mirrorSouthBudget + 25000 &&
+               mirrorSouthChampion->morale == 50,
+           "Con Tercera A activa el campeon Sur debe recibir el mismo bono y terminar el reinicio con moral 50.");
+
+    expect(!summaryA.lines.empty(),
+           "La transicion espejo de Tercera A debe seguir generando resumen.");
+}
 void testSegundaUsesTerceraAChampionAndPlayoffWinner() {
     Career career;
     career.currentSeason = 9;
@@ -6374,6 +6681,7 @@ int main() {
         {"season_transition", testSeasonTransitionAdvancesCareerWithoutUiDependencies},
         {"season_transition_standings", testSeasonTransitionPromotesByStandingsNotSquadValue},
         {"segunda_tercera_a_promotion_sync", testSegundaUsesTerceraAChampionAndPlayoffWinner},
+        {"tercera_a_b_transition_consistency", testTerceraATerceraBTransitionConsistency},
         {"primera_b_promotion_sync", testPrimeraBPromotionAppearsInPrimeraNextSeason},
         {"primera_b_active_full_promotion_sync", testPrimeraBActiveCareerPromotesChampionAndLiguillaWinner},
         {"primera_full_promotion_relegation_sync", testPrimeraAndPrimeraBFullPromotionRelegationSync},

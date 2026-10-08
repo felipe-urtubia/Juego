@@ -960,6 +960,7 @@ SeasonTransitionSummary endSeasonTerceraA(Career& career) {
     for (Team* team : fromLower) {
         if (!lower.empty()) {
             team->division = career.activeDivision;
+            team->budget += 25000;
             team->morale = 58;
         }
     }
@@ -1031,6 +1032,7 @@ SeasonTransitionSummary endSeasonTerceraB(Career& career) {
     }
     for (Team* team : higherOutcome.directRelegated) {
         team->division = career.activeDivision;
+        team->budget = max(0LL, team->budget - 15000);
         team->morale = 45;
     }
     for (Team* team : promotedByPromotion) {
@@ -1041,18 +1043,23 @@ SeasonTransitionSummary endSeasonTerceraB(Career& career) {
     }
     for (Team* team : relegatedByPromotion) {
         team->division = career.activeDivision;
+        team->budget = max(0LL, team->budget - 15000);
         team->morale = 45;
     }
 
     summary.champion = outcome.champion ? outcome.champion->name : "";
     vector<Team*> allPromoted = outcome.directPromoted;
     allPromoted.insert(allPromoted.end(), promotedByPromotion.begin(), promotedByPromotion.end());
-    addMovementLines(summary, "Ascensos", allPromoted, "Descensos", {});
+
+    vector<Team*> allRelegated = higherOutcome.directRelegated;
+    allRelegated.insert(allRelegated.end(), relegatedByPromotion.begin(), relegatedByPromotion.end());
+
+    addMovementLines(summary, "Ascensos", allPromoted, "Descensos", allRelegated);
 
     summary.note = "Campeones zonales, final y promocion por playoff.";
     awardSeasonPrizeMoney(career, buildRelevantCompetitionTable(career), summary);
     updateWorldDivisionRecords(career, summary);
-    recordSeasonHistory(career, summary.champion, allPromoted, {}, summary.note);
+    recordSeasonHistory(career, summary.champion, allPromoted, allRelegated, summary.note);
     advanceToNextSeason(career, summary);
     return summary;
 }
