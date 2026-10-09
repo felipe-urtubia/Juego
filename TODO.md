@@ -9454,3 +9454,81 @@ Commit:
 - [x] El historial permanece append-only.
 - [x] No se eliminó documentación anterior.
 - [x] La próxima etapa documental corresponde a la preparación y publicación de `v0.1.2.2-alpha`.
+---
+
+## ✅ Release v0.1.2.2-alpha - 2026-10-09
+
+### Preparación y validación
+
+- [x] Versión visible actualizada a `v0.1.2.2-alpha`.
+- [x] `CHANGELOG.md` actualizado con las novedades de esta versión.
+- [x] `README.md` actualizado y revisado para conservar todas sus secciones.
+- [x] `INDEX.md` actualizado.
+- [x] `docs/ROADMAP.md` actualizado.
+- [x] `docs/ARCHITECTURE.md` actualizado.
+- [x] Versión visible de la GUI actualizada.
+- [x] Build completo aprobado.
+- [x] `FootballManager`, `FootballManagerCLI` y `FootballManagerTests` compilados.
+- [x] CTest: 100% de las pruebas configuradas superadas.
+- [x] Validador general aprobado.
+- [x] 5 divisiones validadas.
+- [x] 90 equipos revisados.
+- [x] 2200 jugadores auditados.
+- [x] 0 errores.
+- [x] 0 advertencias.
+- [x] `git diff --check` aprobado.
+
+### Contenido principal
+
+- [x] Editor táctico personalizable.
+- [x] Formación, mentalidad, presión, ritmo, anchura, línea defensiva, marcaje e instrucciones configurables.
+- [x] Pizarra táctica rediseñada.
+- [x] Selección manual de los 11 titulares.
+- [x] Asignación de puesto específico a cada titular.
+- [x] Selección y orden de 7 suplentes.
+- [x] Jugadores fuera de convocatoria.
+- [x] Selector unificado `Destino`.
+- [x] Destinos `SUPLENTE 1-7`.
+- [x] Destino `FUERA`.
+- [x] Convocatoria automática.
+- [x] Aplicación manual de convocatoria.
+- [x] Integración real del XI seleccionado con el partido.
+- [x] Banca congelada al comienzo del partido.
+- [x] Persistencia mediante `preferredXI` y `preferredBench`.
+- [x] Respeto de lesiones y suspensiones.
+
+### Paquete distribuible
+
+- [x] Creado `FootballManager-v0.1.2.2-alpha`.
+- [x] Incluye `FootballManager.exe`.
+- [x] Incluye `assets`.
+- [x] Incluye `data`.
+- [x] Incluye carpeta `saves`.
+- [x] Incluye `LEEME.txt`.
+- [x] No incluye `FootballManagerCLI.exe`.
+- [x] No incluye `FootballManagerTests.exe`.
+- [x] No incluye partidas personales.
+- [x] ZIP: `FootballManager-v0.1.2.2-alpha.zip`.
+- [x] Tamaño: `28264716` bytes.
+- [x] SHA-256: `3137F7027E654F8D808ED9DFAB58D8F1F0B26CCD5E0CB4B94380955C92DBB3E7`.
+- [x] Asset remoto descargado nuevamente y comparado con el archivo local.
+- [x] Tamaño remoto verificado.
+- [x] SHA-256 remoto verificado.
+
+### Git y publicación
+
+- [x] Commit de preparación: `87ecf95853cb8b4821b6a4645b550779e71f36a5`.
+- [x] Tag anotado `v0.1.2.2-alpha` creado.
+- [x] Tag publicado en GitHub.
+- [x] Release creada como prerelease.
+- [x] ZIP publicado como asset.
+- [x] Release pública verificada.
+- [x] URL: https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.2-alpha.
+
+### Estado final
+
+- [x] `v0.1.2.2-alpha` publicada correctamente.
+- [x] Release asociada al commit de preparación correcto.
+- [x] Binario distribuible validado.
+- [x] Integridad del ZIP verificada después de descargarlo desde GitHub.
+- [x] Esta release incorpora todo el trabajo funcional posterior a `v0.1.2.1-alpha`.
