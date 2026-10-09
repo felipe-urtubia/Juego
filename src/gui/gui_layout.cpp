@@ -1619,14 +1619,8 @@ void layoutCareerDashboard(AppState& state, const RECT& client) {
     MoveWindow(state.squadLabel, thirdLeft, bottomTop, thirdWidth, s(kPanelLabelHeight), TRUE);
     MoveWindow(state.squadList, thirdLeft, bottomTop + s(kPanelBodyOffset), thirdWidth, bottomPanelHeight, TRUE);
 
-    state.layout.statusBar = makeRect(padding, statusTop, std::max(0, static_cast<int>(client.right) - padding * 2), s(22));
-    MoveWindow(state.statusLabel,
-               state.layout.statusBar.left,
-               state.layout.statusBar.top,
-               rectWidth(state.layout.statusBar),
-               s(20),
-               TRUE);
-    setControlVisibility(state, state.statusLabel, true);
+    state.layout.statusBar = RECT{};
+    setControlVisibility(state, state.statusLabel, false);
 }
 
 void rebuildFonts(AppState& state) {
@@ -2244,17 +2238,9 @@ void layoutWindow(AppState& state) {
                 creditsColumnWidth, creditsBodyHeight
             );
         }
-        state.layout.statusBar = makeRect(padding,
-                                          static_cast<int>(client.bottom) - s(kStatusHeight),
-                                          std::max(0, static_cast<int>(client.right) - padding * 2),
-                                          s(22));
-        placeFixedWindow(state.statusLabel,
-                         state.layout.statusBar.left,
-                         state.layout.statusBar.top,
-                         rectWidth(state.layout.statusBar),
-                         s(20));
+        state.layout.statusBar = RECT{};
         // Sin barra de estado en Cargar partida.
-        setControlVisibility(state, state.statusLabel, state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Settings && state.currentPage != GuiPage::Credits);
+        setControlVisibility(state, state.statusLabel, false);
         // Evitar barras blancas innecesarias en los paneles de guardados.
         const bool showFrontPanelScrollbars = state.currentPage != GuiPage::Saves && state.currentPage != GuiPage::Credits;
         ShowScrollBar(state.detailEdit, SB_VERT, showFrontPanelScrollbars);
@@ -2720,11 +2706,9 @@ void layoutWindow(AppState& state) {
     applyEditInteriorPadding(state, state.managerEdit, 8, 0);
 
     state.layout.topBar = makeRect(0, 0, static_cast<int>(client.right), topBarHeight);
-    state.layout.statusBar = makeRect(padding,
-                                      static_cast<int>(client.bottom) - s(kStatusHeight),
-                                      std::max(0, static_cast<int>(client.right) - padding * 2),
-                                      s(22));
-    const int chromeBottom = std::max(topBarHeight + s(180), static_cast<int>(state.layout.statusBar.top) - s(10));
+    state.layout.statusBar = RECT{};
+    const int chromeBottom = std::max(topBarHeight + s(180),
+                                      static_cast<int>(client.bottom) - padding);
     state.layout.sideMenu = makeRect(padding, topBarHeight, sideWidth, chromeBottom - topBarHeight);
     state.layout.sideMenuTitle = makeRect(state.layout.sideMenu.left + s(12),
                                           state.layout.sideMenu.top + s(10),
@@ -3139,11 +3123,6 @@ void layoutWindow(AppState& state) {
                             newsDoc.bottom};
         state.layout.rightColumn = viewportRect(state, rightColumnDoc, true);
 
-        placeFixedWindow(state.statusLabel,
-                         state.layout.statusBar.left,
-                         state.layout.statusBar.top,
-                         rectWidth(state.layout.statusBar),
-                         s(20));
         applyEditInteriorPadding(state, state.summaryEdit, 10, 8);
         applyEditInteriorPadding(state, state.detailEdit, 10, 8);
         if (state.simulationProgressActive) hideSimulationProgressCoveredControls(state);
@@ -3581,11 +3560,6 @@ void layoutWindow(AppState& state) {
         state.layout.contextCard = viewportRect(state, contextDoc, true);
     }
 
-    placeFixedWindow(state.statusLabel,
-                     state.layout.statusBar.left,
-                     state.layout.statusBar.top,
-                     rectWidth(state.layout.statusBar),
-                     s(20));
     applyEditInteriorPadding(state, state.summaryEdit, 10, 8);
     applyEditInteriorPadding(state, state.detailEdit, 10, 8);
 
@@ -3762,7 +3736,7 @@ void initializeInterface(AppState& state) {
     state.detailEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL, 0, 0, 280, 240, state.window, IDC_DETAIL_EDIT);
     state.newsLabel = createControl(state, 0, L"STATIC", L"Noticias", WS_CHILD | WS_VISIBLE, 0, 0, 240, 18, state.window, 0);
     state.newsList = createControl(state, WS_EX_CLIENTEDGE, L"LISTBOX", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_NOTIFY | LBS_OWNERDRAWFIXED | LBS_HASSTRINGS, 0, 0, 280, 220, state.window, IDC_NEWS_LIST);
-    state.statusLabel = createControl(state, 0, L"STATIC", L"Interfaz lista.", WS_CHILD | WS_VISIBLE, 0, 0, 420, 18, state.window, 0);
+    state.statusLabel = createControl(state, 0, L"STATIC", L"Interfaz lista.", WS_CHILD, 0, 0, 420, 18, state.window, 0);
 
     applyInterfaceFonts(state);
 
