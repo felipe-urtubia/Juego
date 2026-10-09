@@ -1820,11 +1820,10 @@ void layoutWindow(AppState& state) {
             };
 
             RECT visibleRect{};
-            const bool crossesTacticsViewportTop =
-                state.currentPage == GuiPage::Tactics &&
+            const bool crossesViewportTop =
                 targetRect.top < scrollClipViewport.top;
 
-            if (crossesTacticsViewportTop ||
+            if (crossesViewportTop ||
                 !IntersectRect(
                     &visibleRect,
                     &targetRect,
