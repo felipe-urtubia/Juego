@@ -797,7 +797,7 @@ GuiPageModel buildTacticsModel(AppState& state) {
         ? "Enfoque en presion alta: recuperacion, desgaste y riesgo a la espalda."
         : (lowBlockFocus
                ? "Enfoque en bloque bajo: proteccion del area, centros rivales y salida tras recuperacion."
-               : "Lee el plan tactico, el once inicial y el impacto esperado de cada ajuste.");
+               : "Personaliza cada parametro del plan y revisa al instante su impacto sobre el XI.");
     model.summary.title = "TacticalSummary";
     model.primary.title = "TacticsBoard";
     model.primary.columns = {{L"Variable", 130}, {L"Valor", 135}, {L"Efecto estimado", 360}};
@@ -822,12 +822,21 @@ GuiPageModel buildTacticsModel(AppState& state) {
     const TacticalRead tacticalRead = buildTacticalRead(team, startingXi, congestedWeek);
     const std::string familiarityLabel = tacticalFamiliarityLabel(tacticalRead.familiarity);
     const std::string riskLabel = tacticalRiskLabel(tacticalRead.risk);
+
+    std::string mentalityLabel = team.tactics;
+    if (team.tactics == "Defensive") mentalityLabel = "Defensiva";
+    else if (team.tactics == "Balanced") mentalityLabel = "Equilibrada";
+    else if (team.tactics == "Offensive") mentalityLabel = "Ofensiva";
+    else if (team.tactics == "Pressing") mentalityLabel = "Presion intensa";
+    else if (team.tactics == "Counter") mentalityLabel = "Contraataque";
+
     model.summary.content =
-        "Formacion " + team.formation + " | Mentalidad " + team.tactics +
+        "Formacion " + team.formation + " | Mentalidad " + mentalityLabel +
         "\r\nPresion " + std::to_string(team.pressingIntensity) +
         " | Ritmo " + std::to_string(team.tempo) +
         " | Anchura " + std::to_string(team.width) +
         " | Linea " + std::to_string(team.defensiveLine) +
+        " | Marcaje " + team.markingStyle +
         "\r\nFamiliaridad tactica: " + familiarityLabel + " " + std::to_string(tacticalRead.familiarity) + "/100" +
         " | Riesgo del plan: " + riskLabel + " " + std::to_string(tacticalRead.risk) + "/100" +
         "\r\nRoles XI: " + tacticalRoleBalanceLine(tacticalRead) +
@@ -844,6 +853,8 @@ GuiPageModel buildTacticsModel(AppState& state) {
                                   team.width >= 4 ? "Abre carriles y centros" : "Compacta por dentro"});
     model.primary.rows.push_back({"Linea", std::to_string(team.defensiveLine),
                                   team.defensiveLine >= 4 ? "Recupera alto, riesgo al balon largo" : "Protege espalda y concede campo"});
+    model.primary.rows.push_back({"Marcaje", team.markingStyle,
+                                  team.markingStyle == "Hombre" ? "Seguimiento individual y mas duelos" : "Estructura zonal y mejor cobertura"});
     model.primary.rows.push_back({"Instruccion", team.matchInstruction,
                                   team.matchInstruction == "Juego directo" ? "Acelera llegada a ultimo tercio" : "Ajuste situacional"});
     model.primary.rows.push_back({"Plan semanal", team.trainingFocus,

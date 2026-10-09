@@ -1061,7 +1061,17 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                     SetTextColor(hdc, kThemeText);
                     return reinterpret_cast<LRESULT>(state->inputBrush ? state->inputBrush : state->panelBrush);
                 }
-                if (control == state->divisionCombo || control == state->teamCombo || control == state->filterCombo) {
+                if (control == state->divisionCombo ||
+    control == state->teamCombo ||
+    control == state->filterCombo ||
+    control == state->tacticFormationCombo ||
+    control == state->tacticMentalityCombo ||
+    control == state->tacticPressingCombo ||
+    control == state->tacticTempoCombo ||
+    control == state->tacticWidthCombo ||
+    control == state->tacticLineCombo ||
+    control == state->tacticMarkingCombo ||
+    control == state->tacticInstructionCombo) {
                     SetBkMode(hdc, OPAQUE);
                     SetBkColor(hdc, kThemeInput);
                     SetTextColor(hdc, kThemeText);
@@ -1079,7 +1089,16 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                                          control == state->squadLabel || control == state->transferLabel ||
                                          control == state->detailLabel || control == state->newsLabel;
                 const bool shellStatic = control == state->pageTitleLabel || control == state->breadcrumbLabel ||
-                                         control == state->infoLabel || control == state->filterLabel;
+                                         control == state->infoLabel ||
+               control == state->filterLabel ||
+               control == state->tacticFormationLabel ||
+               control == state->tacticMentalityLabel ||
+               control == state->tacticPressingLabel ||
+               control == state->tacticTempoLabel ||
+               control == state->tacticWidthLabel ||
+               control == state->tacticLineLabel ||
+               control == state->tacticMarkingLabel ||
+               control == state->tacticInstructionLabel;
                 const bool statusStatic = control == state->statusLabel;
                 if (panelStatic) {
                     SetTextColor(hdc, kThemeAccent);
@@ -1165,6 +1184,75 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                         handleFilterChange(*state);
                     }
                     return 0;
+
+                case IDC_TACTIC_FORMATION_COMBO:
+                case IDC_TACTIC_MENTALITY_COMBO:
+                case IDC_TACTIC_PRESSING_COMBO:
+                case IDC_TACTIC_TEMPO_COMBO:
+                case IDC_TACTIC_WIDTH_COMBO:
+                case IDC_TACTIC_LINE_COMBO:
+                case IDC_TACTIC_MARKING_COMBO:
+                case IDC_TACTIC_INSTRUCTION_COMBO:
+                    if (HIWORD(wParam) == CBN_SELCHANGE &&
+                        !state->suppressTacticEditorEvents &&
+                        state->career.myTeam) {
+
+                        Team& team = *state->career.myTeam;
+                        const int controlId = static_cast<int>(LOWORD(wParam));
+                        HWND combo = reinterpret_cast<HWND>(lParam);
+                        const int selected = comboIndex(combo);
+
+                        if (selected >= 0) {
+                            static const std::array<const char*, 5> formations = {{
+                                "4-4-2",
+                                "4-3-3",
+                                "3-5-2",
+                                "5-3-2",
+                                "3-4-3"
+                            }};
+
+                            static const std::array<const char*, 5> mentalities = {{
+                                "Defensive",
+                                "Balanced",
+                                "Offensive",
+                                "Pressing",
+                                "Counter"
+                            }};
+
+                            if (controlId == IDC_TACTIC_FORMATION_COMBO &&
+                                selected < static_cast<int>(formations.size())) {
+                                team.formation = formations[static_cast<size_t>(selected)];
+
+                            } else if (controlId == IDC_TACTIC_MENTALITY_COMBO &&
+                                       selected < static_cast<int>(mentalities.size())) {
+                                team.tactics = mentalities[static_cast<size_t>(selected)];
+
+                            } else if (controlId == IDC_TACTIC_PRESSING_COMBO) {
+                                team.pressingIntensity = std::max(1, std::min(5, selected + 1));
+
+                            } else if (controlId == IDC_TACTIC_TEMPO_COMBO) {
+                                team.tempo = std::max(1, std::min(5, selected + 1));
+
+                            } else if (controlId == IDC_TACTIC_WIDTH_COMBO) {
+                                team.width = std::max(1, std::min(5, selected + 1));
+
+                            } else if (controlId == IDC_TACTIC_LINE_COMBO) {
+                                team.defensiveLine = std::max(1, std::min(5, selected + 1));
+
+                            } else if (controlId == IDC_TACTIC_MARKING_COMBO) {
+                                team.markingStyle = selected == 1 ? "Hombre" : "Zonal";
+
+                            } else if (controlId == IDC_TACTIC_INSTRUCTION_COMBO) {
+                                team.matchInstruction = comboText(state->tacticInstructionCombo);
+                            }
+
+                            state->modelCache.clear();
+                            state->modelCacheSignatures.clear();
+                            refreshCurrentPage(*state);
+                        }
+                    }
+                    return 0;
+
                 case IDC_GLOBAL_SEARCH_EDIT:
                     if (HIWORD(wParam) == EN_CHANGE && state->globalSearchActive) {
                         state->globalSearchQuery = getWindowTextUtf8(state->globalSearchEdit);

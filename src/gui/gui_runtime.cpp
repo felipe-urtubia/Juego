@@ -331,6 +331,140 @@ void refreshFilterComboOptions(AppState& state) {
     state.suppressFilterEvents = false;
 }
 
+void refreshTacticsEditorControls(AppState& state) {
+    const std::vector<std::string> formations = {
+        "4-4-2",
+        "4-3-3",
+        "3-5-2",
+        "5-3-2",
+        "3-4-3"
+    };
+
+    const std::vector<std::string> mentalities = {
+        "Defensiva",
+        "Equilibrada",
+        "Ofensiva",
+        "Presion intensa",
+        "Contraataque"
+    };
+
+    const std::vector<std::string> levels = {
+        "1 Muy baja",
+        "2 Baja",
+        "3 Media",
+        "4 Alta",
+        "5 Muy alta"
+    };
+
+    const std::vector<std::string> markings = {
+        "Zonal",
+        "Al hombre"
+    };
+
+    const std::vector<std::string> instructions = {
+        "Equilibrado",
+        "Laterales altos",
+        "Bloque bajo",
+        "Balon parado",
+        "Presion final",
+        "Por bandas",
+        "Juego directo",
+        "Contra-presion",
+        "Pausar juego"
+    };
+
+    auto fillCombo =
+        [&](HWND combo,
+            const std::vector<std::string>& options,
+            int selected) {
+
+            if (!combo) return;
+
+            SendMessageW(combo, CB_RESETCONTENT, 0, 0);
+
+            for (const auto& option : options) {
+                addComboItem(combo, option);
+            }
+
+            if (!options.empty()) {
+                selected =
+                    std::max(
+                        0,
+                        std::min(
+                            selected,
+                            static_cast<int>(options.size()) - 1));
+
+                SendMessageW(
+                    combo,
+                    CB_SETCURSEL,
+                    selected,
+                    0);
+            }
+        };
+
+    Team* team = state.career.myTeam;
+
+    int formationIndex = 0;
+    int mentalityIndex = 1;
+    int pressingIndex = 2;
+    int tempoIndex = 2;
+    int widthIndex = 2;
+    int lineIndex = 2;
+    int markingIndex = 0;
+    int instructionIndex = 0;
+
+    if (team) {
+        const auto formationIt =
+            std::find(
+                formations.begin(),
+                formations.end(),
+                team->formation);
+
+        if (formationIt != formations.end()) {
+            formationIndex =
+                static_cast<int>(
+                    formationIt - formations.begin());
+        }
+
+        if (team->tactics == "Defensive") mentalityIndex = 0;
+        else if (team->tactics == "Offensive") mentalityIndex = 2;
+        else if (team->tactics == "Pressing") mentalityIndex = 3;
+        else if (team->tactics == "Counter") mentalityIndex = 4;
+
+        pressingIndex = std::max(0, std::min(4, team->pressingIntensity - 1));
+        tempoIndex = std::max(0, std::min(4, team->tempo - 1));
+        widthIndex = std::max(0, std::min(4, team->width - 1));
+        lineIndex = std::max(0, std::min(4, team->defensiveLine - 1));
+
+        markingIndex = team->markingStyle == "Hombre" ? 1 : 0;
+
+        const auto instructionIt =
+            std::find(
+                instructions.begin(),
+                instructions.end(),
+                team->matchInstruction);
+
+        if (instructionIt != instructions.end()) {
+            instructionIndex =
+                static_cast<int>(
+                    instructionIt - instructions.begin());
+        }
+    }
+
+    state.suppressTacticEditorEvents = true;
+
+    fillCombo(state.tacticFormationCombo, formations, formationIndex);
+    fillCombo(state.tacticMentalityCombo, mentalities, mentalityIndex);
+    fillCombo(state.tacticPressingCombo, levels, pressingIndex);
+    fillCombo(state.tacticTempoCombo, levels, tempoIndex);
+    fillCombo(state.tacticWidthCombo, levels, widthIndex);
+    fillCombo(state.tacticLineCombo, levels, lineIndex);
+    fillCombo(state.tacticMarkingCombo, markings, markingIndex);
+    fillCombo(state.tacticInstructionCombo, instructions, instructionIndex);
+
+    state.suppressTacticEditorEvents = false;
+}
+
 bool isKnownDivision(const AppState& state, const std::string& divisionId) {
     for (const auto& division : state.career.divisions) {
         if (division.id == divisionId) return true;
@@ -999,6 +1133,7 @@ void refreshCurrentPage(AppState& state) {
     }
     check_game_ready(state);
     refreshFilterComboOptions(state);
+    refreshTacticsEditorControls(state);
     const std::string cacheKey = pageCacheKey(state, state.currentPage);
     const std::string cacheSignature = pageCacheSignature(state, state.currentPage);
     if (canUseCachedModel(state) &&
@@ -1071,6 +1206,10 @@ void refreshCurrentPage(AppState& state) {
     bool showFooterLabel = showFooter;
     bool showFilter = !frontMenuPage && !dashboardEmptyState && state.currentPage != GuiPage::Dashboard && !(state.currentPage == GuiPage::Transfers && state.globalSearchActive);
     bool showGlobalSearch = !frontMenuPage && state.currentPage == GuiPage::Transfers && state.globalSearchActive;
+    const bool showTacticsEditor =
+        !frontMenuPage &&
+        !dashboardEmptyState &&
+        state.currentPage == GuiPage::Tactics;
     setControlVisibility(state, state.tableList, showTable);
     setControlVisibility(state, state.tableLabel, showTableLabel);
     setControlVisibility(state, state.squadList, showSquad);
@@ -1080,6 +1219,61 @@ void refreshCurrentPage(AppState& state) {
     setControlVisibility(state, state.filterLabel, showFilter);
     setControlVisibility(state, state.filterCombo, showFilter);
     setControlVisibility(state, state.globalSearchEdit, showGlobalSearch);
+
+    if (state.filterLabel) {
+        setWindowTextUtf8(
+            state.filterLabel,
+            state.currentPage == GuiPage::Tactics
+                ? "Vista"
+                : "Filtro");
+    }
+
+    const std::array<HWND, 16> tacticsEditorControls = {{
+        state.tacticFormationLabel,
+        state.tacticFormationCombo,
+        state.tacticMentalityLabel,
+        state.tacticMentalityCombo,
+        state.tacticPressingLabel,
+        state.tacticPressingCombo,
+        state.tacticTempoLabel,
+        state.tacticTempoCombo,
+        state.tacticWidthLabel,
+        state.tacticWidthCombo,
+        state.tacticLineLabel,
+        state.tacticLineCombo,
+        state.tacticMarkingLabel,
+        state.tacticMarkingCombo,
+        state.tacticInstructionLabel,
+        state.tacticInstructionCombo
+    }};
+
+    for (HWND control : tacticsEditorControls) {
+        setControlVisibility(
+            state,
+            control,
+            showTacticsEditor);
+    }
+
+    const std::array<HWND, 8> tacticsEditorCombos = {{
+        state.tacticFormationCombo,
+        state.tacticMentalityCombo,
+        state.tacticPressingCombo,
+        state.tacticTempoCombo,
+        state.tacticWidthCombo,
+        state.tacticLineCombo,
+        state.tacticMarkingCombo,
+        state.tacticInstructionCombo
+    }};
+
+    for (HWND combo : tacticsEditorCombos) {
+        if (combo) {
+            EnableWindow(
+                combo,
+                showTacticsEditor &&
+                state.career.myTeam &&
+                !state.actionInProgress);
+        }
+    }
 
     layoutWindow(state);
     autosizeVisibleLists(state);

@@ -41,6 +41,14 @@ enum ControlId {
     IDC_DISPLAY_MODE_BUTTON,
     IDC_FRONT_MENU_BUTTON,
     IDC_FILTER_COMBO,
+    IDC_TACTIC_FORMATION_COMBO,
+    IDC_TACTIC_MENTALITY_COMBO,
+    IDC_TACTIC_PRESSING_COMBO,
+    IDC_TACTIC_TEMPO_COMBO,
+    IDC_TACTIC_WIDTH_COMBO,
+    IDC_TACTIC_LINE_COMBO,
+    IDC_TACTIC_MARKING_COMBO,
+    IDC_TACTIC_INSTRUCTION_COMBO,
     IDC_SUMMARY_EDIT,
     IDC_NEWS_LIST,
     IDC_TABLE_LIST,
@@ -216,6 +224,7 @@ struct LayoutSnapshot {
     RECT pageTitle{};
     RECT infoLine{};
     RECT filterLabel{};
+    RECT tacticsEditorPanel{};
     RECT filterField{};
     RECT actionStrip{};
     RECT scrollViewport{};
@@ -308,6 +317,7 @@ struct AppState {
     bool settingsDirty = false;
     bool suppressComboEvents = false;
     bool suppressFilterEvents = false;
+    bool suppressTacticEditorEvents = false;
     bool globalSearchActive = false;
     bool pageRefreshInProgress = false;
     bool pageChangeQueued = false;
@@ -359,6 +369,23 @@ struct AppState {
     HWND managerLabel = nullptr;
     HWND filterLabel = nullptr;
     HWND filterCombo = nullptr;
+
+    HWND tacticFormationLabel = nullptr;
+    HWND tacticFormationCombo = nullptr;
+    HWND tacticMentalityLabel = nullptr;
+    HWND tacticMentalityCombo = nullptr;
+    HWND tacticPressingLabel = nullptr;
+    HWND tacticPressingCombo = nullptr;
+    HWND tacticTempoLabel = nullptr;
+    HWND tacticTempoCombo = nullptr;
+    HWND tacticWidthLabel = nullptr;
+    HWND tacticWidthCombo = nullptr;
+    HWND tacticLineLabel = nullptr;
+    HWND tacticLineCombo = nullptr;
+    HWND tacticMarkingLabel = nullptr;
+    HWND tacticMarkingCombo = nullptr;
+    HWND tacticInstructionLabel = nullptr;
+    HWND tacticInstructionCombo = nullptr;
     HWND globalSearchEdit = nullptr;
     HWND managerHelpLabel = nullptr;
     HWND newCareerButton = nullptr;

@@ -359,33 +359,6 @@ std::vector<const Player*> playersForLine(const Team& team, const std::string& p
     return players;
 }
 
-void drawPlayerDots(HDC hdc,
-                    const RECT& rect,
-                    const std::vector<const Player*>& players,
-                    double xRatio,
-                    COLORREF fill) {
-    if (players.empty()) return;
-    int width = rect.right - rect.left;
-    int height = rect.bottom - rect.top;
-    int x = rect.left + static_cast<int>(width * xRatio);
-    int spacing = height / static_cast<int>(players.size() + 1);
-    HBRUSH brush = CreateSolidBrush(fill);
-    HGDIOBJ oldBrush = SelectObject(hdc, brush);
-    HGDIOBJ oldPen = SelectObject(hdc, GetStockObject(NULL_PEN));
-    SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, kThemeText);
-    for (size_t i = 0; i < players.size(); ++i) {
-        int y = rect.top + spacing * static_cast<int>(i + 1);
-        Ellipse(hdc, x - 13, y - 13, x + 13, y + 13);
-        std::wstring label = shortPlayerLabel(players[i]->name);
-        RECT textRect{x + 18, y - 10, rect.right - 10, y + 10};
-        DrawTextW(hdc, label.c_str(), -1, &textRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-    }
-    SelectObject(hdc, oldBrush);
-    SelectObject(hdc, oldPen);
-    DeleteObject(brush);
-}
-
 void drawTopMetrics(AppState& state, HDC hdc, const RECT& client) {
     const HeaderLayoutProfile header = buildHeaderLayout(client);
     const auto s = [&](int value) { return scaleByDpi(state, value); };
@@ -837,40 +810,274 @@ void drawContextSpotlights(AppState& state, HDC hdc, const RECT& band) {
 }
 
 void drawTacticsBoard(AppState& state, HDC hdc, const RECT& rect) {
-    drawRoundedPanel(hdc, rect, RGB(14, 31, 26), RGB(44, 86, 67), 16);
+    const auto s = [&](int value) {
+        return scaleByDpi(state, value);
+    };
+
+    drawRoundedPanel(
+        hdc,
+        rect,
+        RGB(11, 35, 29),
+        RGB(46, 104, 78),
+        s(16));
+
     RECT inner = rect;
-    InflateRect(&inner, -14, -14);
-    drawPitchOverlay(hdc, inner);
+    InflateRect(&inner, -s(12), -s(10));
+
+    if (!rectHasArea(inner)) return;
+
+    RECT header = inner;
+    header.bottom =
+        std::min(
+            static_cast<LONG>(inner.bottom),
+            static_cast<LONG>(inner.top + s(30)));
+
+    RECT pitch = inner;
+    pitch.top =
+        std::min(
+            static_cast<LONG>(inner.bottom),
+            static_cast<LONG>(header.bottom + s(4)));
+
+    if (rectHasArea(pitch)) {
+        drawPitchOverlay(hdc, pitch);
+    }
 
     if (!state.career.myTeam) return;
+
     const Team& team = *state.career.myTeam;
-    drawPlayerDots(hdc, inner, playersForLine(team, "ARQ"), 0.12, RGB(66, 116, 186));
-    drawPlayerDots(hdc, inner, playersForLine(team, "DEF"), 0.31, RGB(46, 142, 96));
-    drawPlayerDots(hdc, inner, playersForLine(team, "MED"), 0.55, RGB(226, 191, 92));
-    drawPlayerDots(hdc, inner, playersForLine(team, "DEL"), 0.79, RGB(204, 108, 74));
 
-    RECT titleRect{inner.left + 12, inner.top + 10, inner.right - 12, inner.top + 32};
+    std::string mentality = team.tactics;
+
+    if (mentality == "Defensive") {
+        mentality = "Defensiva";
+    } else if (mentality == "Balanced") {
+        mentality = "Equilibrada";
+    } else if (mentality == "Offensive") {
+        mentality = "Ofensiva";
+    } else if (mentality == "Pressing") {
+        mentality = "Presion intensa";
+    } else if (mentality == "Counter") {
+        mentality = "Contraataque";
+    }
+
     SetBkMode(hdc, TRANSPARENT);
-    SetTextColor(hdc, RGB(228, 241, 236));
-    HGDIOBJ oldFont = SelectObject(hdc, state.sectionFont ? state.sectionFont : state.font);
-    std::wstring title = utf8ToWide(team.formation + " | " + team.tactics);
-    DrawTextW(hdc, title.c_str(), -1, &titleRect, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-    SelectObject(hdc, oldFont);
+    SetTextColor(hdc, RGB(232, 244, 239));
 
-    RECT barArea{inner.left + 12, inner.bottom - 116, inner.right - 12, inner.bottom - 12};
-    int barWidth = (barArea.right - barArea.left - 18) / 2;
-    std::array<RECT, 5> bars{
-        RECT{barArea.left, barArea.top, barArea.left + barWidth, barArea.top + 28},
-        RECT{barArea.left + barWidth + 18, barArea.top, barArea.right, barArea.top + 28},
-        RECT{barArea.left, barArea.top + 34, barArea.left + barWidth, barArea.top + 62},
-        RECT{barArea.left + barWidth + 18, barArea.top + 34, barArea.right, barArea.top + 62},
-        RECT{barArea.left, barArea.top + 68, barArea.right, barArea.top + 96}
+    HGDIOBJ oldTitleFont =
+        SelectObject(
+            hdc,
+            state.sectionFont
+                ? state.sectionFont
+                : state.font);
+
+    RECT titleRect{
+        header.left + s(8),
+        header.top,
+        header.right - s(8),
+        header.bottom
     };
-    drawStatBar(hdc, bars[0], L"Presion", team.pressingIntensity, 5, kThemeAccentGreen);
-    drawStatBar(hdc, bars[1], L"Ritmo", team.tempo, 5, kThemeAccentBlue);
-    drawStatBar(hdc, bars[2], L"Anchura", team.width, 5, kThemeAccent);
-    drawStatBar(hdc, bars[3], L"Linea", team.defensiveLine, 5, kThemeWarning);
-    drawStatBar(hdc, bars[4], L"Moral equipo", team.morale, 100, kThemeAccentGreen);
+
+    const std::wstring title =
+        utf8ToWide(
+            team.formation +
+            "  |  " +
+            mentality);
+
+    DrawTextW(
+        hdc,
+        title.c_str(),
+        -1,
+        &titleRect,
+        DT_LEFT |
+        DT_VCENTER |
+        DT_SINGLELINE |
+        DT_END_ELLIPSIS);
+
+    SelectObject(hdc, oldTitleFont);
+
+    if (!rectHasArea(pitch)) return;
+
+    const int pitchWidth =
+        std::max(
+            1,
+            static_cast<int>(pitch.right - pitch.left));
+
+    const int pitchHeight =
+        std::max(
+            1,
+            static_cast<int>(pitch.bottom - pitch.top));
+
+    const int radius =
+        std::max(
+            s(5),
+            std::min(
+                s(8),
+                pitchHeight / 18));
+
+    const int labelGap = s(6);
+
+    const int labelWidth =
+        std::max(
+            s(44),
+            std::min(
+                s(68),
+                pitchWidth / 7));
+
+    HGDIOBJ oldPlayerFont =
+        SelectObject(
+            hdc,
+            state.font);
+
+    SetTextColor(
+        hdc,
+        RGB(235, 244, 240));
+
+    const auto drawLine =
+        [&](const std::vector<const Player*>& players,
+            double xRatio,
+            COLORREF fill,
+            bool labelsToLeft) {
+
+            if (players.empty()) return;
+
+            const int x =
+                pitch.left +
+                static_cast<int>(
+                    pitchWidth * xRatio);
+
+            const int topPadding = s(8);
+            const int usableHeight =
+                std::max(
+                    1,
+                    pitchHeight - topPadding * 2);
+
+            const int spacing =
+                std::max(
+                    s(15),
+                    usableHeight /
+                        static_cast<int>(
+                            players.size() + 1));
+
+            HBRUSH playerBrush =
+                CreateSolidBrush(fill);
+
+            HPEN borderPen =
+                CreatePen(
+                    PS_SOLID,
+                    1,
+                    RGB(226, 241, 234));
+
+            HGDIOBJ oldBrush =
+                SelectObject(
+                    hdc,
+                    playerBrush);
+
+            HGDIOBJ oldPen =
+                SelectObject(
+                    hdc,
+                    borderPen);
+
+            for (size_t i = 0;
+                 i < players.size();
+                 ++i) {
+
+                const int y =
+                    pitch.top +
+                    topPadding +
+                    spacing *
+                        static_cast<int>(i + 1);
+
+                Ellipse(
+                    hdc,
+                    x - radius,
+                    y - radius,
+                    x + radius,
+                    y + radius);
+
+                const std::wstring label =
+                    shortPlayerLabel(
+                        players[i]->name);
+
+                RECT textRect{};
+
+                if (labelsToLeft) {
+                    textRect = RECT{
+                        x - labelWidth - labelGap - radius,
+                        y - s(9),
+                        x - radius - labelGap,
+                        y + s(9)
+                    };
+                } else {
+                    textRect = RECT{
+                        x + radius + labelGap,
+                        y - s(9),
+                        x + radius + labelGap + labelWidth,
+                        y + s(9)
+                    };
+                }
+
+                textRect.left =
+                    std::max(
+                        textRect.left,
+                        pitch.left + s(3));
+
+                textRect.right =
+                    std::min(
+                        textRect.right,
+                        pitch.right - s(3));
+
+                DrawTextW(
+                    hdc,
+                    label.c_str(),
+                    -1,
+                    &textRect,
+                    (labelsToLeft
+                         ? DT_RIGHT
+                         : DT_LEFT) |
+                        DT_VCENTER |
+                        DT_SINGLELINE |
+                        DT_END_ELLIPSIS);
+            }
+
+            SelectObject(
+                hdc,
+                oldBrush);
+
+            SelectObject(
+                hdc,
+                oldPen);
+
+            DeleteObject(playerBrush);
+            DeleteObject(borderPen);
+        };
+
+    drawLine(
+        playersForLine(team, "ARQ"),
+        0.06,
+        RGB(70, 128, 196),
+        false);
+
+    drawLine(
+        playersForLine(team, "DEF"),
+        0.29,
+        RGB(49, 151, 101),
+        false);
+
+    drawLine(
+        playersForLine(team, "MED"),
+        0.54,
+        RGB(226, 190, 84),
+        false);
+
+    drawLine(
+        playersForLine(team, "DEL"),
+        0.82,
+        RGB(214, 111, 73),
+        false);
+
+    SelectObject(
+        hdc,
+        oldPlayerFont);
 }
 
 void setLabelFont(HWND hwnd, HFONT font) {
@@ -1411,6 +1618,14 @@ void applyInterfaceFonts(AppState& state) {
     setLabelFont(state.infoLabel, state.font);
     setLabelFont(state.statusLabel, state.font);
     setLabelFont(state.filterLabel, state.font);
+    setLabelFont(state.tacticFormationLabel, state.font);
+    setLabelFont(state.tacticMentalityLabel, state.font);
+    setLabelFont(state.tacticPressingLabel, state.font);
+    setLabelFont(state.tacticTempoLabel, state.font);
+    setLabelFont(state.tacticWidthLabel, state.font);
+    setLabelFont(state.tacticLineLabel, state.font);
+    setLabelFont(state.tacticMarkingLabel, state.font);
+    setLabelFont(state.tacticInstructionLabel, state.font);
     setLabelFont(state.divisionLabel, state.font);
     setLabelFont(state.teamLabel, state.font);
     setLabelFont(state.managerLabel, state.font);
@@ -1449,7 +1664,19 @@ void applyInterfaceFonts(AppState& state) {
 
     const int comboFieldHeight = scaleByDpi(state, 24);
     const int comboItemHeight = scaleByDpi(state, 28);
-    const std::array<HWND, 3> combos = {state.divisionCombo, state.teamCombo, state.filterCombo};
+    const std::array<HWND, 11> combos = {{
+        state.divisionCombo,
+        state.teamCombo,
+        state.filterCombo,
+        state.tacticFormationCombo,
+        state.tacticMentalityCombo,
+        state.tacticPressingCombo,
+        state.tacticTempoCombo,
+        state.tacticWidthCombo,
+        state.tacticLineCombo,
+        state.tacticMarkingCombo,
+        state.tacticInstructionCombo
+    }};
     for (HWND combo : combos) {
         if (!combo) continue;
         SendMessageW(combo, CB_SETITEMHEIGHT, static_cast<WPARAM>(-1), comboFieldHeight);
@@ -1538,10 +1765,64 @@ void layoutWindow(AppState& state) {
     };
     auto placeWindowWithMode = [&](HWND hwnd, int x, int y, int width, int height, bool scrollable) {
         if (!hwnd) return;
+
         const int targetY = scrollable ? (y - state.pageScrollY) : y;
-        moveControlAndInvalidate(state, hwnd, x, targetY, width, height);
-        applyControlViewportClip(state, hwnd, scrollable ? &scrollClipViewport : nullptr);
-        if (scrollable && IsWindowVisible(hwnd)) recordBottom(y, height);
+
+        if (scrollable) {
+            RECT targetRect{
+                x,
+                targetY,
+                x + std::max(0, width),
+                targetY + std::max(0, height)
+            };
+
+            RECT visibleRect{};
+            const bool crossesTacticsViewportTop =
+                state.currentPage == GuiPage::Tactics &&
+                targetRect.top < scrollClipViewport.top;
+
+            if (crossesTacticsViewportTop ||
+                !IntersectRect(
+                    &visibleRect,
+                    &targetRect,
+                    &scrollClipViewport)) {
+
+                moveControlAndInvalidate(
+                    state,
+                    hwnd,
+                    -10000,
+                    -10000,
+                    width,
+                    height);
+
+                applyControlViewportClip(
+                    state,
+                    hwnd,
+                    &scrollClipViewport);
+
+                if (IsWindowVisible(hwnd)) {
+                    recordBottom(y, height);
+                }
+                return;
+            }
+        }
+
+        moveControlAndInvalidate(
+            state,
+            hwnd,
+            x,
+            targetY,
+            width,
+            height);
+
+        applyControlViewportClip(
+            state,
+            hwnd,
+            scrollable ? &scrollClipViewport : nullptr);
+
+        if (scrollable && IsWindowVisible(hwnd)) {
+            recordBottom(y, height);
+        }
     };
     auto placeFixedWindow = [&](HWND hwnd, int x, int y, int width, int height) {
         placeWindowWithMode(hwnd, x, y, width, height, false);
@@ -2437,6 +2718,21 @@ void layoutWindow(AppState& state) {
     const bool stackHeaderFilter = headerFieldVisible && rectWidth(state.layout.shellInner) < s(1040);
     const int pageHeaderHeight = s(kPageHeaderHeight) + (headerFieldVisible && stackHeaderFilter ? s(kHeaderFieldHeight + 18) : 0);
     state.layout.pageHeader = takeTop(shellCursor, pageHeaderHeight, s(kPageSectionGap));
+    const int tacticsScrollTop =
+        std::min(
+            static_cast<int>(state.layout.shellInner.bottom) - 1,
+            static_cast<int>(state.layout.pageHeader.bottom) + s(kPageSectionGap));
+
+    if (state.currentPage == GuiPage::Tactics) {
+        scrollViewportTop = tacticsScrollTop;
+        scrollViewportBottom = state.layout.shellInner.bottom;
+        scrollClipViewport = RECT{
+            state.layout.shellInner.left,
+            tacticsScrollTop,
+            state.layout.shellInner.right,
+            state.layout.shellInner.bottom
+        };
+    }
     state.layout.headerTextArea = state.layout.pageHeader;
     if (headerFieldVisible) {
         if (stackHeaderFilter) {
@@ -2510,6 +2806,124 @@ void layoutWindow(AppState& state) {
                          fieldHeight);
     }
 
+    state.layout.tacticsEditorPanel = RECT{};
+
+    const bool tacticsEditorVisible =
+        state.currentPage == GuiPage::Tactics &&
+        state.tacticFormationCombo &&
+        IsWindowVisible(state.tacticFormationCombo);
+
+    if (tacticsEditorVisible) {
+        const int availableWidth =
+            std::max(s(220), rectWidth(shellCursor.remaining));
+
+        const int editorColumns =
+            availableWidth >= s(980)
+                ? 4
+                : (availableWidth >= s(560) ? 2 : 1);
+
+        const int editorRows =
+            (8 + editorColumns - 1) / editorColumns;
+
+        const int editorRowHeight = s(58);
+        const int editorHeight =
+            s(38) + editorRows * editorRowHeight + s(10);
+
+        RECT tacticsEditorDoc =
+            takeTop(
+                shellCursor,
+                editorHeight,
+                s(kPageSectionGap));
+
+        state.layout.tacticsEditorPanel =
+            viewportRect(
+                state,
+                tacticsEditorDoc,
+                true);
+
+        RECT editorInner =
+            shrinkRect(
+                tacticsEditorDoc,
+                s(14),
+                s(10));
+
+        editorInner.top += s(26);
+
+        const int columnGap = s(12);
+        const int usableWidth =
+            rectWidth(editorInner) -
+            columnGap * (editorColumns - 1);
+
+        const int columnWidth =
+            std::max(
+                s(120),
+                usableWidth / editorColumns);
+
+        const std::array<HWND, 8> labels = {{
+            state.tacticFormationLabel,
+            state.tacticMentalityLabel,
+            state.tacticPressingLabel,
+            state.tacticTempoLabel,
+            state.tacticWidthLabel,
+            state.tacticLineLabel,
+            state.tacticMarkingLabel,
+            state.tacticInstructionLabel
+        }};
+
+        const std::array<HWND, 8> editors = {{
+            state.tacticFormationCombo,
+            state.tacticMentalityCombo,
+            state.tacticPressingCombo,
+            state.tacticTempoCombo,
+            state.tacticWidthCombo,
+            state.tacticLineCombo,
+            state.tacticMarkingCombo,
+            state.tacticInstructionCombo
+        }};
+
+        for (size_t i = 0; i < editors.size(); ++i) {
+            const int row =
+                static_cast<int>(i) / editorColumns;
+
+            const int column =
+                static_cast<int>(i) % editorColumns;
+
+            const int x =
+                editorInner.left +
+                column * (columnWidth + columnGap);
+
+            const int y =
+                editorInner.top +
+                row * editorRowHeight;
+
+            placeScrollableWindow(
+                labels[i],
+                x,
+                y,
+                columnWidth,
+                s(18));
+
+            const RECT fieldRect =
+                makeRect(
+                    x,
+                    y + s(20),
+                    columnWidth,
+                    fieldHeight);
+
+            const RECT comboRect =
+                controlRectForCombo(
+                    fieldRect,
+                    s(kComboPopupHeight));
+
+            placeScrollableWindow(
+                editors[i],
+                comboRect.left,
+                comboRect.top,
+                rectWidth(comboRect),
+                rectHeight(comboRect));
+        }
+    }
+
     showActionButtonsForPage(state);
     std::vector<ActionButtonRef> visibleButtons = {
         {state.scoutActionButton, 92}, {state.shortlistButton, 92}, {state.followShortlistButton, 98},
@@ -2548,7 +2962,21 @@ void layoutWindow(AppState& state) {
         for (const auto& row : actionRows) {
             int x = state.layout.actionStrip.left;
             for (const auto& action : row) {
-                placeFixedWindow(action.hwnd, x, rowTop, action.width, actionButtonHeight);
+                if (state.currentPage == GuiPage::Tactics) {
+                    placeScrollableWindow(
+                        action.hwnd,
+                        x,
+                        rowTop,
+                        action.width,
+                        actionButtonHeight);
+                } else {
+                    placeFixedWindow(
+                        action.hwnd,
+                        x,
+                        rowTop,
+                        action.width,
+                        actionButtonHeight);
+                }
                 x += action.width + actionGap;
             }
             rowTop += actionButtonHeight + actionRowGap;
@@ -2556,6 +2984,11 @@ void layoutWindow(AppState& state) {
     }
 
     state.layout.scrollViewport = shellCursor.remaining;
+
+    if (state.currentPage == GuiPage::Tactics) {
+        state.layout.scrollViewport.top = tacticsScrollTop;
+    }
+
     state.layout.mainArea = state.layout.scrollViewport;
     scrollViewportTop = state.layout.scrollViewport.top;
     scrollViewportBottom = state.layout.scrollViewport.bottom;
@@ -2568,7 +3001,12 @@ void layoutWindow(AppState& state) {
     const int contextualInsightReserve = contextualInsightStrip
         ? s((client.right - client.left) < s(1380) ? kInsightStripCompactReserve : kInsightStripWideReserve)
         : 0;
-    int panelsTop = scrollViewportTop;
+    int panelsTop =
+        state.currentPage == GuiPage::Tactics
+            ? std::max(
+                  scrollViewportTop,
+                  static_cast<int>(shellCursor.remaining.top))
+            : scrollViewportTop;
     const int insightReserve = dashboardSpotlightReserve + contextualInsightReserve;
     if (insightReserve > 0) {
         RECT spotlightDoc{contentLeft,
@@ -2728,6 +3166,18 @@ void layoutWindow(AppState& state) {
                      s(20));
     applyEditInteriorPadding(state, state.summaryEdit, 10, 8);
     applyEditInteriorPadding(state, state.detailEdit, 10, 8);
+
+    if (state.currentPage == GuiPage::Tactics) {
+        applyControlViewportClip(
+            state,
+            state.detailLabel,
+            &state.layout.scrollViewport);
+        applyControlViewportClip(
+            state,
+            state.detailEdit,
+            &state.layout.scrollViewport);
+    }
+
     if (state.simulationProgressActive) hideSimulationProgressCoveredControls(state);
     if (syncScrollState()) return;
 }
@@ -2763,6 +3213,33 @@ void initializeInterface(AppState& state) {
     state.teamCombo = createControl(state, 0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL, 360, 14, 224, 300, state.window, IDC_TEAM_COMBO);
     state.managerEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE | ES_AUTOHSCROLL, 676, 14, 188, 24, state.window, IDC_MANAGER_EDIT);
     state.filterCombo = createControl(state, 0, L"COMBOBOX", L"", WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL, 0, 0, 180, 260, state.window, IDC_FILTER_COMBO);
+
+    const DWORD tacticLabelStyle = WS_CHILD | SS_LEFTNOWORDWRAP;
+    const DWORD tacticComboStyle = WS_CHILD | WS_TABSTOP | CBS_DROPDOWNLIST | WS_VSCROLL;
+
+    state.tacticFormationLabel = createControl(state, 0, L"STATIC", L"Formacion", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticFormationCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_FORMATION_COMBO);
+
+    state.tacticMentalityLabel = createControl(state, 0, L"STATIC", L"Mentalidad", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticMentalityCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_MENTALITY_COMBO);
+
+    state.tacticPressingLabel = createControl(state, 0, L"STATIC", L"Presion", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticPressingCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_PRESSING_COMBO);
+
+    state.tacticTempoLabel = createControl(state, 0, L"STATIC", L"Ritmo", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticTempoCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_TEMPO_COMBO);
+
+    state.tacticWidthLabel = createControl(state, 0, L"STATIC", L"Anchura", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticWidthCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_WIDTH_COMBO);
+
+    state.tacticLineLabel = createControl(state, 0, L"STATIC", L"Linea defensiva", tacticLabelStyle, 0, 0, 120, 18, state.window, 0);
+    state.tacticLineCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_LINE_COMBO);
+
+    state.tacticMarkingLabel = createControl(state, 0, L"STATIC", L"Marcaje", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticMarkingCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 160, 250, state.window, IDC_TACTIC_MARKING_COMBO);
+
+    state.tacticInstructionLabel = createControl(state, 0, L"STATIC", L"Instruccion", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticInstructionCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 180, 300, state.window, IDC_TACTIC_INSTRUCTION_COMBO);
     state.globalSearchEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | ES_AUTOHSCROLL, 0, 0, 260, 28, state.window, IDC_GLOBAL_SEARCH_EDIT);
     SendMessageW(state.globalSearchEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Buscar jugador o club..."));
     SendMessageW(state.globalSearchEdit, EM_LIMITTEXT, 80, 0);
@@ -4252,6 +4729,51 @@ void paintWindowChrome(AppState& state, HDC hdc) {
         drawRoundedPanel(hdc, state.layout.statusBar, RGB(11, 23, 31), RGB(39, 65, 79), s(12));
     }
 
+    if (state.currentPage == GuiPage::Tactics &&
+        rectHasArea(state.layout.tacticsEditorPanel)) {
+
+        ScopedClipRect tacticsEditorClip(
+            hdc,
+            state.layout.scrollViewport);
+
+        drawRoundedPanel(
+            hdc,
+            state.layout.tacticsEditorPanel,
+            RGB(13, 29, 39),
+            RGB(49, 91, 111),
+            s(18));
+
+        RECT editorTitle =
+            shrinkRect(
+                state.layout.tacticsEditorPanel,
+                s(14),
+                s(8));
+
+        editorTitle.bottom =
+            std::min(
+                editorTitle.bottom,
+                editorTitle.top + s(20));
+
+        SetBkMode(hdc, TRANSPARENT);
+        SetTextColor(hdc, RGB(109, 211, 185));
+
+        HGDIOBJ oldEditorFont =
+            SelectObject(
+                hdc,
+                state.sectionFont
+                    ? state.sectionFont
+                    : state.font);
+
+        DrawTextW(
+            hdc,
+            L"CENTRO TACTICO  |  PLAN PERSONALIZADO",
+            -1,
+            &editorTitle,
+            DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+
+        SelectObject(hdc, oldEditorFont);
+    }
+
     auto drawScrollableChrome = [&]() {
         if (rectHasArea(state.layout.summaryPanel.outer) && IsWindowVisible(state.summaryEdit)) {
             drawRoundedPanel(hdc, state.layout.summaryPanel.outer, kThemePanel, RGB(40, 64, 79), s(16));
@@ -4300,7 +4822,12 @@ void paintWindowChrome(AppState& state, HDC hdc) {
     if (state.currentPage == GuiPage::Tactics) {
         RECT boardRect = shrinkRect(state.layout.primaryPanel.body, s(2), s(2));
         if (rectHasArea(boardRect)) {
-            ScopedClipRect boardClip(hdc, state.layout.primaryPanel.body);
+            ScopedClipRect boardViewportClip(
+                hdc,
+                state.layout.scrollViewport);
+            ScopedClipRect boardClip(
+                hdc,
+                state.layout.primaryPanel.body);
             drawTacticsBoard(state, hdc, boardRect);
         }
     }
