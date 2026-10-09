@@ -9141,3 +9141,316 @@ Commit:
 - [x] Feature integrada y publicada en `main`.
 
 > Esta mejora es posterior a `v0.1.2.1-alpha`. No modifica retroactivamente el ZIP ni el ejecutable ya publicados para esa release.
+---
+
+## ✅ Convocatoria, XI titular, puestos y suplentes - 2026-10-09
+
+### Objetivo de esta etapa
+
+- [x] Permitir controlar desde `Tácticas` qué jugadores disputan realmente el partido.
+- [x] Permitir elegir los 11 titulares.
+- [x] Permitir elegir los 7 suplentes.
+- [x] Permitir dejar al resto de los jugadores fuera de la convocatoria.
+- [x] Permitir decidir en qué puesto de la formación juega cada titular.
+- [x] Integrar estas elecciones con el motor real del partido y no únicamente con la presentación visual.
+- [x] Mantener compatibilidad con el sistema de guardado existente.
+- [x] Respetar lesiones y suspensiones al formar XI y banca.
+
+### Estado editable de la convocatoria
+
+- [x] Incorporado un borrador de convocatoria específico de la pantalla `Tácticas`.
+- [x] El borrador mantiene por separado:
+  - XI titular.
+  - suplentes.
+  - jugadores fuera.
+- [x] Los cambios pueden prepararse antes de confirmarlos definitivamente.
+- [x] La interfaz informa si existen cambios todavía sin aplicar.
+- [x] El borrador se vuelve a sincronizar con el equipo después de aplicar la convocatoria.
+- [x] Se conserva el jugador seleccionado durante los refrescos de la pantalla.
+
+### XI titular
+
+- [x] Se pueden seleccionar exactamente 11 titulares.
+- [x] El botón `Titular` mueve al jugador seleccionado al XI.
+- [x] No se permiten duplicados.
+- [x] Un jugador lesionado o suspendido no puede ser incorporado manualmente como titular.
+- [x] La selección manual utiliza `Team::preferredXI`.
+- [x] El motor continúa pudiendo completar una alineación de emergencia cuando una selección guardada deja de estar disponible.
+
+### Puestos específicos dentro del XI
+
+- [x] Cada uno de los 11 titulares puede asignarse a un puesto concreto de la formación.
+- [x] Los puestos se generan dinámicamente según la formación activa.
+- [x] El primer puesto corresponde al arquero.
+- [x] Los restantes puestos se distribuyen por línea defensiva, mediocampo y delantera.
+- [x] Ejemplos de destinos:
+  - `ARQ`
+  - `DEF 1`
+  - `DEF 2`
+  - `MED 1`
+  - `DEL 1`
+- [x] Formaciones compatibles:
+  - `4-4-2`
+  - `4-3-3`
+  - `3-5-2`
+  - `5-3-2`
+  - `3-4-3`
+- [x] La posición asignada se representa mediante el orden de `preferredXI`.
+- [x] Cambiar el puesto de un titular intercambia su posición con el jugador que ya ocupaba ese destino.
+- [x] La disposición gráfica en el campo utiliza los puestos asignados y no solamente la posición natural del jugador.
+- [x] La formación puede reinterpretar automáticamente los 11 destinos cuando cambia su estructura.
+
+### Suplentes
+
+- [x] Se pueden seleccionar exactamente 7 suplentes.
+- [x] El botón `Suplente` permite mover al jugador seleccionado a la banca.
+- [x] Los jugadores lesionados o suspendidos no pueden incorporarse manualmente a la banca.
+- [x] Los suplentes utilizan `Team::preferredBench`.
+- [x] Cuando existe una convocatoria manual completa, la banca queda restringida a los siete jugadores elegidos.
+- [x] Los jugadores fuera de la convocatoria no aparecen automáticamente como sustitutos durante el partido.
+- [x] La banca del partido se congela al comenzar el encuentro.
+- [x] Las sustituciones posteriores utilizan esa banca inicial y no recalculan jugadores externos en cada pausa.
+
+### Destino unificado
+
+- [x] El selector inicialmente creado como `Puesto XI` fue ampliado a `Destino`.
+- [x] `Destino` permite controlar toda la convocatoria desde un único desplegable.
+- [x] Para un jugador seleccionado se pueden elegir:
+  - cualquiera de los 11 puestos titulares;
+  - `SUPLENTE 1`;
+  - `SUPLENTE 2`;
+  - `SUPLENTE 3`;
+  - `SUPLENTE 4`;
+  - `SUPLENTE 5`;
+  - `SUPLENTE 6`;
+  - `SUPLENTE 7`;
+  - `FUERA`.
+- [x] Seleccionar un puesto ocupado intercambia correctamente jugadores.
+- [x] Seleccionar un lugar ocupado de la banca intercambia correctamente suplentes.
+- [x] Mover un titular a la banca conserva una convocatoria coherente.
+- [x] Mover un suplente al XI conserva una convocatoria coherente.
+- [x] `FUERA` elimina al jugador tanto del XI como de la banca.
+- [x] Los botones `Titular`, `Suplente` y `Fuera` se mantienen como accesos rápidos.
+
+### Selección automática
+
+- [x] Incorporado `Auto convocatoria`.
+- [x] La selección automática parte del algoritmo real del equipo.
+- [x] Genera un XI completo.
+- [x] Genera una banca de siete jugadores.
+- [x] Respeta disponibilidad de jugadores.
+- [x] El resultado automático permanece como borrador hasta pulsar `Aplicar convocatoria`.
+
+### Aplicación de la convocatoria
+
+- [x] Incorporado `Aplicar convocatoria`.
+- [x] Antes de aplicar se exige:
+  - exactamente 11 titulares;
+  - exactamente 7 suplentes.
+- [x] Se verifican jugadores inexistentes.
+- [x] Se verifican duplicados.
+- [x] Se verifican lesiones.
+- [x] Se verifican suspensiones.
+- [x] Al confirmar se escriben `preferredXI` y `preferredBench` en el equipo real.
+- [x] La interfaz muestra confirmación de 11 titulares, 7 suplentes y resto fuera.
+
+### Persistencia
+
+- [x] No fue necesario crear un formato de guardado paralelo.
+- [x] Se reutilizó la persistencia existente de `preferredXI`.
+- [x] Se reutilizó la persistencia existente de `preferredBench`.
+- [x] El orden de `preferredXI` conserva también la asignación de puestos del XI.
+- [x] Las carreras antiguas siguen siendo compatibles con el fallback existente.
+- [x] Los suplentes seleccionados permanecen disponibles después de guardar y cargar.
+
+### Integración con el Match Center y motor
+
+- [x] `getStartingXIIndices()` continúa siendo la fuente real del XI utilizado por el partido.
+- [x] `getBenchIndices()` utiliza la banca preferida cuando existe convocatoria manual completa.
+- [x] El Match Center recibe una banca congelada al inicio del encuentro.
+- [x] Los jugadores marcados `FUERA` no entran como sustitutos inesperadamente.
+- [x] Se conserva el comportamiento de sustituciones manuales.
+- [x] Se conserva el límite y funcionamiento existente de sustituciones durante el partido.
+- [x] La corrección evita recalcular la banca y romper las cinco sustituciones manuales de las pruebas.
+
+### Rediseño de Convocatoria
+
+- [x] `Convocatoria` se integró como panel propio dentro de `Tácticas`.
+- [x] Los controles relacionados con la plantilla se trasladaron junto a la tabla de jugadores.
+- [x] Se eliminaron desplazamientos innecesarios entre la tabla y los botones.
+- [x] Se incorporaron directamente junto a `Convocatoria`:
+  - `Destino`;
+  - `Titular`;
+  - `Suplente`;
+  - `Fuera`;
+  - `Auto convocatoria`;
+  - `Aplicar convocatoria`.
+- [x] Los controles permanecen accesibles mientras se trabaja con la tabla mediante comportamiento sticky.
+- [x] Se mantuvo el scroll general de la pantalla de Tácticas.
+- [x] Se respetó el recorte del viewport para evitar controles Win32 superpuestos.
+
+### Tabla de Convocatoria
+
+- [x] La tabla muestra todos los jugadores de la plantilla.
+- [x] Los titulares aparecen primero.
+- [x] Los suplentes aparecen a continuación.
+- [x] Los jugadores no convocados permanecen visibles como `FUERA`.
+- [x] Columnas disponibles:
+  - `Jugador`
+  - `Convocatoria`
+  - `Destino`
+  - `Pos`
+  - `Hab`
+  - `Rol`
+  - `Encaje`
+  - `Fisico`
+  - `Estado`
+- [x] Los titulares muestran su puesto concreto.
+- [x] Los suplentes muestran `SUPLENTE 1-7`.
+- [x] Los no convocados muestran `FUERA`.
+- [x] Se conservaron `Rol` y `Encaje` para no perder información táctica previa.
+- [x] Se agregaron colores diferenciados para:
+  - titulares;
+  - suplentes;
+  - jugadores fuera;
+  - jugadores no disponibles.
+
+### Disposición en el campo
+
+- [x] La pizarra táctica utiliza el XI actualmente preparado.
+- [x] Los jugadores se muestran de acuerdo con su puesto asignado.
+- [x] El cambio de destino de un titular actualiza la disposición.
+- [x] Se conservó el diseño limpio de la pizarra táctica implementado en la etapa anterior.
+- [x] No se reintrodujeron barras tácticas antiguas ni elementos visuales descartados.
+
+### Correcciones realizadas durante la implementación
+
+- [x] Corregida regresión en `interactive_match_five_substitutions`.
+- [x] La causa era la reconstrucción dinámica de la banca durante las pausas.
+- [x] La solución fue almacenar la banca inicial en el estado runtime del equipo.
+- [x] Corregida regresión en `management_view_filters`.
+- [x] Restauradas las columnas e información de `Rol` y `Encaje`.
+- [x] Ajustado el pintado personalizado de `Convocatoria`.
+- [x] Corregida la ubicación de los controles de convocatoria.
+- [x] Corregido el problema por el cual los botones quedaban lejos de la tabla al hacer scroll.
+- [x] Convertido `Puesto XI` en el selector más completo `Destino`.
+
+### Archivos modificados
+
+- [x] `include/gui/gui_internal.h`
+- [x] `src/engine/team_selection.cpp`
+- [x] `src/gui/gui.cpp`
+- [x] `src/gui/gui_layout.cpp`
+- [x] `src/gui/gui_runtime.cpp`
+- [x] `src/gui/gui_shared.cpp`
+- [x] `src/gui/gui_view_overview.cpp`
+- [x] `src/simulation/match_engine.cpp`
+
+### Validación automática
+
+- [x] `git diff --check` aprobado.
+- [x] Build completo aprobado.
+- [x] `FootballManager` compilado.
+- [x] `FootballManagerCLI` compilado.
+- [x] `FootballManagerTests` compilado.
+- [x] CTest: `1/1` prueba ejecutable aprobada.
+- [x] 100% de tests superados.
+- [x] Validador general aprobado.
+- [x] 5 divisiones validadas.
+- [x] 90 equipos revisados.
+- [x] 2200 jugadores auditados.
+- [x] 0 errores.
+- [x] 0 advertencias.
+
+### Validación manual
+
+- [x] Revisado visualmente el panel `Convocatoria`.
+- [x] Verificada selección de titulares.
+- [x] Verificada selección de suplentes.
+- [x] Verificados jugadores fuera.
+- [x] Verificado selector de puestos del XI.
+- [x] Verificado selector `Destino`.
+- [x] Verificada disponibilidad de `SUPLENTE 1-7`.
+- [x] Verificado destino `FUERA`.
+- [x] Verificado funcionamiento de `Auto convocatoria`.
+- [x] Verificado funcionamiento de `Aplicar convocatoria`.
+- [x] Verificado mensaje de convocatoria aplicada.
+- [x] Diseño y comportamiento aprobados manualmente.
+
+### Git e integración
+
+- [x] Feature desarrollada en `feature/tactics-lineup-selection`.
+- [x] Commit funcional: `0fd6ebd`.
+- [x] Commit completo: `0fd6ebd2077d589d6bd5368177803eefbc4d13dc`.
+- [x] Mensaje: `feat: add tactical lineup and matchday selection`.
+- [x] 8 archivos modificados.
+- [x] 1617 inserciones.
+- [x] 65 eliminaciones.
+- [x] Integración mediante fast-forward.
+- [x] `main` avanzada desde `c38895e` hasta `0fd6ebd`.
+- [x] Push a `origin/main` completado correctamente.
+- [x] `main` y `origin/main` quedaron sincronizadas.
+- [x] Rama `feature/tactics-lineup-selection` eliminada después de integrar.
+- [x] No quedaron otras ramas locales de feature.
+- [x] No quedaron otras ramas remotas aparte de `origin/main`.
+- [x] Working tree limpio al cerrar la feature.
+
+### Estado final de esta etapa
+
+- [x] El usuario controla qué jugadores comienzan el partido.
+- [x] El usuario controla exactamente dónde juega cada titular.
+- [x] El usuario controla cuáles son los siete suplentes.
+- [x] El usuario controla el orden de los siete suplentes.
+- [x] El usuario controla qué jugadores quedan fuera.
+- [x] La selección se utiliza realmente por el partido.
+- [x] La convocatoria es persistente.
+- [x] Lesiones y suspensiones se respetan.
+- [x] La pantalla de Tácticas mantiene el rediseño moderno.
+- [x] Feature integrada, validada y publicada en `main`.
+
+> Esta mejora es posterior a `v0.1.2.1-alpha` y formará parte de `v0.1.2.2-alpha`.
+
+---
+
+## ✅ Auditoría documental completa antes de v0.1.2.2-alpha - 2026-10-09
+
+### Alcance revisado
+
+- [x] Revisado `TODO.md` completo.
+- [x] Revisado el historial completo de commits disponible en Git.
+- [x] Revisados los tags existentes.
+- [x] Revisado `CHANGELOG.md`.
+- [x] Contrastados los hitos recientes con las secciones ya registradas en `TODO.md`.
+
+### Historial ya documentado
+
+- [x] Desarrollo histórico previo conservado en el registro append-only de `TODO.md`.
+- [x] Refactors de arquitectura y servicios registrados.
+- [x] Desarrollo y ampliaciones del Match Center registrados.
+- [x] Sistemas de carrera, mercado, scouting, staff y notificaciones registrados.
+- [x] Rediseños y correcciones de GUI registrados.
+- [x] Modularización de `CareerService` registrada.
+- [x] Release `v0.1.1-alpha` registrada.
+- [x] Release `v0.1.2.0-alpha` registrada.
+- [x] Integración final del Live Match Center registrada.
+- [x] Match Center interactivo registrado.
+- [x] Sincronización completa de ascensos y descensos registrada.
+- [x] Correcciones de guardados múltiples registradas.
+- [x] Release `v0.1.2.1-alpha` registrada.
+- [x] Editor táctico personalizable registrado.
+- [x] Convocatoria, XI, puestos, suplentes y jugadores fuera registrada en esta actualización.
+
+### Revisión de cambios posteriores a v0.1.2.1-alpha
+
+- [x] `6f635f7` - documentación de `v0.1.2.1-alpha`.
+- [x] `b210a58` - editor táctico personalizable.
+- [x] `c38895e` - documentación del editor táctico.
+- [x] `0fd6ebd` - convocatoria, XI, puestos y selección de partido.
+- [x] No queda ninguna feature funcional posterior a `v0.1.2.1-alpha` sin registrar en `TODO.md`.
+
+### Resultado
+
+- [x] `TODO.md` queda actualizado hasta el último commit funcional previo a `v0.1.2.2-alpha`.
+- [x] El historial permanece append-only.
+- [x] No se eliminó documentación anterior.
+- [x] La próxima etapa documental corresponde a la preparación y publicación de `v0.1.2.2-alpha`.
