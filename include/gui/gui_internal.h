@@ -49,6 +49,7 @@ enum ControlId {
     IDC_TACTIC_LINE_COMBO,
     IDC_TACTIC_MARKING_COMBO,
     IDC_TACTIC_INSTRUCTION_COMBO,
+    IDC_TACTIC_LINEUP_SLOT_COMBO,
     IDC_SUMMARY_EDIT,
     IDC_NEWS_LIST,
     IDC_TABLE_LIST,
@@ -386,6 +387,8 @@ struct AppState {
     HWND tacticMarkingCombo = nullptr;
     HWND tacticInstructionLabel = nullptr;
     HWND tacticInstructionCombo = nullptr;
+    HWND tacticLineupSlotLabel = nullptr;
+    HWND tacticLineupSlotCombo = nullptr;
     HWND globalSearchEdit = nullptr;
     HWND managerHelpLabel = nullptr;
     HWND newCareerButton = nullptr;
@@ -443,6 +446,11 @@ struct AppState {
     HWND trainingUpgradeButton = nullptr;
     HWND scoutingUpgradeButton = nullptr;
     HWND stadiumUpgradeButton = nullptr;
+
+    std::vector<std::string> tacticLineupDraftXI;
+    std::vector<std::string> tacticLineupDraftBench;
+    std::string tacticLineupTeamKey;
+    bool tacticLineupDraftDirty = false;
 
     HWND breadcrumbLabel = nullptr;
     HWND pageTitleLabel = nullptr;
@@ -566,6 +574,14 @@ void handleFeedSelectionChange(AppState& state, int controlId);
 void activateListAction(AppState& state, int controlId);
 void handlePlayerContextMenu(AppState& state, int controlId, const NMITEMACTIVATE& activation);
 void handleListColumnClick(AppState& state, const NMLISTVIEW& view);
+
+void ensureTacticsLineupDraft(AppState& state);
+void setSelectedTacticPlayerRole(AppState& state, const std::string& role);
+void autoSelectTacticsLineup(AppState& state);
+void applyTacticsLineup(AppState& state);
+std::vector<std::string> tacticLineupSlots(const Team& team);
+void refreshTacticsLineupSlotControl(AppState& state);
+void assignSelectedTacticLineupSlot(AppState& state);
 
 void startNewCareer(AppState& state);
 void continueCareer(AppState& state);

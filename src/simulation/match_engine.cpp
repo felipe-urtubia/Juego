@@ -27,6 +27,7 @@ namespace {
 struct TeamRuntimeState {
     Team team;
     vector<int> xi;
+    vector<int> bench;
     vector<int> participants;
     vector<string> cautionedPlayers;
     vector<string> sentOffPlayers;
@@ -182,8 +183,27 @@ MatchSimulationData simulateCore(
     MatchSimulationData data;
     const MatchSetup setup = match_context::buildMatchSetup(home, away, keyMatch, neutralVenue);
 
-    TeamRuntimeState homeState{home, setup.home.xi, setup.home.xi, {}, {}, {}, {}};
-    TeamRuntimeState awayState{away, setup.away.xi, setup.away.xi, {}, {}, {}, {}};
+    TeamRuntimeState homeState{
+        home,
+        setup.home.xi,
+        home.getBenchIndices(7),
+        setup.home.xi,
+        {},
+        {},
+        {},
+        {}
+    };
+
+    TeamRuntimeState awayState{
+        away,
+        setup.away.xi,
+        away.getBenchIndices(7),
+        setup.away.xi,
+        {},
+        {},
+        {},
+        {}
+    };
     MatchStats stats;
     MatchTimeline timeline;
     timeline.events.reserve(96);
@@ -451,19 +471,26 @@ if (stats.awayGoals > awayGoalsBefore) {
                     timeline,
                     userState.team.name);
 
-            for (int i = 0;
-                 i < static_cast<int>(userState.team.players.size());
-                 ++i) {
+            const vector<int>& plannedBench =
+                userState.bench;
+
+            for (int playerIndex : plannedBench) {
                 if (find(
                         userState.xi.begin(),
                         userState.xi.end(),
-                        i) == userState.xi.end() &&
-                    find(
+                        playerIndex) != userState.xi.end()) {
+                    continue;
+                }
+
+                if (find(
                         userState.participants.begin(),
                         userState.participants.end(),
-                        i) == userState.participants.end()) {
-                    interactiveState.availableBench.push_back(i);
+                        playerIndex) != userState.participants.end()) {
+                    continue;
                 }
+
+                interactiveState.availableBench.push_back(
+                    playerIndex);
             }
 
             vector<const MatchEvent*> recentImportantEvents;

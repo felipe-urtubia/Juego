@@ -181,6 +181,15 @@ vector<int> Team::getBenchIndices(int count) const {
     };
 
     tryPreferred();
+
+    const bool strictPreferredBench =
+        preferredXI.size() >= 11 &&
+        static_cast<int>(preferredBench.size()) >= count;
+
+    if (strictPreferredBench) {
+        return bench;
+    }
+
     if (static_cast<int>(bench.size()) < count) {
         vector<int> candidates;
         for (size_t i = 0; i < players.size(); ++i) {

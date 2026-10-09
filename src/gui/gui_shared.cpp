@@ -1383,7 +1383,49 @@ LRESULT handleListCustomDraw(AppState& state, LPNMHDR header) {
             text = RGB(255, 244, 208);
         }
     } else if (header->idFrom == IDC_SQUAD_LIST) {
-        if (titleMatches(state.currentModel.secondary.title, "TeamStatusPanel")) {
+        if (titleMatches(
+                state.currentModel.secondary.title,
+                "LineupSelectionPanel")) {
+
+            const std::string callStatus =
+                listViewText(state.squadList, row, 1);
+
+            const std::string playerState =
+                listViewText(
+                    state.squadList,
+                    row,
+                    std::max(
+                        0,
+                        Header_GetItemCount(
+                            ListView_GetHeader(
+                                state.squadList)) - 1));
+
+            if (callStatus.find("NO DISP.") != std::string::npos ||
+                playerState.find("Les") != std::string::npos ||
+                playerState.find("Susp") != std::string::npos) {
+
+                bg = RGB(82, 34, 36);
+                text = RGB(255, 237, 237);
+
+            } else if (callStatus.find("TITULAR") != std::string::npos) {
+
+                bg = RGB(19, 62, 47);
+                text = RGB(235, 248, 241);
+
+            } else if (callStatus.find("SUPLENTE") != std::string::npos) {
+
+                bg = RGB(73, 61, 24);
+                text = RGB(255, 244, 208);
+
+            } else {
+
+                bg = row % 2 == 0
+                    ? kThemeInput
+                    : RGB(14, 24, 33);
+                text = kThemeMuted;
+            }
+
+        } else if (titleMatches(state.currentModel.secondary.title, "TeamStatusPanel")) {
             std::string level = listViewText(state.squadList, row, 1);
             if (level == "Alta" && row >= 2) {
                 bg = RGB(88, 34, 38);

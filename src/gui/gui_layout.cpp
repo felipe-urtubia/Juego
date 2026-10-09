@@ -846,6 +846,53 @@ void drawTacticsBoard(AppState& state, HDC hdc, const RECT& rect) {
 
     const Team& team = *state.career.myTeam;
 
+    const auto lineupPlayersForLine =
+        [&](const std::string& position) {
+            std::vector<const Player*> players;
+
+            if (state.tacticLineupDraftXI.empty()) {
+                return playersForLine(
+                    team,
+                    position);
+            }
+
+            const std::vector<std::string> slots =
+                tacticLineupSlots(team);
+
+            for (size_t slotIndex = 0;
+                 slotIndex < state.tacticLineupDraftXI.size() &&
+                 slotIndex < slots.size();
+                 ++slotIndex) {
+
+                const std::string& slot =
+                    slots[slotIndex];
+
+                if (slot.rfind(position, 0) != 0) {
+                    continue;
+                }
+
+                const std::string& playerName =
+                    state.tacticLineupDraftXI[
+                        slotIndex];
+
+                auto playerIt =
+                    std::find_if(
+                        team.players.begin(),
+                        team.players.end(),
+                        [&](const Player& player) {
+                            return player.name ==
+                                   playerName;
+                        });
+
+                if (playerIt != team.players.end()) {
+                    players.push_back(
+                        &(*playerIt));
+                }
+            }
+
+            return players;
+        };
+
     std::string mentality = team.tactics;
 
     if (mentality == "Defensive") {
@@ -1052,25 +1099,25 @@ void drawTacticsBoard(AppState& state, HDC hdc, const RECT& rect) {
         };
 
     drawLine(
-        playersForLine(team, "ARQ"),
+        lineupPlayersForLine("ARQ"),
         0.06,
         RGB(70, 128, 196),
         false);
 
     drawLine(
-        playersForLine(team, "DEF"),
+        lineupPlayersForLine("DEF"),
         0.29,
         RGB(49, 151, 101),
         false);
 
     drawLine(
-        playersForLine(team, "MED"),
+        lineupPlayersForLine("MED"),
         0.54,
         RGB(226, 190, 84),
         false);
 
     drawLine(
-        playersForLine(team, "DEL"),
+        lineupPlayersForLine("DEL"),
         0.82,
         RGB(214, 111, 73),
         false);
@@ -1101,12 +1148,12 @@ void showActionButtonsForPage(AppState& state) {
         {state.scoutActionButton, {GuiPage::Transfers, GuiPage::Dashboard, GuiPage::Youth, GuiPage::News}},
         {state.shortlistButton, {GuiPage::Transfers}},
         {state.followShortlistButton, {GuiPage::Transfers, GuiPage::News}},
-        {state.buyButton, {GuiPage::Transfers}},
+        {state.buyButton, {GuiPage::Transfers, GuiPage::Tactics}},
         {state.preContractButton, {GuiPage::Transfers}},
-        {state.loanButton, {GuiPage::Transfers, GuiPage::Squad, GuiPage::Youth}},
-        {state.renewButton, {GuiPage::Squad, GuiPage::Finances}},
-        {state.sellButton, {GuiPage::Squad, GuiPage::Transfers}},
-        {state.planButton, {GuiPage::Squad, GuiPage::Youth}},
+        {state.loanButton, {GuiPage::Transfers, GuiPage::Squad, GuiPage::Youth, GuiPage::Tactics}},
+        {state.renewButton, {GuiPage::Squad, GuiPage::Finances, GuiPage::Tactics}},
+        {state.sellButton, {GuiPage::Squad, GuiPage::Transfers, GuiPage::Tactics}},
+        {state.planButton, {GuiPage::Squad, GuiPage::Youth, GuiPage::Tactics}},
         {state.instructionButton, {GuiPage::Tactics, GuiPage::Dashboard, GuiPage::Squad, GuiPage::Youth, GuiPage::Board, GuiPage::News}},
         {state.youthUpgradeButton, {GuiPage::Youth, GuiPage::Finances, GuiPage::Board}},
         {state.trainingUpgradeButton, {GuiPage::Tactics, GuiPage::Finances, GuiPage::Board}},
@@ -1626,6 +1673,7 @@ void applyInterfaceFonts(AppState& state) {
     setLabelFont(state.tacticLineLabel, state.font);
     setLabelFont(state.tacticMarkingLabel, state.font);
     setLabelFont(state.tacticInstructionLabel, state.font);
+    setLabelFont(state.tacticLineupSlotLabel, state.font);
     setLabelFont(state.divisionLabel, state.font);
     setLabelFont(state.teamLabel, state.font);
     setLabelFont(state.managerLabel, state.font);
@@ -1664,7 +1712,7 @@ void applyInterfaceFonts(AppState& state) {
 
     const int comboFieldHeight = scaleByDpi(state, 24);
     const int comboItemHeight = scaleByDpi(state, 28);
-    const std::array<HWND, 11> combos = {{
+    const std::array<HWND, 12> combos = {{
         state.divisionCombo,
         state.teamCombo,
         state.filterCombo,
@@ -1675,7 +1723,8 @@ void applyInterfaceFonts(AppState& state) {
         state.tacticWidthCombo,
         state.tacticLineCombo,
         state.tacticMarkingCombo,
-        state.tacticInstructionCombo
+        state.tacticInstructionCombo,
+        state.tacticLineupSlotCombo
     }};
     for (HWND combo : combos) {
         if (!combo) continue;
@@ -2925,13 +2974,22 @@ void layoutWindow(AppState& state) {
     }
 
     showActionButtonsForPage(state);
-    std::vector<ActionButtonRef> visibleButtons = {
-        {state.scoutActionButton, 92}, {state.shortlistButton, 92}, {state.followShortlistButton, 98},
-        {state.buyButton, 92}, {state.preContractButton, 102}, {state.loanButton, 96}, {state.renewButton, 92},
-        {state.sellButton, 92}, {state.planButton, 92}, {state.instructionButton, 112},
-        {state.youthUpgradeButton, 94}, {state.trainingUpgradeButton, 96},
-        {state.scoutingUpgradeButton, 94}, {state.stadiumUpgradeButton, 96}
-    };
+    std::vector<ActionButtonRef> visibleButtons;
+
+    if (state.currentPage == GuiPage::Tactics) {
+        visibleButtons = {
+            {state.instructionButton, 112},
+            {state.trainingUpgradeButton, 96}
+        };
+    } else {
+        visibleButtons = {
+            {state.scoutActionButton, 92}, {state.shortlistButton, 92}, {state.followShortlistButton, 98},
+            {state.buyButton, 92}, {state.preContractButton, 102}, {state.loanButton, 96}, {state.renewButton, 92},
+            {state.sellButton, 92}, {state.planButton, 92}, {state.instructionButton, 112},
+            {state.youthUpgradeButton, 94}, {state.trainingUpgradeButton, 96},
+            {state.scoutingUpgradeButton, 94}, {state.stadiumUpgradeButton, 96}
+        };
+    }
 
     std::vector<std::vector<ActionButtonRef> > actionRows;
     std::vector<ActionButtonRef> currentActionRow;
@@ -3114,8 +3172,372 @@ void layoutWindow(AppState& state) {
     (void)primaryDocPanel;
 
     const int secondTop = primaryDoc.bottom + s(kPanelGap);
-    RECT secondaryDoc{contentLeft, secondTop, contentLeft + contentWidth, secondTop + midPanelHeight};
-    PanelBounds secondaryDocPanel = placeScrollablePanel(state.layout.secondaryPanel, state.squadLabel, state.squadList, secondaryDoc);
+
+    const bool lineupEditorVisible =
+        state.currentPage == GuiPage::Tactics &&
+        state.career.myTeam &&
+        state.squadList &&
+        IsWindowVisible(state.squadList);
+
+    setControlVisibility(
+        state,
+        state.tacticLineupSlotLabel,
+        lineupEditorVisible);
+
+    setControlVisibility(
+        state,
+        state.tacticLineupSlotCombo,
+        lineupEditorVisible);
+
+    std::vector<std::vector<ActionButtonRef> > lineupActionRows;
+    int lineupActionStripHeight = 0;
+    const int lineupSlotAreaHeight =
+        lineupEditorVisible ? s(54) : 0;
+
+    if (lineupEditorVisible) {
+        const std::vector<ActionButtonRef> lineupActions = {
+            {state.loanButton, 100},
+            {state.renewButton, 110},
+            {state.sellButton, 90},
+            {state.planButton, 138},
+            {state.buyButton, 158}
+        };
+
+        const int lineupAvailableWidth =
+            std::max(
+                s(140),
+                contentWidth -
+                    s(kPanelContentPadding) * 2);
+
+        std::vector<ActionButtonRef> currentLineupRow;
+        int currentLineupWidth = 0;
+
+        for (const auto& action : lineupActions) {
+            if (!action.hwnd ||
+                !IsWindowVisible(action.hwnd)) {
+                continue;
+            }
+
+            const int width = s(action.width);
+
+            const int nextWidth =
+                currentLineupRow.empty()
+                    ? width
+                    : currentLineupWidth +
+                          actionGap +
+                          width;
+
+            if (!currentLineupRow.empty() &&
+                nextWidth > lineupAvailableWidth) {
+
+                lineupActionRows.push_back(
+                    currentLineupRow);
+
+                currentLineupRow.clear();
+                currentLineupWidth = 0;
+            }
+
+            currentLineupRow.push_back(
+                {action.hwnd, action.width});
+
+            currentLineupWidth =
+                currentLineupRow.size() == 1
+                    ? width
+                    : currentLineupWidth +
+                          actionGap +
+                          width;
+        }
+
+        if (!currentLineupRow.empty()) {
+            lineupActionRows.push_back(
+                currentLineupRow);
+        }
+
+        if (!lineupActionRows.empty()) {
+            lineupActionStripHeight =
+                static_cast<int>(
+                    lineupActionRows.size()) *
+                    actionButtonHeight +
+                std::max(
+                    0,
+                    static_cast<int>(
+                        lineupActionRows.size()) - 1) *
+                    actionRowGap +
+                s(10);
+        }
+    }
+
+    RECT secondaryDoc{
+        contentLeft,
+        secondTop,
+        contentLeft + contentWidth,
+        secondTop +
+            midPanelHeight +
+            lineupSlotAreaHeight +
+            lineupActionStripHeight
+    };
+
+    PanelBounds secondaryDocPanel{};
+
+    if (lineupEditorVisible) {
+        secondaryDocPanel =
+            placeScrollablePanel(
+                state.layout.secondaryPanel,
+                state.squadLabel,
+                nullptr,
+                secondaryDoc);
+
+        const RECT lineupBody =
+            secondaryDocPanel.body;
+
+        const int usedButtonHeight =
+            lineupActionRows.empty()
+                ? 0
+                : static_cast<int>(
+                      lineupActionRows.size()) *
+                      actionButtonHeight +
+                      std::max(
+                          0,
+                          static_cast<int>(
+                              lineupActionRows.size()) - 1) *
+                          actionRowGap;
+
+        const int actionBottomGap =
+            lineupActionRows.empty()
+                ? 0
+                : s(10);
+
+        const int titleHeight =
+            std::max(
+                0,
+                rectHeight(
+                    secondaryDocPanel.title));
+
+        const int titleGap =
+            titleHeight > 0
+                ? s(kPanelHeaderGap)
+                : 0;
+
+        const int stickyControlsHeight =
+            lineupSlotAreaHeight +
+            usedButtonHeight +
+            actionBottomGap;
+
+        const int stickyBlockHeight =
+            titleHeight +
+            titleGap +
+            stickyControlsHeight;
+
+        const int naturalBlockTop =
+            titleHeight > 0
+                ? static_cast<int>(
+                      secondaryDocPanel.title.top) -
+                      state.pageScrollY
+                : static_cast<int>(
+                      lineupBody.top) -
+                      state.pageScrollY;
+
+        const int panelScreenBottom =
+            static_cast<int>(
+                lineupBody.bottom) -
+            state.pageScrollY;
+
+        const int minimumTableHeight =
+            s(96);
+
+        int stickyBlockTop =
+            std::max(
+                naturalBlockTop,
+                static_cast<int>(
+                    scrollClipViewport.top) +
+                    s(4));
+
+        const int latestStickyTop =
+            panelScreenBottom -
+            stickyBlockHeight -
+            minimumTableHeight;
+
+        stickyBlockTop =
+            std::min(
+                stickyBlockTop,
+                latestStickyTop);
+
+        auto placeLineupStickyWindow =
+            [&](HWND hwnd,
+                int x,
+                int y,
+                int width,
+                int height) {
+
+                if (!hwnd ||
+                    width <= 0 ||
+                    height <= 0) {
+                    return;
+                }
+
+                RECT targetRect{
+                    x,
+                    y,
+                    x + width,
+                    y + height
+                };
+
+                RECT visibleRect{};
+
+                if (!IntersectRect(
+                        &visibleRect,
+                        &targetRect,
+                        &scrollClipViewport)) {
+
+                    moveControlAndInvalidate(
+                        state,
+                        hwnd,
+                        -10000,
+                        -10000,
+                        width,
+                        height);
+
+                    applyControlViewportClip(
+                        state,
+                        hwnd,
+                        &scrollClipViewport);
+
+                    return;
+                }
+
+                moveControlAndInvalidate(
+                    state,
+                    hwnd,
+                    x,
+                    y,
+                    width,
+                    height);
+
+                applyControlViewportClip(
+                    state,
+                    hwnd,
+                    &scrollClipViewport);
+            };
+
+        int controlsTop =
+            stickyBlockTop;
+
+        if (titleHeight > 0) {
+            placeLineupStickyWindow(
+                state.squadLabel,
+                secondaryDocPanel.title.left,
+                controlsTop,
+                rectWidth(
+                    secondaryDocPanel.title),
+                titleHeight);
+
+            controlsTop +=
+                titleHeight +
+                titleGap;
+        }
+
+        placeLineupStickyWindow(
+            state.tacticLineupSlotLabel,
+            lineupBody.left,
+            controlsTop,
+            s(100),
+            s(18));
+
+        placeLineupStickyWindow(
+            state.tacticLineupSlotCombo,
+            lineupBody.left,
+            controlsTop + s(20),
+            std::min(
+                s(250),
+                rectWidth(lineupBody)),
+            s(240));
+
+        int lineupRowTop =
+            controlsTop +
+            lineupSlotAreaHeight;
+
+        for (const auto& row :
+             lineupActionRows) {
+
+            int x =
+                lineupBody.left;
+
+            for (const auto& action :
+                 row) {
+
+                placeLineupStickyWindow(
+                    action.hwnd,
+                    x,
+                    lineupRowTop,
+                    s(action.width),
+                    actionButtonHeight);
+
+                x +=
+                    s(action.width) +
+                    actionGap;
+            }
+
+            lineupRowTop +=
+                actionButtonHeight +
+                actionRowGap;
+        }
+
+        const int naturalListTop =
+            static_cast<int>(
+                lineupBody.top) -
+            state.pageScrollY +
+            lineupSlotAreaHeight +
+            usedButtonHeight +
+            actionBottomGap;
+
+        const int stickyListTop =
+            controlsTop +
+            lineupSlotAreaHeight +
+            usedButtonHeight +
+            actionBottomGap;
+
+        const int listScreenTop =
+            std::max(
+                naturalListTop,
+                stickyListTop);
+
+        const int listScreenBottom =
+            std::min(
+                panelScreenBottom,
+                static_cast<int>(
+                    scrollClipViewport.bottom));
+
+        const int listScreenHeight =
+            std::max(
+                0,
+                listScreenBottom -
+                listScreenTop);
+
+        if (listScreenHeight > 0) {
+            placeLineupStickyWindow(
+                state.squadList,
+                lineupBody.left,
+                listScreenTop,
+                rectWidth(lineupBody),
+                listScreenHeight);
+        } else {
+            moveControlAndInvalidate(
+                state,
+                state.squadList,
+                -10000,
+                -10000,
+                rectWidth(lineupBody),
+                1);
+        }
+    } else {
+        secondaryDocPanel =
+            placeScrollablePanel(
+                state.layout.secondaryPanel,
+                state.squadLabel,
+                state.squadList,
+                secondaryDoc);
+    }
+
     (void)secondaryDocPanel;
 
     const int footerTop = secondaryDoc.bottom + s(kPanelGap);
@@ -3240,6 +3662,9 @@ void initializeInterface(AppState& state) {
 
     state.tacticInstructionLabel = createControl(state, 0, L"STATIC", L"Instruccion", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
     state.tacticInstructionCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 180, 300, state.window, IDC_TACTIC_INSTRUCTION_COMBO);
+
+    state.tacticLineupSlotLabel = createControl(state, 0, L"STATIC", L"Destino", tacticLabelStyle, 0, 0, 100, 18, state.window, 0);
+    state.tacticLineupSlotCombo = createControl(state, 0, L"COMBOBOX", L"", tacticComboStyle, 0, 0, 210, 280, state.window, IDC_TACTIC_LINEUP_SLOT_COMBO);
     state.globalSearchEdit = createControl(state, WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | ES_AUTOHSCROLL, 0, 0, 260, 28, state.window, IDC_GLOBAL_SEARCH_EDIT);
     SendMessageW(state.globalSearchEdit, EM_SETCUEBANNER, TRUE, reinterpret_cast<LPARAM>(L"Buscar jugador o club..."));
     SendMessageW(state.globalSearchEdit, EM_LIMITTEXT, 80, 0);

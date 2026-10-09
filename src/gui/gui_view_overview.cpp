@@ -797,12 +797,22 @@ GuiPageModel buildTacticsModel(AppState& state) {
         ? "Enfoque en presion alta: recuperacion, desgaste y riesgo a la espalda."
         : (lowBlockFocus
                ? "Enfoque en bloque bajo: proteccion del area, centros rivales y salida tras recuperacion."
-               : "Personaliza cada parametro del plan y revisa al instante su impacto sobre el XI.");
+               : "Selecciona un jugador y elige su Destino: puesto del XI, Suplente 1-7 o Fuera.");
     model.summary.title = "TacticalSummary";
     model.primary.title = "TacticsBoard";
     model.primary.columns = {{L"Variable", 130}, {L"Valor", 135}, {L"Efecto estimado", 360}};
-    model.secondary.title = "FormationSelector";
-    model.secondary.columns = {{L"Linea", 90}, {L"Jugador", 200}, {L"Pos", 60}, {L"Hab", 50}, {L"Fisico", 60}, {L"Estado", 120}};
+    model.secondary.title = "LineupSelectionPanel";
+    model.secondary.columns = {
+        {L"Jugador", 155},
+        {L"Convocatoria", 105},
+        {L"Destino", 90},
+        {L"Pos", 45},
+        {L"Hab", 40},
+        {L"Rol", 105},
+        {L"Encaje", 105},
+        {L"Fisico", 50},
+        {L"Estado", 100}
+    };
     model.footer.title = "TacticalImpactSummary";
     model.footer.columns = {{L"Area", 130}, {L"Lectura", 220}, {L"Riesgo", 220}};
     model.detail.title = "MatchAnalysisPanel";
@@ -817,9 +827,24 @@ GuiPageModel buildTacticsModel(AppState& state) {
     }
 
     Team& team = *state.career.myTeam;
+
+    ensureTacticsLineupDraft(state);
+
     const bool congestedWeek = isCongestedWeek(state.career);
-    const std::vector<int> startingXi = team.getStartingXIIndices();
-    const TacticalRead tacticalRead = buildTacticalRead(team, startingXi, congestedWeek);
+
+    std::vector<int> startingXi;
+
+    for (const std::string& preferredName : state.tacticLineupDraftXI) {
+        for (size_t index = 0; index < team.players.size(); ++index) {
+            if (team.players[index].name == preferredName) {
+                startingXi.push_back(static_cast<int>(index));
+                break;
+            }
+        }
+    }
+
+    const TacticalRead tacticalRead =
+        buildTacticalRead(team, startingXi, congestedWeek);
     const std::string familiarityLabel = tacticalFamiliarityLabel(tacticalRead.familiarity);
     const std::string riskLabel = tacticalRiskLabel(tacticalRead.risk);
 
@@ -843,7 +868,23 @@ GuiPageModel buildTacticsModel(AppState& state) {
         " | Alertas de encaje: " + std::to_string(tacticalRead.roleWarnings) +
         "\r\nInstruccion actual: " + team.matchInstruction +
         " | Plan semanal: " + team.trainingFocus +
-        "\r\nFiltro tactico: " + state.currentFilter;
+        "\r\nFiltro tactico: " + state.currentFilter +
+        "\r\nConvocatoria: XI " +
+        std::to_string(state.tacticLineupDraftXI.size()) +
+        "/11 | Suplentes " +
+        std::to_string(state.tacticLineupDraftBench.size()) +
+        "/7 | Fuera " +
+        std::to_string(
+            team.players.size() >=
+                    state.tacticLineupDraftXI.size() +
+                    state.tacticLineupDraftBench.size()
+                ? team.players.size() -
+                      state.tacticLineupDraftXI.size() -
+                      state.tacticLineupDraftBench.size()
+                : 0) +
+        (state.tacticLineupDraftDirty
+             ? " | CAMBIOS SIN APLICAR"
+             : " | APLICADA");
 
     model.primary.rows.push_back({"Presion", std::to_string(team.pressingIntensity),
                                   team.pressingIntensity >= 4 ? "Recupera arriba, sube fatiga" : "Presion mas contenida"});
@@ -866,25 +907,145 @@ GuiPageModel buildTacticsModel(AppState& state) {
     model.primary.rows.push_back({"Balance roles", tacticalRoleBalanceLine(tacticalRead),
                                   tacticalRead.roleWarnings > 0 ? "Hay roles que conviene ajustar" : "XI coherente con el plan"});
 
-    std::map<std::string, std::vector<const Player*> > byLine;
-    for (int index : startingXi) {
-        if (index < 0 || index >= static_cast<int>(team.players.size())) continue;
-        const Player& player = team.players[static_cast<size_t>(index)];
-        byLine[normalizePosition(player.position)].push_back(&player);
-    }
-    model.secondary.columns = {{L"Linea", 75}, {L"Jugador", 170}, {L"Pos", 50}, {L"Rol", 130}, {L"Encaje", 130}, {L"Fisico", 60}, {L"Estado", 110}};
-    for (const auto& entry : byLine) {
-        for (const Player* player : entry.second) {
+    auto inLineupGroup =
+        [](const std::vector<std::string>& group,
+           const std::string& name) {
+            return std::find(
+                       group.begin(),
+                       group.end(),
+                       name) != group.end();
+        };
+
+    const std::vector<std::string> lineupSlots =
+        tacticLineupSlots(team);
+
+    auto addLineupPlayer =
+        [&](const Player& player) {
+            const bool isStarter =
+                inLineupGroup(
+                    state.tacticLineupDraftXI,
+                    player.name);
+
+            const bool isBench =
+                inLineupGroup(
+                    state.tacticLineupDraftBench,
+                    player.name);
+
+            std::string lineupSlot =
+                "FUERA";
+
+            if (isStarter) {
+                const auto starterIt =
+                    std::find(
+                        state.tacticLineupDraftXI.begin(),
+                        state.tacticLineupDraftXI.end(),
+                        player.name);
+
+                if (starterIt !=
+                    state.tacticLineupDraftXI.end()) {
+
+                    const size_t slotIndex =
+                        static_cast<size_t>(
+                            std::distance(
+                                state.tacticLineupDraftXI.begin(),
+                                starterIt));
+
+                    if (slotIndex <
+                        lineupSlots.size()) {
+
+                        lineupSlot =
+                            lineupSlots[
+                                slotIndex];
+                    }
+                }
+
+            } else if (isBench) {
+                const auto benchIt =
+                    std::find(
+                        state.tacticLineupDraftBench.begin(),
+                        state.tacticLineupDraftBench.end(),
+                        player.name);
+
+                if (benchIt !=
+                    state.tacticLineupDraftBench.end()) {
+
+                    const int benchIndex =
+                        static_cast<int>(
+                            std::distance(
+                                state.tacticLineupDraftBench.begin(),
+                                benchIt));
+
+                    lineupSlot =
+                        "SUPLENTE " +
+                        std::to_string(
+                            benchIndex + 1);
+                }
+            }
+
+            std::string callStatus =
+                isStarter
+                    ? "TITULAR"
+                    : (isBench ? "SUPLENTE" : "FUERA");
+
+            if (player.injured ||
+                player.matchesSuspended > 0) {
+                callStatus += " / NO DISP.";
+            }
+
             model.secondary.rows.push_back({
-                entry.first,
-                player->name,
-                normalizePosition(player->position),
-                player->role.empty() ? activeDutyFor(*player) : player->role + "/" + activeDutyFor(*player),
-                roleFitLabel(team, *player),
-                std::to_string(player->fitness),
-                playerStatus(*player)
+                player.name,
+                callStatus,
+                lineupSlot,
+                normalizePosition(player.position),
+                std::to_string(player.skill),
+                player.role.empty()
+                    ? activeDutyFor(player)
+                    : player.role + "/" + activeDutyFor(player),
+                roleFitLabel(team, player),
+                std::to_string(player.fitness),
+                playerStatus(player)
             });
+        };
+
+    for (const std::string& name : state.tacticLineupDraftXI) {
+        auto it =
+            std::find_if(
+                team.players.begin(),
+                team.players.end(),
+                [&](const Player& player) {
+                    return player.name == name;
+                });
+
+        if (it != team.players.end()) {
+            addLineupPlayer(*it);
         }
+    }
+
+    for (const std::string& name : state.tacticLineupDraftBench) {
+        auto it =
+            std::find_if(
+                team.players.begin(),
+                team.players.end(),
+                [&](const Player& player) {
+                    return player.name == name;
+                });
+
+        if (it != team.players.end()) {
+            addLineupPlayer(*it);
+        }
+    }
+
+    for (const Player& player : team.players) {
+        if (inLineupGroup(
+                state.tacticLineupDraftXI,
+                player.name) ||
+            inLineupGroup(
+                state.tacticLineupDraftBench,
+                player.name)) {
+            continue;
+        }
+
+        addLineupPlayer(player);
     }
 
     model.footer.rows.push_back({"Enfoque",

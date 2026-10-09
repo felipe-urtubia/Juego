@@ -1071,7 +1071,8 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
     control == state->tacticWidthCombo ||
     control == state->tacticLineCombo ||
     control == state->tacticMarkingCombo ||
-    control == state->tacticInstructionCombo) {
+    control == state->tacticInstructionCombo ||
+            control == state->tacticLineupSlotCombo) {
                     SetBkMode(hdc, OPAQUE);
                     SetBkColor(hdc, kThemeInput);
                     SetTextColor(hdc, kThemeText);
@@ -1098,7 +1099,8 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                control == state->tacticWidthLabel ||
                control == state->tacticLineLabel ||
                control == state->tacticMarkingLabel ||
-               control == state->tacticInstructionLabel;
+               control == state->tacticInstructionLabel ||
+               control == state->tacticLineupSlotLabel;
                 const bool statusStatic = control == state->statusLabel;
                 if (panelStatic) {
                     SetTextColor(hdc, kThemeAccent);
@@ -1182,6 +1184,15 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                 case IDC_FILTER_COMBO:
                     if (HIWORD(wParam) == CBN_SELCHANGE && !state->suppressFilterEvents) {
                         handleFilterChange(*state);
+                    }
+                    return 0;
+
+                case IDC_TACTIC_LINEUP_SLOT_COMBO:
+                    if (HIWORD(wParam) == CBN_SELCHANGE &&
+                        !state->suppressTacticEditorEvents) {
+
+                        assignSelectedTacticLineupSlot(
+                            *state);
                     }
                     return 0;
 
@@ -1398,22 +1409,42 @@ LRESULT CALLBACK windowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
                     runFollowShortlistAction(*state);
                     return 0;
                 case IDC_BUY_BUTTON:
-                    runBuyAction(*state);
+                    if (state->currentPage == GuiPage::Tactics) {
+                        applyTacticsLineup(*state);
+                    } else {
+                        runBuyAction(*state);
+                    }
                     return 0;
                 case IDC_PRECONTRACT_BUTTON:
                     runPreContractAction(*state);
                     return 0;
                 case IDC_LOAN_BUTTON:
-                    runLoanAction(*state);
+                    if (state->currentPage == GuiPage::Tactics) {
+                        setSelectedTacticPlayerRole(*state, "Titular");
+                    } else {
+                        runLoanAction(*state);
+                    }
                     return 0;
                 case IDC_RENEW_BUTTON:
-                    runRenewAction(*state);
+                    if (state->currentPage == GuiPage::Tactics) {
+                        setSelectedTacticPlayerRole(*state, "Suplente");
+                    } else {
+                        runRenewAction(*state);
+                    }
                     return 0;
                 case IDC_SELL_BUTTON:
-                    runSellAction(*state);
+                    if (state->currentPage == GuiPage::Tactics) {
+                        setSelectedTacticPlayerRole(*state, "Fuera");
+                    } else {
+                        runSellAction(*state);
+                    }
                     return 0;
                 case IDC_PLAN_BUTTON:
-                    runPlanAction(*state);
+                    if (state->currentPage == GuiPage::Tactics) {
+                        autoSelectTacticsLineup(*state);
+                    } else {
+                        runPlanAction(*state);
+                    }
                     return 0;
                 case IDC_INSTRUCTION_BUTTON:
                     runInstructionAction(*state);

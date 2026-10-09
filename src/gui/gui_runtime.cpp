@@ -202,6 +202,7 @@ std::string friendlyPanelTitle(const std::string& title) {
     if (title == "TacticalSummary") return "Resumen tactico";
     if (title == "TacticsBoard") return "Disposicion en el campo";
     if (title == "FormationSelector") return "Once titular";
+    if (title == "LineupSelectionPanel") return "Convocatoria";
     if (title == "TacticalImpactSummary") return "Impacto tactico";
     if (title == "MatchAnalysisPanel") return "Informe tactico";
     if (title == "CalendarSummary") return "Resumen del calendario";
@@ -286,7 +287,10 @@ void renderListPanel(AppState& state, HWND label, HWND list, const ListPanelMode
                 break;
             }
         }
-    } else if ((state.currentPage == GuiPage::Squad || state.currentPage == GuiPage::Youth) && list == state.squadList) {
+    } else if ((state.currentPage == GuiPage::Squad ||
+                state.currentPage == GuiPage::Youth ||
+                state.currentPage == GuiPage::Tactics) &&
+               list == state.squadList) {
         for (size_t i = 0; i < model.rows.size(); ++i) {
             const auto& row = model.rows[i];
             if (!row.empty() && row[0] == state.selectedPlayerName) {
@@ -1134,6 +1138,7 @@ void refreshCurrentPage(AppState& state) {
     check_game_ready(state);
     refreshFilterComboOptions(state);
     refreshTacticsEditorControls(state);
+    refreshTacticsLineupSlotControl(state);
     const std::string cacheKey = pageCacheKey(state, state.currentPage);
     const std::string cacheSignature = pageCacheSignature(state, state.currentPage);
     if (canUseCachedModel(state) &&
@@ -1181,14 +1186,37 @@ void refreshCurrentPage(AppState& state) {
     }
     if (state.planButton) {
         std::string planLabel = "Plan";
-        if (state.currentPage == GuiPage::Squad) planLabel = "Instrucc.";
+        if (state.currentPage == GuiPage::Tactics) planLabel = "Auto convocatoria";
+        else if (state.currentPage == GuiPage::Squad) planLabel = "Instrucc.";
         setWindowTextUtf8(state.planButton, planLabel);
     }
     if (state.scoutActionButton) {
         setWindowTextUtf8(state.scoutActionButton, state.currentPage == GuiPage::News ? "Asignar" : "Otear");
     }
     if (state.loanButton) {
-        setWindowTextUtf8(state.loanButton, state.currentPage == GuiPage::Transfers ? "Pedir cesion" : "Ceder");
+        setWindowTextUtf8(
+            state.loanButton,
+            state.currentPage == GuiPage::Tactics
+                ? "Titular"
+                : (state.currentPage == GuiPage::Transfers ? "Pedir cesion" : "Ceder"));
+    }
+
+    if (state.renewButton) {
+        setWindowTextUtf8(
+            state.renewButton,
+            state.currentPage == GuiPage::Tactics ? "Suplente" : "Renovar");
+    }
+
+    if (state.sellButton) {
+        setWindowTextUtf8(
+            state.sellButton,
+            state.currentPage == GuiPage::Tactics ? "Fuera" : "Vender");
+    }
+
+    if (state.buyButton) {
+        setWindowTextUtf8(
+            state.buyButton,
+            state.currentPage == GuiPage::Tactics ? "Aplicar convocatoria" : "Comprar");
     }
 
     renderListPanel(state, state.tableLabel, state.tableList, state.currentModel.primary);
@@ -1228,7 +1256,7 @@ void refreshCurrentPage(AppState& state) {
                 : "Filtro");
     }
 
-    const std::array<HWND, 16> tacticsEditorControls = {{
+    const std::array<HWND, 18> tacticsEditorControls = {{
         state.tacticFormationLabel,
         state.tacticFormationCombo,
         state.tacticMentalityLabel,
@@ -1244,7 +1272,9 @@ void refreshCurrentPage(AppState& state) {
         state.tacticMarkingLabel,
         state.tacticMarkingCombo,
         state.tacticInstructionLabel,
-        state.tacticInstructionCombo
+        state.tacticInstructionCombo,
+        state.tacticLineupSlotLabel,
+        state.tacticLineupSlotCombo
     }};
 
     for (HWND control : tacticsEditorControls) {
@@ -1316,6 +1346,814 @@ void queuePageTransition(AppState& state, GuiPage page) {
     PostMessageW(state.window, kGuiPageTransitionMessage, static_cast<WPARAM>(static_cast<int>(page)), 0);
 }
 
+std::vector<std::string> tacticLineupSlots(const Team& team) {
+    int defenders = 4;
+    int midfielders = 4;
+    int forwards = 2;
+
+    if (team.formation == "4-3-3") {
+        defenders = 4;
+        midfielders = 3;
+        forwards = 3;
+    } else if (team.formation == "3-5-2") {
+        defenders = 3;
+        midfielders = 5;
+        forwards = 2;
+    } else if (team.formation == "5-3-2") {
+        defenders = 5;
+        midfielders = 3;
+        forwards = 2;
+    } else if (team.formation == "3-4-3") {
+        defenders = 3;
+        midfielders = 4;
+        forwards = 3;
+    }
+
+    std::vector<std::string> slots;
+    slots.reserve(11);
+
+    slots.push_back("ARQ");
+
+    auto appendLine =
+        [&](const std::string& line, int count) {
+            for (int i = 1; i <= count; ++i) {
+                slots.push_back(
+                    line + " " +
+                    std::to_string(i));
+            }
+        };
+
+    appendLine("DEF", defenders);
+    appendLine("MED", midfielders);
+    appendLine("DEL", forwards);
+
+    return slots;
+}
+
+void refreshTacticsLineupSlotControl(AppState& state) {
+    if (!state.tacticLineupSlotCombo ||
+        !state.tacticLineupSlotLabel) {
+        return;
+    }
+
+    const bool oldSuppress =
+        state.suppressTacticEditorEvents;
+
+    state.suppressTacticEditorEvents = true;
+
+    SendMessageW(
+        state.tacticLineupSlotCombo,
+        CB_RESETCONTENT,
+        0,
+        0);
+
+    setWindowTextUtf8(
+        state.tacticLineupSlotLabel,
+        "Destino");
+
+    if (state.currentPage != GuiPage::Tactics ||
+        !state.career.myTeam) {
+
+        EnableWindow(
+            state.tacticLineupSlotCombo,
+            FALSE);
+
+        state.suppressTacticEditorEvents =
+            oldSuppress;
+
+        return;
+    }
+
+    ensureTacticsLineupDraft(state);
+
+    Team& team =
+        *state.career.myTeam;
+
+    const auto playerIt =
+        std::find_if(
+            team.players.begin(),
+            team.players.end(),
+            [&](const Player& player) {
+                return player.name ==
+                       state.selectedPlayerName;
+            });
+
+    if (playerIt == team.players.end()) {
+        const std::wstring placeholder =
+            L"Selecciona un jugador";
+
+        SendMessageW(
+            state.tacticLineupSlotCombo,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(
+                placeholder.c_str()));
+
+        SendMessageW(
+            state.tacticLineupSlotCombo,
+            CB_SETCURSEL,
+            0,
+            0);
+
+        EnableWindow(
+            state.tacticLineupSlotCombo,
+            FALSE);
+
+        state.suppressTacticEditorEvents =
+            oldSuppress;
+
+        return;
+    }
+
+    const std::vector<std::string> starterSlots =
+        tacticLineupSlots(team);
+
+    std::vector<std::string> destinations =
+        starterSlots;
+
+    for (int i = 1; i <= 7; ++i) {
+        destinations.push_back(
+            "SUPLENTE " +
+            std::to_string(i));
+    }
+
+    destinations.push_back("FUERA");
+
+    for (const std::string& destination :
+         destinations) {
+
+        const std::wstring wide =
+            utf8ToWide(destination);
+
+        SendMessageW(
+            state.tacticLineupSlotCombo,
+            CB_ADDSTRING,
+            0,
+            reinterpret_cast<LPARAM>(
+                wide.c_str()));
+    }
+
+    int selectedDestination =
+        static_cast<int>(
+            destinations.size()) - 1;
+
+    const auto starterIt =
+        std::find(
+            state.tacticLineupDraftXI.begin(),
+            state.tacticLineupDraftXI.end(),
+            state.selectedPlayerName);
+
+    if (starterIt !=
+        state.tacticLineupDraftXI.end()) {
+
+        selectedDestination =
+            static_cast<int>(
+                std::distance(
+                    state.tacticLineupDraftXI.begin(),
+                    starterIt));
+
+    } else {
+        const auto benchIt =
+            std::find(
+                state.tacticLineupDraftBench.begin(),
+                state.tacticLineupDraftBench.end(),
+                state.selectedPlayerName);
+
+        if (benchIt !=
+            state.tacticLineupDraftBench.end()) {
+
+            selectedDestination =
+                static_cast<int>(
+                    starterSlots.size()) +
+                static_cast<int>(
+                    std::distance(
+                        state.tacticLineupDraftBench.begin(),
+                        benchIt));
+        }
+    }
+
+    SendMessageW(
+        state.tacticLineupSlotCombo,
+        CB_SETCURSEL,
+        selectedDestination,
+        0);
+
+    EnableWindow(
+        state.tacticLineupSlotCombo,
+        !state.actionInProgress);
+
+    state.suppressTacticEditorEvents =
+        oldSuppress;
+}
+
+void assignSelectedTacticLineupSlot(
+    AppState& state) {
+
+    if (!state.career.myTeam) {
+        return;
+    }
+
+    ensureTacticsLineupDraft(state);
+
+    Team& team =
+        *state.career.myTeam;
+
+    const auto playerIt =
+        std::find_if(
+            team.players.begin(),
+            team.players.end(),
+            [&](const Player& player) {
+                return player.name ==
+                       state.selectedPlayerName;
+            });
+
+    if (playerIt == team.players.end()) {
+        setStatus(
+            state,
+            "Selecciona un jugador de la convocatoria.");
+        return;
+    }
+
+    const std::vector<std::string> starterSlots =
+        tacticLineupSlots(team);
+
+    const int starterSlotCount =
+        static_cast<int>(
+            starterSlots.size());
+
+    constexpr int benchSlotCount = 7;
+
+    const int outsideDestination =
+        starterSlotCount +
+        benchSlotCount;
+
+    const int target =
+        static_cast<int>(
+            SendMessageW(
+                state.tacticLineupSlotCombo,
+                CB_GETCURSEL,
+                0,
+                0));
+
+    if (target < 0 ||
+        target > outsideDestination) {
+        return;
+    }
+
+    const bool targetStarter =
+        target < starterSlotCount;
+
+    const bool targetBench =
+        target >= starterSlotCount &&
+        target < outsideDestination;
+
+    if ((targetStarter ||
+         targetBench) &&
+        (playerIt->injured ||
+         playerIt->matchesSuspended > 0)) {
+
+        setStatus(
+            state,
+            state.selectedPlayerName +
+                " no esta disponible para jugar.");
+        refreshTacticsLineupSlotControl(state);
+        return;
+    }
+
+    auto starterIt =
+        std::find(
+            state.tacticLineupDraftXI.begin(),
+            state.tacticLineupDraftXI.end(),
+            state.selectedPlayerName);
+
+    auto benchIt =
+        std::find(
+            state.tacticLineupDraftBench.begin(),
+            state.tacticLineupDraftBench.end(),
+            state.selectedPlayerName);
+
+    int currentStarter = -1;
+    int currentBench = -1;
+
+    if (starterIt !=
+        state.tacticLineupDraftXI.end()) {
+
+        currentStarter =
+            static_cast<int>(
+                std::distance(
+                    state.tacticLineupDraftXI.begin(),
+                    starterIt));
+    }
+
+    if (benchIt !=
+        state.tacticLineupDraftBench.end()) {
+
+        currentBench =
+            static_cast<int>(
+                std::distance(
+                    state.tacticLineupDraftBench.begin(),
+                    benchIt));
+    }
+
+    std::string destinationName;
+
+    if (targetStarter) {
+        destinationName =
+            starterSlots[
+                static_cast<size_t>(
+                    target)];
+
+        if (currentStarter == target) {
+            return;
+        }
+
+        if (target <
+            static_cast<int>(
+                state.tacticLineupDraftXI.size())) {
+
+            const std::string displaced =
+                state.tacticLineupDraftXI[
+                    static_cast<size_t>(
+                        target)];
+
+            if (currentStarter >= 0) {
+                std::swap(
+                    state.tacticLineupDraftXI[
+                        static_cast<size_t>(
+                            currentStarter)],
+                    state.tacticLineupDraftXI[
+                        static_cast<size_t>(
+                            target)]);
+
+            } else {
+                state.tacticLineupDraftXI[
+                    static_cast<size_t>(
+                        target)] =
+                    state.selectedPlayerName;
+
+                if (currentBench >= 0) {
+                    state.tacticLineupDraftBench[
+                        static_cast<size_t>(
+                            currentBench)] =
+                        displaced;
+                }
+            }
+
+        } else {
+            if (currentStarter >= 0) {
+                state.tacticLineupDraftXI.erase(
+                    state.tacticLineupDraftXI.begin() +
+                    currentStarter);
+
+                currentBench = -1;
+            }
+
+            if (currentBench >= 0) {
+                state.tacticLineupDraftBench.erase(
+                    state.tacticLineupDraftBench.begin() +
+                    currentBench);
+            }
+
+            const int insertIndex =
+                std::min(
+                    target,
+                    static_cast<int>(
+                        state.tacticLineupDraftXI.size()));
+
+            state.tacticLineupDraftXI.insert(
+                state.tacticLineupDraftXI.begin() +
+                    insertIndex,
+                state.selectedPlayerName);
+        }
+
+    } else if (targetBench) {
+        const int benchTarget =
+            target -
+            starterSlotCount;
+
+        destinationName =
+            "SUPLENTE " +
+            std::to_string(
+                benchTarget + 1);
+
+        if (currentBench ==
+            benchTarget) {
+            return;
+        }
+
+        if (benchTarget <
+            static_cast<int>(
+                state.tacticLineupDraftBench.size())) {
+
+            const std::string displaced =
+                state.tacticLineupDraftBench[
+                    static_cast<size_t>(
+                        benchTarget)];
+
+            if (currentBench >= 0) {
+                std::swap(
+                    state.tacticLineupDraftBench[
+                        static_cast<size_t>(
+                            currentBench)],
+                    state.tacticLineupDraftBench[
+                        static_cast<size_t>(
+                            benchTarget)]);
+
+            } else {
+                state.tacticLineupDraftBench[
+                    static_cast<size_t>(
+                        benchTarget)] =
+                    state.selectedPlayerName;
+
+                if (currentStarter >= 0) {
+                    state.tacticLineupDraftXI[
+                        static_cast<size_t>(
+                            currentStarter)] =
+                        displaced;
+                }
+            }
+
+        } else {
+            if (currentStarter >= 0) {
+                state.tacticLineupDraftXI.erase(
+                    state.tacticLineupDraftXI.begin() +
+                    currentStarter);
+
+                currentBench = -1;
+            }
+
+            if (currentBench >= 0) {
+                state.tacticLineupDraftBench.erase(
+                    state.tacticLineupDraftBench.begin() +
+                    currentBench);
+            }
+
+            const int insertIndex =
+                std::min(
+                    benchTarget,
+                    static_cast<int>(
+                        state.tacticLineupDraftBench.size()));
+
+            state.tacticLineupDraftBench.insert(
+                state.tacticLineupDraftBench.begin() +
+                    insertIndex,
+                state.selectedPlayerName);
+        }
+
+    } else {
+        destinationName = "FUERA";
+
+        if (currentStarter >= 0) {
+            state.tacticLineupDraftXI.erase(
+                state.tacticLineupDraftXI.begin() +
+                currentStarter);
+        }
+
+        if (currentBench >= 0) {
+            state.tacticLineupDraftBench.erase(
+                state.tacticLineupDraftBench.begin() +
+                currentBench);
+        }
+    }
+
+    state.tacticLineupDraftDirty = true;
+    state.modelCache.clear();
+    state.modelCacheSignatures.clear();
+
+    const std::string selectedName =
+        state.selectedPlayerName;
+
+    refreshCurrentPage(state);
+
+    state.selectedPlayerName =
+        selectedName;
+
+    setStatus(
+        state,
+        selectedName +
+            " -> " +
+            destinationName +
+            ". Pulsa Aplicar convocatoria para confirmar.");
+}
+
+void ensureTacticsLineupDraft(AppState& state) {
+    if (!state.career.myTeam) {
+        state.tacticLineupDraftXI.clear();
+        state.tacticLineupDraftBench.clear();
+        state.tacticLineupTeamKey.clear();
+        state.tacticLineupDraftDirty = false;
+        return;
+    }
+
+    Team& team = *state.career.myTeam;
+
+    const std::string teamKey =
+        team.division + "|" +
+        team.name + "|" +
+        std::to_string(team.players.size());
+
+    if (state.tacticLineupDraftDirty &&
+        state.tacticLineupTeamKey == teamKey) {
+        return;
+    }
+
+    state.tacticLineupDraftXI.clear();
+    state.tacticLineupDraftBench.clear();
+
+    const std::vector<int> xi = team.getStartingXIIndices();
+
+    for (int index : xi) {
+        if (index < 0 ||
+            index >= static_cast<int>(team.players.size())) {
+            continue;
+        }
+
+        state.tacticLineupDraftXI.push_back(
+            team.players[static_cast<size_t>(index)].name);
+    }
+
+    const std::vector<int> bench = team.getBenchIndices(7);
+
+    for (int index : bench) {
+        if (index < 0 ||
+            index >= static_cast<int>(team.players.size())) {
+            continue;
+        }
+
+        const std::string& name =
+            team.players[static_cast<size_t>(index)].name;
+
+        if (std::find(
+                state.tacticLineupDraftXI.begin(),
+                state.tacticLineupDraftXI.end(),
+                name) == state.tacticLineupDraftXI.end()) {
+            state.tacticLineupDraftBench.push_back(name);
+        }
+    }
+
+    state.tacticLineupTeamKey = teamKey;
+    state.tacticLineupDraftDirty = false;
+}
+
+void setSelectedTacticPlayerRole(
+    AppState& state,
+    const std::string& role) {
+
+    if (!state.career.myTeam) {
+        setStatus(state, "No hay equipo activo.");
+        return;
+    }
+
+    ensureTacticsLineupDraft(state);
+
+    if (state.selectedPlayerName.empty()) {
+        setStatus(state, "Selecciona primero un jugador de la convocatoria.");
+        return;
+    }
+
+    Team& team = *state.career.myTeam;
+
+    auto playerIt =
+        std::find_if(
+            team.players.begin(),
+            team.players.end(),
+            [&](const Player& player) {
+                return player.name == state.selectedPlayerName;
+            });
+
+    if (playerIt == team.players.end()) {
+        setStatus(state, "No se encontro el jugador seleccionado.");
+        return;
+    }
+
+    if (role != "Fuera" &&
+        (playerIt->injured || playerIt->matchesSuspended > 0)) {
+        setStatus(
+            state,
+            playerIt->name +
+                " no esta disponible por lesion o suspension.");
+        return;
+    }
+
+    const std::string playerName = playerIt->name;
+
+    const bool alreadyStarter =
+        std::find(
+            state.tacticLineupDraftXI.begin(),
+            state.tacticLineupDraftXI.end(),
+            playerName) != state.tacticLineupDraftXI.end();
+
+    const bool alreadyBench =
+        std::find(
+            state.tacticLineupDraftBench.begin(),
+            state.tacticLineupDraftBench.end(),
+            playerName) != state.tacticLineupDraftBench.end();
+
+    if (role == "Titular" &&
+        !alreadyStarter &&
+        state.tacticLineupDraftXI.size() >= 11) {
+        setStatus(
+            state,
+            "El XI ya tiene 11 jugadores. Saca o mueve un titular primero.");
+        return;
+    }
+
+    if (role == "Suplente" &&
+        !alreadyBench &&
+        state.tacticLineupDraftBench.size() >= 7) {
+        setStatus(
+            state,
+            "La banca ya tiene 7 jugadores. Saca o mueve un suplente primero.");
+        return;
+    }
+
+    auto eraseName =
+        [&](std::vector<std::string>& values) {
+            values.erase(
+                std::remove(
+                    values.begin(),
+                    values.end(),
+                    playerName),
+                values.end());
+        };
+
+    eraseName(state.tacticLineupDraftXI);
+    eraseName(state.tacticLineupDraftBench);
+
+    if (role == "Titular") {
+        state.tacticLineupDraftXI.push_back(playerName);
+    } else if (role == "Suplente") {
+        state.tacticLineupDraftBench.push_back(playerName);
+    } else if (role != "Fuera") {
+        setStatus(state, "Rol de convocatoria desconocido.");
+        return;
+    }
+
+    state.tacticLineupDraftDirty = true;
+    state.modelCache.clear();
+    state.modelCacheSignatures.clear();
+
+    refreshCurrentPage(state);
+
+    setStatus(
+        state,
+        playerName + " -> " + role +
+            ". Pulsa Aplicar convocatoria para confirmar.");
+}
+
+void autoSelectTacticsLineup(AppState& state) {
+    if (!state.career.myTeam) {
+        setStatus(state, "No hay equipo activo.");
+        return;
+    }
+
+    Team automaticTeam = *state.career.myTeam;
+
+    automaticTeam.preferredXI.clear();
+    automaticTeam.preferredBench.clear();
+
+    state.tacticLineupDraftXI.clear();
+    state.tacticLineupDraftBench.clear();
+
+    const std::vector<int> xi =
+        automaticTeam.getStartingXIIndices();
+
+    for (int index : xi) {
+        if (index < 0 ||
+            index >= static_cast<int>(automaticTeam.players.size())) {
+            continue;
+        }
+
+        state.tacticLineupDraftXI.push_back(
+            automaticTeam.players[static_cast<size_t>(index)].name);
+    }
+
+    const std::vector<int> bench =
+        automaticTeam.getBenchIndices(7);
+
+    for (int index : bench) {
+        if (index < 0 ||
+            index >= static_cast<int>(automaticTeam.players.size())) {
+            continue;
+        }
+
+        const std::string& name =
+            automaticTeam.players[static_cast<size_t>(index)].name;
+
+        if (std::find(
+                state.tacticLineupDraftXI.begin(),
+                state.tacticLineupDraftXI.end(),
+                name) == state.tacticLineupDraftXI.end()) {
+            state.tacticLineupDraftBench.push_back(name);
+        }
+    }
+
+    Team& team = *state.career.myTeam;
+
+    state.tacticLineupTeamKey =
+        team.division + "|" +
+        team.name + "|" +
+        std::to_string(team.players.size());
+
+    state.tacticLineupDraftDirty = true;
+    state.modelCache.clear();
+    state.modelCacheSignatures.clear();
+
+    refreshCurrentPage(state);
+
+    setStatus(
+        state,
+        "Convocatoria automatica preparada. Revisa y pulsa Aplicar convocatoria.");
+}
+
+void applyTacticsLineup(AppState& state) {
+    if (!state.career.myTeam) {
+        setStatus(state, "No hay equipo activo.");
+        return;
+    }
+
+    ensureTacticsLineupDraft(state);
+
+    if (state.tacticLineupDraftXI.size() != 11) {
+        setStatus(
+            state,
+            "La convocatoria necesita exactamente 11 titulares.");
+        return;
+    }
+
+    if (state.tacticLineupDraftBench.size() != 7) {
+        setStatus(
+            state,
+            "La convocatoria necesita exactamente 7 suplentes.");
+        return;
+    }
+
+    Team& team = *state.career.myTeam;
+
+    std::vector<std::string> selectedNames;
+
+    auto validateGroup =
+        [&](const std::vector<std::string>& group) {
+            for (const std::string& name : group) {
+                if (std::find(
+                        selectedNames.begin(),
+                        selectedNames.end(),
+                        name) != selectedNames.end()) {
+                    setStatus(
+                        state,
+                        "Un jugador aparece mas de una vez en la convocatoria.");
+                    return false;
+                }
+
+                auto playerIt =
+                    std::find_if(
+                        team.players.begin(),
+                        team.players.end(),
+                        [&](const Player& player) {
+                            return player.name == name;
+                        });
+
+                if (playerIt == team.players.end()) {
+                    setStatus(
+                        state,
+                        "La convocatoria contiene un jugador que ya no esta en el plantel.");
+                    return false;
+                }
+
+                if (playerIt->injured ||
+                    playerIt->matchesSuspended > 0) {
+                    setStatus(
+                        state,
+                        playerIt->name +
+                            " no esta disponible por lesion o suspension.");
+                    return false;
+                }
+
+                selectedNames.push_back(name);
+            }
+
+            return true;
+        };
+
+    if (!validateGroup(state.tacticLineupDraftXI) ||
+        !validateGroup(state.tacticLineupDraftBench)) {
+        return;
+    }
+
+    team.preferredXI = state.tacticLineupDraftXI;
+    team.preferredBench = state.tacticLineupDraftBench;
+
+    state.tacticLineupDraftDirty = false;
+    state.modelCache.clear();
+    state.modelCacheSignatures.clear();
+
+    refreshCurrentPage(state);
+
+    setStatus(
+        state,
+        "Convocatoria aplicada: 11 titulares, 7 suplentes y el resto fuera.");
+}
+
 void handleFilterChange(AppState& state) {
     state.currentFilter = comboText(state.filterCombo);
     refreshCurrentPage(state);
@@ -1336,7 +2174,10 @@ void handleListSelectionChange(AppState& state, int controlId) {
         return;
     }
 
-    if ((state.currentPage == GuiPage::Squad || state.currentPage == GuiPage::Youth) && controlId == IDC_SQUAD_LIST) {
+    if ((state.currentPage == GuiPage::Squad ||
+         state.currentPage == GuiPage::Youth ||
+         state.currentPage == GuiPage::Tactics) &&
+        controlId == IDC_SQUAD_LIST) {
         const std::string playerName = listViewText(state.squadList, row, 0);
         if (playerName.empty() || playerName == state.selectedPlayerName) return;
         state.selectedPlayerName = playerName;
