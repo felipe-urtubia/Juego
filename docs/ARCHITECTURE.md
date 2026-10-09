@@ -645,4 +645,4 @@ Entre las prioridades futuras se encuentran:
 
 Este documento refleja el estado general del proyecto correspondiente a:
 
-**Chilean Footballito `v0.1.2.1-alpha`**
+**Chilean Footballito `v0.1.2.2-alpha`**

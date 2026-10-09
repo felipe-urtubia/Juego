@@ -4,7 +4,7 @@
 
 ### Simulador de gestión futbolística desarrollado en C++17
 
-**Versión actual: `v0.1.2.1-alpha`**
+**Versión actual: `v0.1.2.2-alpha`**
 
 Motor de simulación propio • Arquitectura modular • IA táctica • Match Center interactivo • Modo Carrera
 
@@ -39,34 +39,23 @@ La arquitectura continúa evolucionando para separar responsabilidades entre mot
 
 La versión pública actual es:
 
-## `v0.1.2.1-alpha`
+## `v0.1.2.2-alpha`
 
 Release:
 
-https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.1-alpha
+https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.2-alpha
 
 ### Cambios principales
 
-- Match Center interactivo.
-- Cambios de mentalidad durante el partido.
-- Instrucciones tácticas en vivo.
-- Mentalidad e instrucción aplicables en un mismo corte de decisión.
-- Sustituciones manuales.
-- Sustituciones realizadas por la IA visibles en el Match Center.
-- Pausa y reanudación.
-- Velocidades de simulación `1x`, `2x` y `4x`.
-- Rediseño del menú principal.
-- Rediseño del flujo de nueva carrera.
-- Rediseño de guardados, configuraciones y créditos.
-- Mejoras de estabilidad al iniciar y navegar por una carrera.
-- KPIs visuales en el dashboard.
-- Menú contextual de jugadores.
-- Salary cap relativo a los ingresos del club.
-- Mayor modularización de `CareerService`.
-- Ampliación de pruebas automatizadas.
-- Validación completa de datos antes de la release.
-
----
+- Editor táctico personalizable con formación, mentalidad, presión, ritmo, anchura, línea defensiva, marcaje e instrucciones.
+- Selección manual de los 11 titulares.
+- Asignación de cada titular a un puesto concreto de la formación.
+- Selección y orden de siete suplentes.
+- Jugadores fuera de convocatoria.
+- Selector unificado `Destino` con puestos del XI, `SUPLENTE 1-7` y `FUERA`.
+- Convocatoria automática y aplicación manual.
+- Integración real de XI y banca con el Match Center.
+- Persistencia de la alineación y suplentes mediante el sistema de guardado existente.
 
 # 🚀 Estado actual del proyecto
 
@@ -100,7 +89,7 @@ Actualmente dispone de:
 - ✅ Interfaz Win32.
 - ✅ Frontend CLI.
 
-La release `v0.1.2.1-alpha` fue verificada con:
+La release `v0.1.2.2-alpha` fue verificada con:
 
 - Build completo correcto.
 - 100% de los tests configurados aprobados.
@@ -710,7 +699,7 @@ La release para Windows contiene únicamente lo necesario para jugar.
 Estructura:
 
 ```text
-FootballManager-v0.1.2.1-alpha/
+FootballManager-v0.1.2.2-alpha/
 ├── assets/
 ├── data/
 ├── saves/

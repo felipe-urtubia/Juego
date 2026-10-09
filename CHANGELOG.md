@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.1.2.2-alpha - 2026-10-09
+
+### Tácticas
+- La pantalla de Tácticas incorpora un editor completamente personalizable.
+- Se pueden configurar formación, mentalidad, presión, ritmo, anchura, línea defensiva, marcaje e instrucción de partido.
+- La pizarra táctica fue rediseñada para representar de forma más clara la formación y los jugadores.
+- Se mejoró el comportamiento del scroll y de los controles Win32 dentro de la pantalla.
+
+### Convocatoria y alineación
+- Se agregó selección manual de los 11 titulares.
+- Cada titular puede asignarse a un puesto concreto de la formación.
+- Se pueden seleccionar exactamente siete suplentes.
+- Los jugadores restantes pueden dejarse fuera de la convocatoria.
+- El selector `Destino` permite elegir puestos del XI, `SUPLENTE 1-7` o `FUERA`.
+- Se agregó generación automática de convocatoria y confirmación mediante `Aplicar convocatoria`.
+- Lesiones y suspensiones son respetadas al formar el XI y la banca.
+
+### Match Center
+- El partido utiliza el XI y la banca seleccionados por el usuario.
+- La banca queda congelada al inicio del encuentro para impedir que jugadores fuera de convocatoria aparezcan como sustitutos.
+- Se mantiene la compatibilidad con las sustituciones manuales y el flujo interactivo del Match Center.
+
+### Persistencia
+- La alineación utiliza `preferredXI`.
+- Los suplentes utilizan `preferredBench`.
+- El orden del XI conserva la asignación de puestos.
+- La selección permanece compatible con el sistema de guardado y carga existente.
+
+### Calidad y regresiones
+- Corregida una regresión relacionada con las cinco sustituciones del Match Center.
+- Corregida una regresión en la información de rol y encaje de la plantilla.
+- Build completo verificado.
+- CTest ejecutado correctamente.
+- Validador general ejecutado sin errores ni advertencias.
 ## v0.1.2.1-alpha - 2026-10-08
 
 ### Guardados

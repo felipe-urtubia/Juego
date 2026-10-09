@@ -1,6 +1,6 @@
 # Índice de Documentación - Chilean Footballito
 
-**Versión pública actual:** `v0.1.2.1-alpha`
+**Versión pública actual:** `v0.1.2.2-alpha`
 
 Este archivo sirve como punto de entrada a la documentación principal del proyecto.
 
@@ -113,6 +113,6 @@ Contiene información relacionada con limpieza y consistencia de datos.
 
 ## Release actual
 
-**Chilean Footballito `v0.1.2.1-alpha`**
+**Chilean Footballito `v0.1.2.2-alpha`**
 
-https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.1-alpha
+https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.2-alpha
