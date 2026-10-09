@@ -9532,3 +9532,160 @@ Commit:
 - [x] Binario distribuible validado.
 - [x] Integridad del ZIP verificada después de descargarlo desde GitHub.
 - [x] Esta release incorpora todo el trabajo funcional posterior a `v0.1.2.1-alpha`.
+---
+
+## Auditoria integral del trabajo realizado en este chat - 2026-10-09
+
+Esta seccion deja constancia de la revision completa realizada sobre `TODO.md`, el historial Git y los cambios desarrollados durante este chat. Las secciones historicas detalladas que ya existian se conservaron y se comprobaron; aqui se resume su cobertura y se documentan expresamente los cambios posteriores a `v0.1.2.2-alpha`.
+
+### Historial previo comprobado
+
+- [x] Arquitectura y refactorizaciones estructurales ya documentadas.
+- [x] Evolucion del Match Center ya documentada.
+- [x] Desarrollo y ampliaciones de la interfaz grafica ya documentados.
+- [x] Sistema de guardado y persistencia ya documentado.
+- [x] Sistemas de carrera ya documentados.
+- [x] Ascensos y descensos ya documentados.
+- [x] Release `v0.1.1-alpha` ya documentada.
+- [x] Release `v0.1.2.0-alpha` ya documentada.
+- [x] Release `v0.1.2.1-alpha` ya documentada.
+
+### Editor de tacticas personalizadas
+
+- [x] Editor tactico personalizable integrado.
+- [x] Formacion configurable.
+- [x] Mentalidad configurable.
+- [x] Intensidad de presion configurable.
+- [x] Linea defensiva configurable.
+- [x] Ritmo configurable.
+- [x] Anchura configurable.
+- [x] Instruccion de partido configurable.
+- [x] Estilo de marcaje configurable.
+- [x] Pantalla de Tacticas modernizada.
+- [x] Pizarra tactica redisenada.
+- [x] Correcciones de scroll de la pantalla tactica.
+- [x] Commit funcional: `b210a580afdb3706f7fcab50031d8e5e12642512` (`feat: add custom tactics editor`).
+- [x] Commit documental: `c38895eb6debd090b3d68524fc5b450abd08877f` (`docs: document custom tactics editor`).
+
+### Convocatoria y alineacion tactica
+
+- [x] Seleccion manual de exactamente 11 titulares.
+- [x] Seleccion de 7 suplentes.
+- [x] Jugadores fuera de convocatoria.
+- [x] Puestos exactos del XI segun la formacion: `ARQ`, `DEF n`, `MED n` y `DEL n`.
+- [x] Selector unificado `Destino`.
+- [x] Destinos del XI disponibles desde el selector.
+- [x] Destinos `SUPLENTE 1` a `SUPLENTE 7`.
+- [x] Destino `FUERA`.
+- [x] Boton rapido `Titular`.
+- [x] Boton rapido `Suplente`.
+- [x] Boton rapido `Fuera`.
+- [x] `Auto convocatoria`.
+- [x] `Aplicar convocatoria`.
+- [x] Bloqueo de jugadores lesionados o suspendidos para XI y banca.
+- [x] Validacion de 11 titulares y 7 suplentes antes de aplicar la convocatoria.
+- [x] Persistencia mediante `Team::preferredXI`.
+- [x] Persistencia mediante `Team::preferredBench`.
+- [x] Orden del XI conservado mediante `preferredXI`.
+- [x] Orden de la banca conservado mediante `preferredBench`.
+- [x] Banca congelada al comienzo del partido mediante `TeamRuntimeState::bench`.
+- [x] Los jugadores fuera de convocatoria no aparecen posteriormente como sustitutos.
+- [x] Seleccion preferida estricta de banca cuando existe convocatoria manual completa.
+- [x] Tabla de convocatoria ampliada con `Jugador`, `Convocatoria`, `Destino`, `Pos`, `Hab`, `Rol`, `Encaje`, `Fisico` y `Estado`.
+- [x] Controles de convocatoria mantenidos visibles durante el scroll.
+- [x] La pizarra tactica refleja el borrador de puestos del XI.
+- [x] Regresion `interactive_match_five_substitutions` corregida.
+- [x] Regresion `management_view_filters` corregida.
+- [x] Build aprobado.
+- [x] CTest aprobado.
+- [x] Validador aprobado con 5 divisiones, 90 equipos y 2200 jugadores.
+- [x] 0 errores y 0 advertencias en la auditoria de plantillas.
+- [x] Commit funcional: `0fd6ebd2077d589d6bd5368177803eefbc4d13dc` (`feat: add tactical lineup and matchday selection`).
+- [x] Commit documental: `4d9c99a183fdfd3bb708e8f5a55b5058da6563e5` (`docs: document tactical lineup selection`).
+
+### Release v0.1.2.2-alpha
+
+- [x] Version visible actualizada a `v0.1.2.2-alpha`.
+- [x] `CHANGELOG.md` actualizado.
+- [x] `README.md` actualizado y reparado para conservar todas sus secciones historicas.
+- [x] `INDEX.md` actualizado.
+- [x] `docs/ROADMAP.md` actualizado.
+- [x] `docs/ARCHITECTURE.md` actualizado.
+- [x] Version visible de la GUI actualizada.
+- [x] Build final aprobado.
+- [x] CTest final aprobado.
+- [x] Validador final aprobado.
+- [x] 5 divisiones validadas.
+- [x] 90 equipos revisados.
+- [x] 2200 jugadores auditados.
+- [x] 0 errores.
+- [x] 0 advertencias.
+- [x] Commit de preparacion de release: `87ecf95853cb8b4821b6a4645b550779e71f36a5`.
+- [x] Tag anotado `v0.1.2.2-alpha` creado y publicado.
+- [x] GitHub Release creada como prerelease.
+- [x] Paquete `FootballManager-v0.1.2.2-alpha.zip` publicado.
+- [x] El paquete incluye `FootballManager.exe`, `assets`, `data`, carpeta `saves` vacia y `LEEME.txt`.
+- [x] El paquete excluye `FootballManagerCLI.exe`, `FootballManagerTests.exe` y partidas personales.
+- [x] Tamano del ZIP: `28264716` bytes.
+- [x] SHA-256: `3137F7027E654F8D808ED9DFAB58D8F1F0B26CCD5E0CB4B94380955C92DBB3E7`.
+- [x] El asset remoto fue descargado nuevamente.
+- [x] Tamano local y remoto comprobados como identicos.
+- [x] SHA-256 local y remoto comprobados como identicos.
+- [x] Documentacion final de la release: `66e486d037c97196544a6f5c86395b3b18f4008f`.
+
+### Correccion posterior: eliminacion de la barra inferior
+
+- [x] Detectada la barra global `state.statusLabel`.
+- [x] Eliminada visualmente la franja inferior que mostraba mensajes como `Configuracion aplicada: ...`.
+- [x] `statusLabel` permanece disponible internamente para no romper llamadas existentes a `setStatus()`.
+- [x] Eliminada la reserva de espacio vertical asociada a `statusBar`.
+- [x] Recuperado el espacio inferior para el contenido principal.
+- [x] Probado visualmente que la barra ya no aparece.
+- [x] Build aprobado.
+- [x] CTest: 1/1 prueba aprobada.
+- [x] Validador: 5 divisiones, 90 equipos y 2200 jugadores.
+- [x] Validador: 0 errores y 0 advertencias.
+- [x] Commit: `af6a19289b5fe7ce3424a8bf91a84b99255bb3f2` (`fix: remove bottom status bar`).
+- [x] Integrado mediante fast-forward en `main`.
+- [x] Publicado en `origin/main`.
+- [x] Rama `fix/remove-bottom-status-bar` eliminada tras la integracion.
+
+### Correccion posterior: clipping del scroll
+
+- [x] Detectado que controles Win32 desplazables podian invadir visualmente la zona superior del viewport.
+- [x] Caso reproducido en `Noticias`, especialmente con el panel `Centro del manager`.
+- [x] Revisado `placeScrollableWindow`.
+- [x] Revisado `placeWindowWithMode`.
+- [x] Revisado `applyControlViewportClip`.
+- [x] Identificada una proteccion del borde superior que se aplicaba exclusivamente a `GuiPage::Tactics`.
+- [x] Generalizada la deteccion `crossesViewportTop` a todas las paginas desplazables.
+- [x] Los controles que cruzan el borde superior dejan de pintarse fuera de su viewport.
+- [x] Correccion probada visualmente en `Noticias`.
+- [x] Build aprobado.
+- [x] CTest: 1/1 prueba aprobada.
+- [x] Validador: 5 divisiones, 90 equipos y 2200 jugadores.
+- [x] Validador: 0 errores y 0 advertencias.
+- [x] Commit: `76f696001ea2e371e511998f47ee1981dc316dee` (`fix: clip scrolled controls at viewport top`).
+- [x] Integrado mediante fast-forward en `main`.
+- [x] Publicado en `origin/main`.
+- [x] Rama `fix/scroll-viewport-clipping` eliminada tras la integracion.
+
+### Relacion con las releases
+
+- [x] El tag `v0.1.2.2-alpha` permanece correctamente asociado al commit `87ecf95853cb8b4821b6a4645b550779e71f36a5`.
+- [x] No se modifico retroactivamente una release ya publicada.
+- [x] `af6a19289b5fe7ce3424a8bf91a84b99255bb3f2` es posterior a `v0.1.2.2-alpha`.
+- [x] `76f696001ea2e371e511998f47ee1981dc316dee` es posterior a `v0.1.2.2-alpha`.
+- [x] Ambas correcciones quedan preparadas para formar parte de la siguiente release.
+
+### Resultado de la auditoria
+
+- [x] Revisado el historial relevante de Git.
+- [x] Revisada la cobertura ya existente en `TODO.md`.
+- [x] Confirmada la documentacion de los grandes hitos previos.
+- [x] Confirmada la documentacion del editor tactico.
+- [x] Confirmada la documentacion de convocatoria y alineacion.
+- [x] Confirmada la documentacion de `v0.1.2.2-alpha`.
+- [x] Documentada la eliminacion de la barra inferior.
+- [x] Documentada la correccion general del clipping al hacer scroll.
+- [x] No quedan cambios funcionales realizados durante este tramo del chat sin registrar en `TODO.md`.
