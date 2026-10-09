@@ -8956,3 +8956,188 @@ Commit:
 - [x] Tamaño remoto verificado.
 - [x] SHA-256 remoto verificado.
 - [x] Release: https://github.com/felipe-urtubia/Juego/releases/tag/v0.1.2.1-alpha.
+---
+
+## ✅ Editor táctico personalizable y rediseño de Tácticas - 2026-10-08
+
+### Objetivo de esta etapa
+
+- [x] Convertir la pantalla `Tácticas` en un editor táctico realmente configurable.
+- [x] Permitir que el usuario construya su propio plan en lugar de depender únicamente de presets.
+- [x] Reutilizar los parámetros tácticos reales ya consumidos por simulación, IA, fatiga y condición.
+- [x] Modernizar visualmente la pantalla sin crear estado táctico paralelo o ficticio.
+- [x] Mantener guardado, carga y compatibilidad con las carreras existentes.
+
+### Centro Táctico personalizable
+
+- [x] Agregado panel `CENTRO TACTICO | PLAN PERSONALIZADO`.
+- [x] Implementado selector de formación.
+- [x] Formaciones disponibles:
+  - `4-4-2`
+  - `4-3-3`
+  - `3-5-2`
+  - `5-3-2`
+  - `3-4-3`
+- [x] Implementado selector de mentalidad.
+- [x] Mentalidades disponibles en la interfaz:
+  - `Defensiva`
+  - `Equilibrada`
+  - `Ofensiva`
+  - `Presion intensa`
+  - `Contraataque`
+- [x] Implementado selector de intensidad de presión de nivel 1 a 5.
+- [x] Implementado selector de ritmo de nivel 1 a 5.
+- [x] Implementado selector de anchura de nivel 1 a 5.
+- [x] Implementado selector de línea defensiva de nivel 1 a 5.
+- [x] Implementado selector de marcaje:
+  - `Zonal`
+  - `Al hombre`
+- [x] Implementado selector de instrucción de partido.
+- [x] Instrucciones disponibles:
+  - `Equilibrado`
+  - `Laterales altos`
+  - `Bloque bajo`
+  - `Balon parado`
+  - `Presion final`
+  - `Por bandas`
+  - `Juego directo`
+  - `Contra-presion`
+  - `Pausar juego`
+
+### Integración con el modelo y el motor
+
+- [x] Formación conectada directamente a `Team::formation`.
+- [x] Mentalidad conectada directamente a `Team::tactics`.
+- [x] Presión conectada directamente a `Team::pressingIntensity`.
+- [x] Ritmo conectado directamente a `Team::tempo`.
+- [x] Anchura conectada directamente a `Team::width`.
+- [x] Línea defensiva conectada directamente a `Team::defensiveLine`.
+- [x] Marcaje conectado directamente a `Team::markingStyle`.
+- [x] Instrucción conectada directamente a `Team::matchInstruction`.
+- [x] Conservados los valores internos `Defensive`, `Balanced`, `Offensive`, `Pressing` y `Counter`.
+- [x] Conservado `Hombre` como valor interno del marcaje individual.
+- [x] Los cambios desde los combos limpian las cachés de modelos.
+- [x] La página se refresca inmediatamente después de modificar una opción.
+- [x] No se agregó un segundo estado táctico desconectado del motor.
+- [x] Las opciones configuradas continúan utilizando la persistencia existente del equipo.
+
+### Rediseño visual de la pantalla
+
+- [x] Nuevo panel táctico oscuro y redondeado integrado con el estilo de la GUI.
+- [x] Layout adaptable según el ancho disponible.
+- [x] Editor distribuido en 4, 2 o 1 columnas según resolución.
+- [x] Etiquetas y combos integrados con tipografía y tema visual existentes.
+- [x] El filtro táctico existente pasó a mostrarse como `Vista` para diferenciarlo de la mentalidad real.
+- [x] Conservados los botones `Plan rival` y `Entreno+`.
+- [x] Conservados `Resumen táctico`, `Disposición en el campo`, `Informe táctico`, `Once titular` e `Impacto táctico`.
+- [x] El resumen ahora muestra también el tipo de marcaje.
+- [x] Mentalidades mostradas en español de forma consistente en resumen y campo.
+
+### Disposición en el campo
+
+- [x] Rediseñada completamente la visualización del campo.
+- [x] Eliminadas las antiguas barras tácticas que saturaban la zona inferior del césped.
+- [x] Formación y mentalidad mostradas en el encabezado del campo.
+- [x] Jugadores distribuidos visualmente por líneas:
+  - ARQ
+  - DEF
+  - MED
+  - DEL
+- [x] Portero, defensas, mediocampistas y delanteros utilizan colores diferenciados.
+- [x] Reducido el tamaño de los marcadores para mejorar legibilidad.
+- [x] Ajustado el ancho de nombres para evitar superposiciones.
+- [x] Nombres largos utilizan elipsis cuando es necesario.
+- [x] Separación final utilizada:
+  - ARQ `0.06`
+  - DEF `0.29`
+  - MED `0.54`
+  - DEL `0.82`
+- [x] Validado visualmente que MED y DEL ya no se pisan.
+- [x] Eliminada la función obsoleta `drawPlayerDots()` después del rediseño.
+- [x] Eliminado el warning de compilación provocado por dicha función sin uso.
+
+### Corrección del scroll de Tácticas
+
+- [x] Detectadas superposiciones entre el editor, los paneles desplazables y el encabezado.
+- [x] Centro Táctico convertido en parte del documento desplazable.
+- [x] Selectores tácticos convertidos a controles desplazables.
+- [x] `Plan rival` y `Entreno+` integrados en el mismo flujo de scroll.
+- [x] Definido un viewport táctico específico bajo el encabezado de la página.
+- [x] Agregado recorte de controles contra el viewport.
+- [x] Los controles completamente fuera del viewport se desplazan fuera de pantalla.
+- [x] Los controles que cruzan el límite superior de Tácticas dejan de dibujarse sobre el encabezado.
+- [x] Reaplicado el clipping al panel `Informe táctico` después de su padding interior.
+- [x] Campo táctico recortado simultáneamente por su panel y por el viewport.
+- [x] Eliminado el dibujo duplicado del título del Centro Táctico.
+- [x] Confirmado visualmente el scroll arriba, en posiciones intermedias y en la zona inferior.
+- [x] Confirmado que los paneles ya no invaden métricas, cabecera ni selectores.
+- [x] Confirmado que `Informe táctico` funciona correctamente durante el desplazamiento.
+
+### Archivos modificados
+
+- [x] `include/gui/gui_internal.h`.
+- [x] `src/gui/gui.cpp`.
+- [x] `src/gui/gui_layout.cpp`.
+- [x] `src/gui/gui_runtime.cpp`.
+- [x] `src/gui/gui_view_overview.cpp`.
+- [x] No se incluyeron archivos funcionales adicionales.
+
+### Validación técnica
+
+- [x] `git diff --check`: correcto.
+- [x] `cmake --build .\build-ci`: correcto.
+- [x] `FootballManager`: compilado correctamente.
+- [x] `FootballManagerCLI`: compilado correctamente.
+- [x] `FootballManagerTests`: compilado correctamente.
+- [x] `ctest --test-dir .\build-ci --output-on-failure`: correcto.
+- [x] Resultado final automático: `1/1` test aprobado.
+- [x] `100% tests passed`.
+- [x] `FootballManagerCLI.exe --validate`: sin fallas.
+- [x] Divisiones validadas: 5.
+- [x] Equipos revisados: 90.
+- [x] Jugadores auditados: 2200.
+- [x] Errores: 0.
+- [x] Advertencias: 0.
+- [x] Build final sin warnings del código táctico nuevo.
+
+### Validación manual
+
+- [x] Centro Táctico revisado visualmente.
+- [x] Selectores revisados dentro de la pantalla real.
+- [x] Scroll validado manualmente.
+- [x] Informe táctico validado manualmente.
+- [x] Once titular e Impacto táctico validados durante el scroll.
+- [x] Disposición en el campo revisada y ajustada mediante varias iteraciones visuales.
+- [x] Separación final de jugadores aprobada visualmente.
+- [x] No se observaron superposiciones restantes en la versión final revisada.
+
+### Git e integración
+
+- [x] Rama de trabajo: `feature/custom-tactics-editor`.
+- [x] Commit funcional: `b210a58 feat: add custom tactics editor`.
+- [x] Commit completo: `b210a580afdb3706f7fcab50031d8e5e12642512`.
+- [x] 5 archivos incluidos.
+- [x] 911 inserciones.
+- [x] 64 eliminaciones.
+- [x] `main` actualizada previamente mediante `git pull --ff-only origin main`.
+- [x] Integración mediante fast-forward.
+- [x] `main` avanzada desde `6f635f7` hasta `b210a58`.
+- [x] Push de `main` completado correctamente.
+- [x] `HEAD`, `main` y `origin/main` quedaron sincronizados en `b210a58`.
+- [x] Rama local `feature/custom-tactics-editor` eliminada después de integrar.
+- [x] Working tree limpio al finalizar la feature.
+
+### Estado final de la etapa
+
+- [x] Editor táctico personalizado funcionando.
+- [x] Ocho parámetros configurables desde la GUI.
+- [x] Opciones conectadas al estado real utilizado por el motor.
+- [x] Nuevo diseño de Tácticas funcionando.
+- [x] Disposición en el campo renovada.
+- [x] Informe táctico conservado y funcionando.
+- [x] Scroll de Tácticas corregido.
+- [x] Validación automática aprobada.
+- [x] Validación manual aprobada.
+- [x] Feature integrada y publicada en `main`.
+
+> Esta mejora es posterior a `v0.1.2.1-alpha`. No modifica retroactivamente el ZIP ni el ejecutable ya publicados para esa release.
