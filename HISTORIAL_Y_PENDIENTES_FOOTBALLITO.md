@@ -1,5 +1,34 @@
 # Lista de Tareas para Juego de Manager de Fútbol Carga de Equipos desde Archivo
 
+## Estado consolidado - 2026-10-13
+
+Este documento integra el historial y las tareas de `TODO.md` y `TODO_actualizado.md`.
+Se conserva el registro cronologico del desarrollo, sin duplicar el contenido compartido entre los dos documentos.
+Las casillas historicas del Match Center ahora indican su finalizacion posterior a la etapa inicial.
+Los archivos originales `TODO.md` y `TODO_actualizado.md` fueron sustituidos por este historial consolidado. Sus versiones anteriores permanecen disponibles en el historial de Git.
+
+### Error funcional prioritario - objetivos sugeridos de directiva
+
+- [ ] Corregir la aplicacion y evaluacion de objetivos sugeridos de directiva relacionados con rotacion/cargas y evitar el descenso; actualmente pueden vencer como incumplidos aunque el jugador cumpla el objetivo.
+  - `manager_advice.cpp` puede sugerir `Rotar jugadores y cuidar cargas en 4 semanas` o `No descender en las proximas 4 semanas`.
+  - `career_reports_ui.cpp` permite adoptar estas sugerencias como objetivo mensual.
+  - `Career::updateDynamicObjectiveStatus()` reconoce `puntos`, `titularidades`, `posicion` y `presupuesto`, pero no evalua rotacion ni `descender`.
+  - Al vencimiento, un tipo no reconocido queda como `success = false`, lo que resta cuatro puntos de confianza a la directiva.
+  - Definir condiciones medibles por tipo, sin depender solo de comparar fragmentos de texto; revisar la semantica de evitar el descenso.
+  - Agregar pruebas de regresion para aceptar y cumplir objetivos de rotacion y descenso. No se han ejecutado pruebas nuevas en esta auditoria.
+
+### Estado de refactorizacion y Match Center
+
+- `simulateCareerWeek()` ya orquesta seis fases; algunas responsabilidades residuales todavia permanecen en `week_simulation.cpp`.
+- `CareerService` ya delega partidos, copa, finanzas, contratos y estado fisico, entre otras operaciones.
+- `CareerService` ya acepta `EventDispatcher` inyectado, pero `career_runtime.h` aun conserva callbacks.
+- El Match Center de HEAD incluye decisiones tacticas, instrucciones, cambios de mentalidad, sustituciones, pausa y velocidades `1x`, `2x` y `4x`.
+- La publicacion de la rama `feature/live-match-center` y su integracion en `main` estan documentadas en el historial del proyecto.
+- Las pruebas y las compilaciones indicadas en apartados historicos son registros de esas fechas; esta consolidacion no las ha vuelto a ejecutar.
+
+---
+
+
 ## Tareas Completadas
 - [x] Analizar la tarea del usuario: Hacer que el juego cargue equipos desde un archivo en lugar de codificados.
 - [x] Leer main.cpp para entender la estructura del código.
@@ -382,8 +411,9 @@ Nota: valores monetarios usan enteros de 64 bits; entrada manual hasta 1e12.
   - [x] Iniciado refactorización del "God Object" Career: Creada clase CareerState en include/career/career_state.h y src/career/career_state.cpp con métodos básicos (usesSegundaFormat, etc.).
   - [x] Actualizado CMakeLists.txt para incluir src/career/career_state.cpp en la compilación.
   - [x] Verificada compilación exitosa después de los cambios.
-  - [ ] Eliminar funciones gigantes: Romper simulateCareerWeek en métodos más pequeños con patrones Command/Strategy.
-  - [ ] Reemplazar global state y callbacks: Implementar sistema de eventos/inyección de dependencias.
+  - [x] Dividir `simulateCareerWeek()` en seis fases: partidos, estado fisico, transferencias, finanzas, noticias y calendario (comprobado en HEAD).
+  - [ ] Evaluar extraccion adicional de responsabilidades y la conveniencia de patrones Command/Strategy, sin rehacer la division en fases que ya existe.
+  - [x] Introducir `EventDispatcher` e inyeccion de dependencias en `CareerService`; la eliminacion de callbacks globales sigue pendiente en el apartado de `career_runtime.h`.
   - [ ] Mejorar const correctness: Intentado agregar const a getDivisionTeams, pero requiere cambios en tipos de retorno para evitar const Team* vs Team*.
 - **Nuevas Funcionalidades de Gameplay**:
   - [ ] Modo Multijugador Local/Online: Agregar soporte para carreras compartidas.
@@ -4298,10 +4328,10 @@ set(FM_SUPPORT_SOURCES
 
 ### Próximos Pasos (Después de esta integración)
 
-- [ ] Migrar funciones gigantes en `week_simulation.cpp` a métodos de `CareerService`
-- [ ] Reemplazar callbacks globales en `career_runtime.h` con EventDispatcher
+- [ ] Completar la migracion de responsabilidades residuales de `week_simulation.cpp` a `CareerService` o servicios especializados (la mayor parte de partidos, finanzas, contratos y estado fisico ya se delega).
+- [ ] Sustituir los callbacks globales restantes de `career_runtime.h` por un mecanismo de eventos apropiado; `CareerService` ya admite `EventDispatcher`, pero aun existen `LiveMatchStateCallback` y funciones asociadas.
 - [ ] Convertir `app_services.cpp` a método-oriented (no solo funciones libres)
-- [ ] Tests unitarios para `CareerService` (ahora es posible inyectar datos)
+- [ ] Ampliar y verificar las pruebas unitarias de `CareerService` con dependencias inyectadas; ya existen pruebas relacionadas, pero la cobertura integral y su ejecucion actual no se han verificado.
 - [ ] Perfilado de performance para asegurar zero degradation
 - [ ] Documentación de architecture patterns (Service Locator, Safe Pointers)
 
@@ -8202,17 +8232,18 @@ Rama de trabajo utilizada:
 - [x] Prueba visual aprobada.
 - [x] Commit creado y repositorio limpio.
 
-### Mejoras futuras / fuera del alcance actual
+### Mejoras pendientes al 05-10-2026, implementadas posteriormente
 
-- [ ] Agregar controles tácticos interactivos dentro del Match Center gráfico.
-- [ ] Permitir cambios de mentalidad durante el partido desde la GUI.
-- [ ] Permitir cambios de instrucciones desde la GUI.
-- [ ] Permitir sustituciones desde la GUI.
-- [ ] Evaluar controles adicionales como pausa o velocidad del partido directamente desde el Match Center.
-- [ ] Publicar la rama `feature/live-match-center` si todavía no se ha realizado.
-- [ ] Integrar `feature/live-match-center` en `main` cuando corresponda.
+- [x] Agregar controles tácticos interactivos dentro del Match Center gráfico.
+- [x] Permitir cambios de mentalidad durante el partido desde la GUI.
+- [x] Permitir cambios de instrucciones desde la GUI.
+- [x] Permitir sustituciones desde la GUI.
+- [x] Evaluar controles adicionales como pausa o velocidad del partido directamente desde el Match Center.
+- [x] Publicar la rama `feature/live-match-center` si todavía no se ha realizado.
+- [x] Integrar `feature/live-match-center` en `main` cuando corresponda.
 
-> Nota: cuando existe `liveMatchStateCallback`, la GUI actual recibe el estado del partido y devuelve una `ManagerDecision{}` vacía. Por ello, el Match Center gráfico de esta etapa está orientado a visualización en vivo; las decisiones tácticas interactivas quedan planificadas como mejora posterior.
+> Nota historica del 05-10-2026: cuando existe `liveMatchStateCallback`, la GUI actual recibe el estado del partido y devuelve una `ManagerDecision{}` vacía. Por ello, el Match Center gráfico de esta etapa está orientado a visualización en vivo; las decisiones tácticas interactivas quedan planificadas como mejora posterior.
+> Actualizacion posterior: el Match Center ahora devuelve decisiones interactivas; el codigo de HEAD incluye mentalidad, instrucciones, sustituciones, pausa y velocidad. Esta nota describe solo la primera etapa.
 
 ---
 
@@ -9689,3 +9720,62 @@ Esta seccion deja constancia de la revision completa realizada sobre `TODO.md`, 
 - [x] Documentada la eliminacion de la barra inferior.
 - [x] Documentada la correccion general del clipping al hacer scroll.
 - [x] No quedan cambios funcionales realizados durante este tramo del chat sin registrar en `TODO.md`.
+
+---
+
+## Fragmentos historicos exclusivos recuperados de TODO_actualizado.md
+
+Estas lineas no tenian equivalente textual en el TODO mas reciente. Se preservan como referencia historica, no como tareas activas ni como verificaciones de HEAD.
+
+
+### Seccion original: Sistema de compilación
+
+> Original L6252: - Se migró completamente el proyecto a MSYS2 UCRT64 + GCC 16.1.
+> Original L6253: - Se configuró correctamente CMake para utilizar Ninja.
+> Original L6254: - Se eliminaron problemas de compilación relacionados con el compilador anterior.
+> Original L6255: - Se verificó la compilación correcta mediante CMake y Ninja.
+
+### Seccion original: CMake
+
+> Original L6258: - Se corrigieron opciones de compilación.
+> Original L6259: - Se ajustó el enlace estático para MinGW.
+> Original L6260: - Se verificó la generación limpia del proyecto.
+
+### Seccion original: Match Context
+
+> Original L6265: - Se corrigió el cálculo de `defensePower`.
+> Original L6266: - El portero dejó de aportar dos veces al cálculo defensivo.
+> Original L6267: - Se reemplazó el bonus directo por una bonificación relativa al nivel del arquero.
+
+### Seccion original: Match Momentum
+
+> Original L6270: - Se corrigieron problemas que impedían la compilación del módulo.
+> Original L6271: - Se verificó la correcta integración con el resto del motor de simulación.
+
+### Seccion original: Validators
+
+> Original L6275: - Se eliminó una reconstrucción duplicada del `RosterDataValidationReport`.
+> Original L6276: - Ahora el reporte se genera una sola vez y posteriormente se reutiliza para escribir el archivo de salida.
+> Original L6277: - Se redujo trabajo innecesario durante la validación.
+
+### Seccion original: team_ai.cpp
+
+> Original L6283: - Se eliminó un uso innecesario de `const_cast`.
+> Original L6284: - La IA ya no modifica el equipo rival cuando solamente necesita leer sus datos.
+> Original L6285: - Se respetó la const-correctness de la función `adjustCpuTactics()`.
+
+### Seccion original: Calidad del código
+
+> Original L6289: - Se comenzó una auditoría completa del proyecto.
+> Original L6290: - Se están eliminando:
+> Original L6291:   - const_cast innecesarios.
+> Original L6292:   - cálculos duplicados.
+> Original L6293:   - código redundante.
+> Original L6294:   - posibles comportamientos indefinidos.
+> Original L6295:   - problemas de mantenimiento.
+
+### Seccion original: Verificación
+
+> Original L6299: Después de cada modificación se ejecuta:
+> Original L6301: ```bash
+> Original L6302: cmake --build out/build -- -j1
