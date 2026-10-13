@@ -648,34 +648,64 @@ void Career::initializeDynamicObjective() {
 
 void Career::updateDynamicObjectiveStatus() {
     if (!myTeam || boardMonthlyObjective.empty()) return;
+
+    const bool recoveryObjective =
+        boardMonthlyObjective.find("Rotar jugadores") != string::npos;
+
+    const bool relegationRiskObjective =
+        boardMonthlyObjective.find("descender") != string::npos ||
+        boardMonthlyObjective.find("zona de riesgo de descenso") != string::npos;
+
     int youthStarts = 0;
     for (const auto& player : myTeam->players) {
         if (player.age <= 20) youthStarts += player.startsThisSeason;
     }
+
     if (boardMonthlyObjective.find("titularidades") != string::npos) {
         boardMonthlyProgress = youthStarts;
     } else if (boardMonthlyObjective.find("posicion") != string::npos) {
         boardMonthlyProgress = currentCompetitiveRank();
     } else if (boardMonthlyObjective.find("presupuesto") != string::npos) {
-        boardMonthlyProgress = static_cast<int>(min<long long>(myTeam->budget, 2000000000LL));
+        boardMonthlyProgress =
+            static_cast<int>(min<long long>(myTeam->budget, 2000000000LL));
+    } else if (relegationRiskObjective) {
+        boardMonthlyProgress = currentCompetitiveRank();
     }
 
     if (currentWeek < boardMonthlyDeadlineWeek) return;
+
     bool success = false;
+
     if (boardMonthlyObjective.find("puntos") != string::npos) {
         success = boardMonthlyProgress >= boardMonthlyTarget;
     } else if (boardMonthlyObjective.find("titularidades") != string::npos) {
         success = boardMonthlyProgress >= boardMonthlyTarget;
     } else if (boardMonthlyObjective.find("posicion") != string::npos) {
-        success = boardMonthlyProgress > 0 && boardMonthlyProgress <= boardMonthlyTarget;
+        success = boardMonthlyProgress > 0 &&
+                  boardMonthlyProgress <= boardMonthlyTarget;
     } else if (boardMonthlyObjective.find("presupuesto") != string::npos) {
         success = boardMonthlyProgress >= boardMonthlyTarget;
+    } else if (relegationRiskObjective) {
+        const int safeRankLimit =
+            max(1, currentCompetitiveFieldSize() * 3 / 4);
+
+        success = boardMonthlyProgress > 0 &&
+                  boardMonthlyProgress <= safeRankLimit;
+    } else if (recoveryObjective) {
+        success = boardMonthlyProgress >= max(1, boardMonthlyTarget);
     }
-    boardConfidence = clampInt(boardConfidence + (success ? 4 : -4), 0, 100);
-    addNews(string("Objetivo mensual ") + (success ? "cumplido: " : "fallado: ") + boardMonthlyObjective);
+
+    boardConfidence = clampInt(
+        boardConfidence + (success ? 4 : -4), 0, 100);
+
+    addNews(
+        string("Objetivo mensual ") +
+        (success ? "cumplido: " : "fallado: ") +
+        boardMonthlyObjective
+    );
+
     initializeDynamicObjective();
 }
-
 int Career::currentCompetitiveRank() const {
     if (!myTeam) return -1;
     vector<Team*> teams = boardRelevantTeams(*this);

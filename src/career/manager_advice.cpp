@@ -54,7 +54,9 @@ int youthProjects(const Team& team) {
 
 bool monthlyObjectiveUnderPressure(const Career& career) {
     if (career.boardMonthlyObjective.empty()) return false;
-    if (career.boardMonthlyObjective.find("posicion") != string::npos) {
+    if (career.boardMonthlyObjective.find("posicion") != string::npos ||
+        career.boardMonthlyObjective.find("descender") != string::npos ||
+        career.boardMonthlyObjective.find("zona de riesgo de descenso") != string::npos) {
         return career.boardMonthlyProgress > 0 && career.boardMonthlyProgress > career.boardMonthlyTarget;
     }
     return career.boardMonthlyProgress < career.boardMonthlyTarget;
@@ -103,7 +105,7 @@ string buildSuggestedBoardObjectiveInternal(const Career& career) {
         return "Rotar jugadores y cuidar cargas en 4 semanas";
     }
     if (relegationRisk) {
-        return "No descender en las proximas 4 semanas";
+        return "Salir de la zona de riesgo de descenso en 4 semanas";
     }
     if (promotionPush) {
         return "Sumar al menos 6 puntos en 4 semanas";

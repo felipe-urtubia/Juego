@@ -54,7 +54,9 @@ bool monthlyObjectiveUnderPressure(const Career& career) {
     const string objective = toLower(career.boardMonthlyObjective);
     if (objective.find("posicion") != string::npos ||
         objective.find("puesto") != string::npos ||
-        objective.find("top") != string::npos) {
+        objective.find("top") != string::npos ||
+        objective.find("descender") != string::npos ||
+        objective.find("zona de riesgo de descenso") != string::npos) {
         return career.boardMonthlyProgress > 0 &&
                career.boardMonthlyProgress > career.boardMonthlyTarget;
     }

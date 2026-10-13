@@ -3652,6 +3652,60 @@ void testSaveLoadRoundTripPreservesCareerState() {
                loaded.rivalAIMap.begin()->second.memoryBank.front().commonPlayPattern == original.rivalAIMap.begin()->second.memoryBank.front().commonPlayPattern,
            "La carga debe preservar la memoria y configuracion de la IA rival.");
 
+    expect(loaded.boardMonthlyObjective == original.boardMonthlyObjective &&
+               loaded.boardMonthlyTarget == original.boardMonthlyTarget &&
+               loaded.boardMonthlyProgress == original.boardMonthlyProgress &&
+               loaded.boardMonthlyDeadlineWeek == original.boardMonthlyDeadlineWeek,
+           "Los objetivos normales deben conservarse al guardar y cargar.");
+
+    const vector<string> relegationObjectiveTexts = {
+        "No descender en las proximas 4 semanas",
+        "Salir de la zona de riesgo de descenso en 4 semanas"
+    };
+
+    for (size_t i = 0; i < relegationObjectiveTexts.size(); ++i) {
+        const string objectiveSavePath = processScopedTestPath(
+            i == 0 ? "saves/test_legacy_relegation_objective.txt"
+                   : "saves/test_current_relegation_objective.txt");
+
+        original.boardMonthlyObjective = relegationObjectiveTexts[i];
+        original.boardMonthlyTarget = 99;
+        original.boardMonthlyProgress = 17;
+        original.boardMonthlyDeadlineWeek = original.currentWeek + 3;
+        original.saveFile = objectiveSavePath;
+
+        expect(original.saveCareer(),
+               "Debe guardarse la carrera con objetivo de descenso.");
+
+        Career relegationLoaded;
+        relegationLoaded.saveFile = objectiveSavePath;
+
+        expect(relegationLoaded.loadCareer(),
+               "Debe cargarse la carrera con objetivo de descenso.");
+
+        const int expectedTarget =
+            max(1, relegationLoaded.currentCompetitiveFieldSize() * 3 / 4);
+
+        expect(relegationLoaded.boardMonthlyObjective ==
+                   relegationObjectiveTexts[i],
+               "La carga debe conservar el texto del objetivo.");
+
+        expect(relegationLoaded.boardMonthlyTarget == expectedTarget,
+               "La carga debe actualizar la meta de riesgo de descenso.");
+
+        expect(relegationLoaded.boardMonthlyProgress ==
+                   relegationLoaded.currentCompetitiveRank(),
+               "La carga debe sincronizar la posicion competitiva.");
+
+        expect(relegationLoaded.boardMonthlyDeadlineWeek ==
+                   original.boardMonthlyDeadlineWeek,
+               "La carga debe conservar la fecha limite del objetivo.");
+
+        expect(relegationLoaded.boardConfidence == original.boardConfidence,
+               "Cargar un objetivo no debe alterar la confianza.");
+
+        std::remove(objectiveSavePath.c_str());
+    }
     std::remove(savePath.c_str());
 }
 
@@ -4372,6 +4426,67 @@ void testSuggestedBoardObjectiveReasonMatchesSituation() {
            "El objetivo sugerido debe recomendar rotacion cuando hay varias lesiones.");
     expect(injuryReason.find("lesionados") != string::npos,
            "La razon debe mencionar lesionados cuando hay un riesgo de bajas.");
+    // Prueba de riesgo de descenso mensual.
+    Career relegationCareer;
+    relegationCareer.currentSeason = 1;
+    relegationCareer.currentWeek = 3;
+    relegationCareer.schedule.resize(12);
+
+    relegationCareer.allTeams.push_back(
+        makeTeam("Riesgo FC", "primera division", 68, 3, 3,
+                 "Balanced", "Equilibrado", 900000));
+
+    for (int i = 1; i <= 7; ++i) {
+        relegationCareer.allTeams.push_back(
+            makeTeam("Rival Riesgo " + to_string(i),
+                     "primera division", 60 + i, 3, 3,
+                     "Balanced", "Equilibrado", 900000));
+        relegationCareer.allTeams.back().points = i * 3;
+    }
+
+    relegationCareer.setActiveDivision("primera division");
+    relegationCareer.myTeam =
+        relegationCareer.findTeamByName("Riesgo FC");
+
+    expect(relegationCareer.myTeam != nullptr,
+           "La prueba de descenso necesita un club controlado.");
+    expect(relegationCareer.currentCompetitiveFieldSize() == 8,
+           "La prueba de descenso necesita ocho equipos en la clasificacion.");
+
+    const int safeLimit =
+        max(1, relegationCareer.currentCompetitiveFieldSize() * 3 / 4);
+
+    auto verifyRelegationObjective =
+        [&](const string& objective, int points, bool expectedSuccess) {
+            relegationCareer.myTeam->points = points;
+
+            const int rank = relegationCareer.currentCompetitiveRank();
+            expect(rank == (points == 99 ? 1 : 8),
+                   "La prueba de descenso debe utilizar la posicion real.");
+
+            relegationCareer.boardMonthlyObjective = objective;
+            relegationCareer.boardMonthlyTarget = safeLimit;
+            relegationCareer.boardMonthlyProgress = 0;
+            relegationCareer.boardMonthlyDeadlineWeek =
+                relegationCareer.currentWeek;
+            relegationCareer.boardConfidence = 50;
+
+            relegationCareer.updateDynamicObjectiveStatus();
+
+            expect(relegationCareer.boardConfidence ==
+                       (expectedSuccess ? 54 : 46),
+                   "La directiva debe evaluar correctamente el riesgo de descenso.");
+        };
+
+    verifyRelegationObjective(
+        "Salir de la zona de riesgo de descenso en 4 semanas", 99, true);
+    verifyRelegationObjective(
+        "Salir de la zona de riesgo de descenso en 4 semanas", 0, false);
+
+    verifyRelegationObjective(
+        "No descender en las proximas 4 semanas", 99, true);
+    verifyRelegationObjective(
+        "No descender en las proximas 4 semanas", 0, false);
 }
 
 void testCareerStorylinesAddChileanFixtureContext() {
@@ -6690,11 +6805,37 @@ void testWeeklyDecisionServiceAppliesActionableConsequences() {
     expect(career.myTeam->trainingFocus == "Recuperacion",
            "El descanso del manager debe dejar un microciclo conservador.");
 
+    career.boardMonthlyObjective = "Rotar jugadores y cuidar cargas en 4 semanas";
+    career.boardMonthlyTarget = 1;
+    career.boardMonthlyProgress = 0;
+    career.boardMonthlyDeadlineWeek = career.currentWeek + 4;
     const int fatigueBefore = career.myTeam->players[0].fatigueLoad;
     ServiceResult recovery = applyWeeklyDecisionService(career, WeeklyDecision::Recovery);
     expect(recovery.ok, "La recuperacion debe aplicarse como decision semanal.");
     expect(career.myTeam->players[0].fatigueLoad < fatigueBefore,
            "La decision de recuperacion debe bajar carga de fatiga.");
+    expect(career.boardMonthlyProgress == 1,
+           "La recuperacion debe completar el objetivo mensual de rotacion.");
+
+    ServiceResult repeatedRecovery =
+        applyWeeklyDecisionService(career, WeeklyDecision::Recovery);
+    expect(repeatedRecovery.ok && career.boardMonthlyProgress == 1,
+           "Repetir recuperacion no debe acumular progreso adicional.");
+
+    career.boardConfidence = 50;
+    career.boardMonthlyDeadlineWeek = career.currentWeek;
+    career.updateDynamicObjectiveStatus();
+    expect(career.boardConfidence == 54,
+           "Cumplir el objetivo de rotacion debe aumentar la confianza.");
+
+    career.boardMonthlyObjective = "Rotar jugadores y cuidar cargas en 4 semanas";
+    career.boardMonthlyTarget = 1;
+    career.boardMonthlyProgress = 0;
+    career.boardMonthlyDeadlineWeek = career.currentWeek;
+    career.boardConfidence = 50;
+    career.updateDynamicObjectiveStatus();
+    expect(career.boardConfidence == 46,
+           "Incumplir el objetivo de rotacion debe reducir la confianza.");
 
     ServiceResult youth = applyWeeklyDecisionService(career, WeeklyDecision::YouthPathway);
     expect(youth.ok, "El impulso juvenil debe aplicarse como decision semanal.");

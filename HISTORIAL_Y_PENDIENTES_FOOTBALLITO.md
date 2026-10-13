@@ -9,14 +9,20 @@ Los archivos originales `TODO.md` y `TODO_actualizado.md` fueron sustituidos por
 
 ### Error funcional prioritario - objetivos sugeridos de directiva
 
-- [ ] Corregir la aplicacion y evaluacion de objetivos sugeridos de directiva relacionados con rotacion/cargas y evitar el descenso; actualmente pueden vencer como incumplidos aunque el jugador cumpla el objetivo.
-  - `manager_advice.cpp` puede sugerir `Rotar jugadores y cuidar cargas en 4 semanas` o `No descender en las proximas 4 semanas`.
-  - `career_reports_ui.cpp` permite adoptar estas sugerencias como objetivo mensual.
-  - `Career::updateDynamicObjectiveStatus()` reconoce `puntos`, `titularidades`, `posicion` y `presupuesto`, pero no evalua rotacion ni `descender`.
-  - Al vencimiento, un tipo no reconocido queda como `success = false`, lo que resta cuatro puntos de confianza a la directiva.
-  - Definir condiciones medibles por tipo, sin depender solo de comparar fragmentos de texto; revisar la semantica de evitar el descenso.
-  - Agregar pruebas de regresion para aceptar y cumplir objetivos de rotacion y descenso. No se han ejecutado pruebas nuevas en esta auditoria.
-
+- [x] Corregir la aplicacion y evaluacion de objetivos sugeridos de directiva relacionados con rotacion/cargas y riesgo de descenso. Correccion validada el 2026-10-13.
+  - `Career::updateDynamicObjectiveStatus()` evalua ahora ambos tipos de objetivo.
+  - El objetivo de rotacion registra progreso cuando `WeeklyDecision::Recovery` protege efectivamente al menos a un jugador.
+  - El progreso de rotacion queda limitado a una unidad para evitar acumulaciones por decisiones repetidas.
+  - El objetivo de descenso se reformulo como `Salir de la zona de riesgo de descenso en 4 semanas`.
+  - La zona de riesgo mensual utiliza el ultimo 25 % de la clasificacion como indicador simplificado; no sustituye las reglas definitivas de descenso de cada division.
+  - Se conserva la evaluacion del texto antiguo `No descender en las proximas 4 semanas` para partidas guardadas.
+  - Al cargar partidas antiguas, se actualizan la meta y el progreso del objetivo de descenso sin cambiar su fecha limite.
+  - Se verifico mediante pruebas el guardado y carga de objetivos normales, antiguos y nuevos.
+  - Se ajustaron las recomendaciones y los indicadores de progreso de la interfaz.
+  - Se incorporaron pruebas de regresion para recuperacion cumplida e incumplida, riesgo de descenso cumplido e incumplido y texto antiguo.
+  - Compilacion correcta: `cmake --build build-ci --config Release`.
+  - Pruebas correctas: `ctest --test-dir build-ci -C Release --output-on-failure` (1 de 1 pruebas registradas aprobada).
+- [ ] Mejora arquitectonica posterior: identificar objetivos mensuales mediante tipos estructurados en lugar de fragmentos de texto y ampliar las pruebas del flujo de adopcion desde la interfaz.
 ### Estado de refactorizacion y Match Center
 
 - `simulateCareerWeek()` ya orquesta seis fases; algunas responsabilidades residuales todavia permanecen en `week_simulation.cpp`.

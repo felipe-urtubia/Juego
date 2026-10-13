@@ -509,8 +509,20 @@ std::vector<DashboardSpotlightCard> buildDashboardSpotlightCards(const AppState&
     const int rank = std::max(1, state.career.currentCompetitiveRank());
     const int rankPulse = clampValue(100 - ((rank - 1) * 100 / std::max(1, fieldSize - 1)), 0, 100);
     const int squadPulse = clampValue(team.morale - injured * 7 - lowFitness * 3, 0, 100);
+    const std::string& deskObjective = state.career.boardMonthlyObjective;
+    const bool deskRankingObjective =
+        deskObjective.find("posicion") != std::string::npos ||
+        deskObjective.find("puesto") != std::string::npos ||
+        deskObjective.find("top") != std::string::npos ||
+        deskObjective.find("entrar") != std::string::npos ||
+        deskObjective.find("descender") != std::string::npos ||
+        deskObjective.find("zona de riesgo de descenso") != std::string::npos;
     const int deskPulse = state.career.boardMonthlyTarget > 0
-        ? clampValue(state.career.boardMonthlyProgress * 100 / std::max(1, state.career.boardMonthlyTarget), 0, 100)
+        ? (deskRankingObjective
+            ? (state.career.boardMonthlyProgress > 0
+                ? clampValue(100 - std::max(0, state.career.boardMonthlyProgress - state.career.boardMonthlyTarget) * 18, 0, 100)
+                : 0)
+            : clampValue(state.career.boardMonthlyProgress * 100 / std::max(1, state.career.boardMonthlyTarget), 0, 100))
         : clampValue(state.career.boardConfidence, 0, 100);
 
     std::ostringstream competitiveValue;
@@ -654,8 +666,20 @@ std::vector<DashboardSpotlightCard> buildContextInsightCards(const AppState& sta
         const int rank = std::max(1, state.career.currentCompetitiveRank());
         const int fieldSize = std::max(1, state.career.currentCompetitiveFieldSize());
         const int boardPulse = clampValue(state.career.boardConfidence, 0, 100);
+        const std::string& boardObjective = state.career.boardMonthlyObjective;
+        const bool boardRankingObjective =
+            boardObjective.find("posicion") != std::string::npos ||
+            boardObjective.find("puesto") != std::string::npos ||
+            boardObjective.find("top") != std::string::npos ||
+            boardObjective.find("entrar") != std::string::npos ||
+            boardObjective.find("descender") != std::string::npos ||
+            boardObjective.find("zona de riesgo de descenso") != std::string::npos;
         const int objectivePulse = state.career.boardMonthlyTarget > 0
-            ? clampValue(state.career.boardMonthlyProgress * 100 / std::max(1, state.career.boardMonthlyTarget), 0, 100)
+            ? (boardRankingObjective
+                ? (state.career.boardMonthlyProgress > 0
+                    ? clampValue(100 - std::max(0, state.career.boardMonthlyProgress - state.career.boardMonthlyTarget) * 18, 0, 100)
+                    : 0)
+                : clampValue(state.career.boardMonthlyProgress * 100 / std::max(1, state.career.boardMonthlyTarget), 0, 100))
             : std::max(35, boardPulse);
         const int jobPulse = clampValue((team.jobSecurity + boardPulse) / 2, 0, 100);
         cards.push_back({L"Confianza directiva",

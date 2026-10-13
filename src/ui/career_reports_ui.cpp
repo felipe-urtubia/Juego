@@ -182,8 +182,10 @@ void applySuggestedBoardObjective(Career& career) {
     } else if (objective.find("presupuesto") != string::npos) {
         career.boardMonthlyTarget = static_cast<int>(min<long long>(max(100000LL, career.myTeam->budget * 80 / 100), 2000000000LL));
         career.boardMonthlyProgress = static_cast<int>(min<long long>(career.myTeam->budget, 2000000000LL));
-    } else if (objective.find("descender") != string::npos) {
-        career.boardMonthlyTarget = max(1, career.currentCompetitiveRank() - 1);
+    } else if (objective.find("descender") != string::npos ||
+               objective.find("zona de riesgo de descenso") != string::npos) {
+        career.boardMonthlyTarget =
+            max(1, career.currentCompetitiveFieldSize() * 3 / 4);
         career.boardMonthlyProgress = career.currentCompetitiveRank();
     } else if (objective.find("puntos") != string::npos) {
         career.boardMonthlyTarget = 6;

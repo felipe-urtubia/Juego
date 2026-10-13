@@ -62,7 +62,9 @@ bool isRankingObjective(const std::string& objective) {
     return lower.find("puesto") != std::string::npos ||
            lower.find("posicion") != std::string::npos ||
            lower.find("top") != std::string::npos ||
-           lower.find("entrar") != std::string::npos;
+           lower.find("entrar") != std::string::npos ||
+           lower.find("descender") != std::string::npos ||
+           lower.find("zona de riesgo de descenso") != std::string::npos;
 }
 
 std::string boardPressureLabel(int score) {

@@ -189,6 +189,11 @@ ServiceResult applyWeeklyDecisionService(Career& career, WeeklyDecision decision
                 }
                 if (++protectedPlayers >= 4) break;
             }
+            if (protectedPlayers > 0 &&
+                career.boardMonthlyObjective.find("Rotar jugadores") != string::npos &&
+                career.currentWeek <= career.boardMonthlyDeadlineWeek) {
+                career.boardMonthlyProgress = max(career.boardMonthlyProgress, 1);
+            }
             reduceStressWithRest(career.managerStress, 1);
             result.messages.push_back("Plan semanal: Recuperacion. Protegidos " + to_string(protectedPlayers) + " jugador(es).");
             break;
