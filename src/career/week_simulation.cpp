@@ -358,7 +358,7 @@ void applyFinancesPhase(Career& career, const unordered_map<TeamId, int>& points
 void updateManagerGameState(Career& career, int myTeamPointsDelta) {
     maybeInvokeIdle();
     if (career.myTeam) {
-        if (boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::Points) {
+        if (career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::Points) {
             career.boardMonthlyProgress += myTeamPointsDelta;
         }
         updateSquadDynamics(career, myTeamPointsDelta);

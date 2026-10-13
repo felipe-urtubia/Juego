@@ -3659,6 +3659,137 @@ void testSaveLoadRoundTripPreservesCareerState() {
                loaded.boardMonthlyDeadlineWeek == original.boardMonthlyDeadlineWeek,
            "Los objetivos normales deben conservarse al guardar y cargar.");
 
+    // El identificador estable prevalece sobre la descripcion.
+    const string customObjective = "Plan especial de descanso del plantel";
+
+    expect(boardObjectiveTypeFromText(customObjective) ==
+               BoardObjectiveType::Unknown,
+           "El texto personalizado no debe revelar el tipo del objetivo.");
+
+    expect(string(boardObjectiveStableId(BoardObjectiveType::Recovery)) ==
+               "recovery" &&
+               boardObjectiveTypeFromStableId("recovery") ==
+                   BoardObjectiveType::Recovery,
+           "El identificador de recuperacion debe convertirse en ambos sentidos.");
+
+    const string stableSavePath = processScopedTestPath(
+        "saves/test_stable_board_objective.txt");
+
+    original.boardMonthlyObjective = customObjective;
+    original.boardMonthlyObjectiveType = BoardObjectiveType::Recovery;
+    original.boardMonthlyTarget = 1;
+    original.boardMonthlyProgress = 0;
+    original.boardMonthlyDeadlineWeek = original.currentWeek + 3;
+    original.saveFile = stableSavePath;
+
+    expect(original.saveCareer(),
+           "Debe guardarse el objetivo con identificador estable.");
+
+    Career stableLoaded;
+    stableLoaded.saveFile = stableSavePath;
+
+    expect(stableLoaded.loadCareer(),
+           "Debe cargarse el objetivo con identificador estable.");
+
+    expect(stableLoaded.boardMonthlyObjective == customObjective &&
+               stableLoaded.boardMonthlyObjectiveType ==
+                   BoardObjectiveType::Recovery &&
+               stableLoaded.effectiveBoardMonthlyObjectiveType() ==
+                   BoardObjectiveType::Recovery,
+           "La carga debe preservar el tipo aunque cambie la descripcion.");
+
+    expect(stableLoaded.boardMonthlyTarget == 1 &&
+               stableLoaded.boardMonthlyProgress == 0 &&
+               stableLoaded.boardMonthlyDeadlineWeek ==
+                   original.boardMonthlyDeadlineWeek,
+           "La carga debe preservar meta, progreso y plazo.");
+
+    std::remove(stableSavePath.c_str());
+
+    // Los escenarios siguientes usan textos antiguos de forma directa.
+    original.boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
+
+    // Compatibilidad real con DYNOBJ de cuatro campos.
+    const string legacyFourFieldPath = processScopedTestPath(
+        "saves/test_four_field_board_objective.txt");
+
+    original.boardMonthlyObjective = "Dar 2 titularidades a sub-20";
+    original.boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
+    original.boardMonthlyTarget = 2;
+    original.boardMonthlyProgress = 1;
+    original.boardMonthlyDeadlineWeek = original.currentWeek + 4;
+    original.saveFile = legacyFourFieldPath;
+
+    expect(original.saveCareer(),
+           "Debe generarse la partida de prueba para el formato antiguo.");
+
+    {
+        std::ifstream input(legacyFourFieldPath, std::ios::binary);
+        expect(input.good(),
+               "Debe poder leerse la partida de prueba.");
+
+        std::ostringstream buffer;
+        buffer << input.rdbuf();
+        std::string contents = buffer.str();
+        input.close();
+
+        const size_t begin = contents.find("DYNOBJ ");
+        expect(begin != string::npos,
+               "El archivo debe contener el objetivo mensual.");
+
+        const size_t lineEnd = contents.find('\n', begin);
+        expect(lineEnd != string::npos,
+               "La linea DYNOBJ debe estar completa.");
+
+        const size_t contentEnd =
+            lineEnd > begin && contents[lineEnd - 1] == '\r'
+                ? lineEnd - 1 : lineEnd;
+
+        const size_t separator = contents.rfind('|', contentEnd);
+        expect(separator != string::npos && separator > begin,
+               "El objetivo debe contener el identificador nuevo.");
+
+        expect(contents.substr(
+                   separator + 1, contentEnd - separator - 1) ==
+                   "youth_starts",
+               "El guardado moderno debe incluir el identificador juvenil.");
+
+        contents.erase(separator, contentEnd - separator);
+
+        std::ofstream output(
+            legacyFourFieldPath,
+            std::ios::binary | std::ios::trunc);
+
+        expect(output.good(),
+               "Debe poder escribirse la partida de cuatro campos.");
+
+        output << contents;
+        output.close();
+
+        expect(output.good(),
+               "Debe completarse la escritura del formato antiguo.");
+    }
+
+    Career legacyFourFieldLoaded;
+    legacyFourFieldLoaded.saveFile = legacyFourFieldPath;
+
+    expect(legacyFourFieldLoaded.loadCareer(),
+           "Debe cargarse una partida DYNOBJ de cuatro campos.");
+
+    expect(legacyFourFieldLoaded.boardMonthlyObjective ==
+               "Dar 2 titularidades a sub-20" &&
+               legacyFourFieldLoaded.effectiveBoardMonthlyObjectiveType() ==
+                   BoardObjectiveType::YouthStarts,
+           "El formato antiguo debe recuperar el tipo desde el texto.");
+
+    expect(legacyFourFieldLoaded.boardMonthlyTarget == 2 &&
+               legacyFourFieldLoaded.boardMonthlyProgress == 1 &&
+               legacyFourFieldLoaded.boardMonthlyDeadlineWeek ==
+                   original.boardMonthlyDeadlineWeek,
+           "El formato antiguo debe conservar meta, progreso y plazo.");
+
+    std::remove(legacyFourFieldPath.c_str());
+
     const vector<string> relegationObjectiveTexts = {
         "No descender en las proximas 4 semanas",
         "Salir de la zona de riesgo de descenso en 4 semanas"
@@ -4556,6 +4687,7 @@ void testSuggestedBoardObjectiveReasonMatchesSituation() {
                    "La prueba de descenso debe utilizar la posicion real.");
 
             relegationCareer.boardMonthlyObjective = objective;
+            relegationCareer.boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
             relegationCareer.boardMonthlyTarget = safeLimit;
             relegationCareer.boardMonthlyProgress = 0;
             relegationCareer.boardMonthlyDeadlineWeek =
@@ -4566,7 +4698,14 @@ void testSuggestedBoardObjectiveReasonMatchesSituation() {
 
             expect(relegationCareer.boardConfidence ==
                        (expectedSuccess ? 54 : 46),
-                   "La directiva debe evaluar correctamente el riesgo de descenso.");
+                   "La directiva debe evaluar correctamente el riesgo de descenso. " +
+                    string("Objetivo: ") + objective +
+                    "; puntos: " + to_string(points) +
+                    "; posicion previa: " + to_string(rank) +
+                    "; confianza real: " +
+                        to_string(relegationCareer.boardConfidence) +
+                    "; confianza esperada: " +
+                        to_string(expectedSuccess ? 54 : 46));
         };
 
     verifyRelegationObjective(
@@ -6897,6 +7036,7 @@ void testWeeklyDecisionServiceAppliesActionableConsequences() {
            "El descanso del manager debe dejar un microciclo conservador.");
 
     career.boardMonthlyObjective = "Rotar jugadores y cuidar cargas en 4 semanas";
+    career.boardMonthlyObjectiveType = BoardObjectiveType::Recovery;
     career.boardMonthlyTarget = 1;
     career.boardMonthlyProgress = 0;
     career.boardMonthlyDeadlineWeek = career.currentWeek + 4;
@@ -6920,6 +7060,7 @@ void testWeeklyDecisionServiceAppliesActionableConsequences() {
            "Cumplir el objetivo de rotacion debe aumentar la confianza.");
 
     career.boardMonthlyObjective = "Rotar jugadores y cuidar cargas en 4 semanas";
+    career.boardMonthlyObjectiveType = BoardObjectiveType::Recovery;
     career.boardMonthlyTarget = 1;
     career.boardMonthlyProgress = 0;
     career.boardMonthlyDeadlineWeek = career.currentWeek;

@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "career/board_objective.h"
 #include "simulation/match_types.h"
 #include "engine/social_system.h"
 #include "engine/manager_stress.h"
@@ -328,6 +329,7 @@ struct Career {
     int boardYouthTarget;
     int boardWarningWeeks;
     std::string boardMonthlyObjective;
+    BoardObjectiveType boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
     int boardMonthlyTarget;
     int boardMonthlyProgress;
     int boardMonthlyDeadlineWeek;
@@ -401,6 +403,18 @@ struct Career {
     void addInboxItem(const std::string& item, const std::string& channel = "");
     void executePendingTransfers();
     void initializeSeasonCup();
+    BoardObjectiveType effectiveBoardMonthlyObjectiveType() const {
+        if (boardMonthlyObjective.empty()) {
+            return BoardObjectiveType::Unknown;
+        }
+
+        if (boardMonthlyObjectiveType != BoardObjectiveType::Unknown) {
+            return boardMonthlyObjectiveType;
+        }
+
+        return boardObjectiveTypeFromText(boardMonthlyObjective);
+    }
+
     void initializeDynamicObjective();
     void updateDynamicObjectiveStatus();
     int currentCompetitiveRank() const;

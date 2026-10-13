@@ -58,9 +58,9 @@ struct BoardPressureSnapshot {
     std::string recommendation;
 };
 
-bool isRankingObjective(const std::string& objective) {
+bool isRankingObjective(const Career& career) {
     return boardObjectiveIsRanking(
-        boardObjectiveTypeFromText(objective));
+        career.effectiveBoardMonthlyObjectiveType());
 }
 
 std::string boardPressureLabel(int score) {
@@ -96,7 +96,7 @@ BoardPressureSnapshot buildBoardPressureSnapshot(const Career& career) {
 
     const Team& team = *career.myTeam;
     const bool hasObjective = !career.boardMonthlyObjective.empty() && career.boardMonthlyTarget > 0;
-    const bool rankingObjective = isRankingObjective(career.boardMonthlyObjective);
+    const bool rankingObjective = isRankingObjective(career);
     bool objectiveMet = true;
     if (hasObjective) {
         objectiveMet = rankingObjective

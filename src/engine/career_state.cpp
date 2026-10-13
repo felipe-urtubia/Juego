@@ -645,13 +645,14 @@ void Career::initializeDynamicObjective() {
         boardMonthlyObjective = "Mantener presupuesto por sobre $" + to_string(boardMonthlyTarget);
         boardMonthlyProgress = static_cast<int>(min<long long>(myTeam->budget, 2000000000LL));
     }
+    boardMonthlyObjectiveType = boardObjectiveTypeFromText(boardMonthlyObjective);
 }
 
 void Career::updateDynamicObjectiveStatus() {
     if (!myTeam || boardMonthlyObjective.empty()) return;
 
     const BoardObjectiveType objectiveType =
-        boardObjectiveTypeFromText(boardMonthlyObjective);
+        effectiveBoardMonthlyObjectiveType();
 
     switch (objectiveType) {
         case BoardObjectiveType::YouthStarts: {

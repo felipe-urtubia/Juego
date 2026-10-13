@@ -53,7 +53,7 @@ void pushFocus(vector<RankedFocus>& items,
 bool monthlyObjectiveUnderPressure(const Career& career) {
     if (career.boardMonthlyObjective.empty()) return false;
     return boardObjectiveUnderPressure(
-        boardObjectiveTypeFromText(career.boardMonthlyObjective),
+        career.effectiveBoardMonthlyObjectiveType(),
         career.boardMonthlyProgress,
         career.boardMonthlyTarget);
 }

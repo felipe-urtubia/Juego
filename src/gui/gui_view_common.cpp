@@ -223,7 +223,7 @@ std::vector<std::string> buildAlertLines(const Career& career) {
     }
     if (!career.boardMonthlyObjective.empty() &&
         boardObjectiveUnderPressure(
-            boardObjectiveTypeFromText(career.boardMonthlyObjective),
+            career.effectiveBoardMonthlyObjectiveType(),
             career.boardMonthlyProgress,
             career.boardMonthlyTarget) &&
         career.boardMonthlyDeadlineWeek - career.currentWeek <= 2) {

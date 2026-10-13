@@ -757,10 +757,14 @@ bool serializeCareer(ostream& file, const Career& career) {
     file << "HUMANS " << encodeHumanManagers(humanManagers) << "\n";
     file << "ACTIVE_MANAGER " << activeHumanManagerIndex << "\n";
     file << "DYNOBJ "
-         << joinEscapedFields({boardMonthlyObjective,
-                               to_string(boardMonthlyTarget),
-                               to_string(boardMonthlyProgress),
-                               to_string(boardMonthlyDeadlineWeek)}, '|')
+         << joinEscapedFields({
+                boardMonthlyObjective,
+                to_string(boardMonthlyTarget),
+                to_string(boardMonthlyProgress),
+                to_string(boardMonthlyDeadlineWeek),
+                boardObjectiveStableId(
+                    career.effectiveBoardMonthlyObjectiveType())
+            }, '|')
          << "\n";
     file << "ACHIEVEMENTS " << achievements.size() << "\n";
     for (const auto& achievement : achievements) file << "ACH " << escapeSaveField(achievement) << "\n";
@@ -966,6 +970,7 @@ bool deserializeCareer(istream& file, Career& career) {
     auto& humanManagers = career.humanManagers;
     auto& activeHumanManagerIndex = career.activeHumanManagerIndex;
     auto& boardMonthlyObjective = career.boardMonthlyObjective;
+    auto& boardMonthlyObjectiveType = career.boardMonthlyObjectiveType;
     auto& boardMonthlyTarget = career.boardMonthlyTarget;
     auto& boardMonthlyProgress = career.boardMonthlyProgress;
     auto& boardMonthlyDeadlineWeek = career.boardMonthlyDeadlineWeek;
@@ -1067,6 +1072,7 @@ bool deserializeCareer(istream& file, Career& career) {
             if (!getline(file, teamsLine)) return false;
         }
         boardMonthlyObjective.clear();
+        boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
         boardMonthlyTarget = 0;
         boardMonthlyProgress = 0;
         boardMonthlyDeadlineWeek = 0;
@@ -1076,6 +1082,17 @@ bool deserializeCareer(istream& file, Career& career) {
             if (objectiveFields.size() > 1) boardMonthlyTarget = parseIntField(objectiveFields[1]);
             if (objectiveFields.size() > 2) boardMonthlyProgress = parseIntField(objectiveFields[2]);
             if (objectiveFields.size() > 3) boardMonthlyDeadlineWeek = parseIntField(objectiveFields[3]);
+
+            if (objectiveFields.size() > 4) {
+                boardMonthlyObjectiveType =
+                    boardObjectiveTypeFromStableId(objectiveFields[4]);
+            }
+
+            if (boardMonthlyObjectiveType == BoardObjectiveType::Unknown) {
+                boardMonthlyObjectiveType =
+                    boardObjectiveTypeFromText(boardMonthlyObjective);
+            }
+
             if (!getline(file, teamsLine)) return false;
         }
         achievements.clear();
@@ -1490,7 +1507,7 @@ bool deserializeCareer(istream& file, Career& career) {
         if (!cupActive && career.getActiveTeamCount() > 0) career.initializeSeasonCup();
         if (hasIntegrity && !validateLoadedIntegrity(career, expectedIntegrity)) return false;
         if (!validateLoadedCareerBasics(career)) return false;
-        if (boardObjectiveTypeFromText(boardMonthlyObjective) ==
+        if (career.effectiveBoardMonthlyObjectiveType() ==
             BoardObjectiveType::RelegationRisk) {
             boardMonthlyTarget =
                 max(1, career.currentCompetitiveFieldSize() * 3 / 4);
@@ -1517,6 +1534,7 @@ bool deserializeCareer(istream& file, Career& career) {
     history.clear();
     pendingTransfers.clear();
     boardMonthlyObjective.clear();
+    boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
     boardMonthlyTarget = 0;
     boardMonthlyProgress = 0;
     boardMonthlyDeadlineWeek = 0;

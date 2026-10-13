@@ -29,7 +29,17 @@ Los archivos originales `TODO.md` y `TODO_actualizado.md` fueron sustituidos por
   - Se traslado la adopcion de sugerencias al servicio manager_advice::adoptSuggestedBoardObjective().
   - Se agregaron pruebas del clasificador y de adopcion real de objetivos financieros y de recuperacion.
   - Compilacion Release correcta y pruebas CTest aprobadas (1 de 1).
-- [ ] Mejora futura: almacenar un identificador tipado estable en las partidas y ampliar las pruebas de interaccion directa con la interfaz.
+- [x] Persistencia de identificadores estables para objetivos mensuales:
+  - Se incorporaron identificadores como `points`, `youth_starts`, `position`, `budget`, `recovery` y `relegation_risk`.
+  - El formato `DYNOBJ` guarda un quinto campo con el identificador estable del objetivo.
+  - Se conserva la compatibilidad con partidas antiguas de cuatro campos, recuperando el tipo a partir del texto.
+  - La evaluacion mensual, las decisiones semanales, las recomendaciones y la interfaz utilizan el tipo efectivo almacenado.
+  - Se agregaron pruebas de persistencia con descripciones personalizadas y de carga de partidas antiguas.
+  - Se corrigieron escenarios de prueba que cambiaban el texto sin sincronizar el identificador.
+  - Compilacion Release completada correctamente.
+  - CTest aprobado en 12 ejecuciones consecutivas, sin fallos.
+- [ ] Mejora futura: ampliar las pruebas de interaccion directa con la interfaz grafica.
+
 ### Estado de refactorizacion y Match Center
 
 - `simulateCareerWeek()` ya orquesta seis fases; algunas responsabilidades residuales todavia permanecen en `week_simulation.cpp`.

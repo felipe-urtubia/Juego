@@ -70,12 +70,15 @@ void setBoardObjective(Career& career) {
         career.boardMonthlyObjective = "Mantener presupuesto por sobre $" + to_string(career.boardMonthlyTarget) + " en 4 semanas";
     } else if (choice == 5) {
         career.boardMonthlyObjective.clear();
+        career.boardMonthlyObjectiveType = BoardObjectiveType::Unknown;
         career.boardMonthlyTarget = 0;
         career.boardMonthlyProgress = 0;
         career.boardMonthlyDeadlineWeek = 0;
         cout << "Objetivo mensual borrado." << endl;
         return;
     }
+
+    career.boardMonthlyObjectiveType = boardObjectiveTypeFromText(career.boardMonthlyObjective);
 
     cout << "Nuevo objetivo: " << career.boardMonthlyObjective << endl;
     cout << "Fecha limite semana: " << career.boardMonthlyDeadlineWeek << endl;

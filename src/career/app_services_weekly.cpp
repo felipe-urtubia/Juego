@@ -115,10 +115,10 @@ WeeklyDecision chooseAutomaticWeeklyDecision(const Career& career) {
     const int lowMorale = countLowMoralePlayers(team);
     const int youth = countYouthCandidates(team);
     const bool objectiveYouth =
-        boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::YouthStarts &&
+        career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::YouthStarts &&
         career.boardMonthlyProgress < career.boardMonthlyTarget;
     const bool objectiveBudget =
-        boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::Budget &&
+        career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::Budget &&
         career.boardMonthlyProgress < career.boardMonthlyTarget;
 
     if (career.debtStatus.debtSeverity >= 55 || objectiveBudget ||
@@ -191,7 +191,7 @@ ServiceResult applyWeeklyDecisionService(Career& career, WeeklyDecision decision
                 if (++protectedPlayers >= 4) break;
             }
             if (protectedPlayers > 0 &&
-                boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::Recovery &&
+                career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::Recovery &&
                 career.currentWeek <= career.boardMonthlyDeadlineWeek) {
                 career.boardMonthlyProgress = max(career.boardMonthlyProgress, 1);
             }
@@ -270,7 +270,7 @@ ServiceResult applyWeeklyDecisionService(Career& career, WeeklyDecision decision
                 ++promotedFocus;
                 if (promotedFocus >= 3) break;
             }
-            if (boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::YouthStarts && promotedFocus > 0) {
+            if (career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::YouthStarts && promotedFocus > 0) {
                 career.addInboxItem("Plan juvenil listo: alinea un sub-20 para avanzar el objetivo mensual.", "Directiva");
             }
             result.messages.push_back("Cantera priorizada: " + to_string(promotedFocus) + " proyecto(s) reciben foco individual.");

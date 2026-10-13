@@ -56,7 +56,7 @@ int youthProjects(const Team& team) {
 bool monthlyObjectiveUnderPressure(const Career& career) {
     if (career.boardMonthlyObjective.empty()) return false;
     return boardObjectiveUnderPressure(
-        boardObjectiveTypeFromText(career.boardMonthlyObjective),
+        career.effectiveBoardMonthlyObjectiveType(),
         career.boardMonthlyProgress,
         career.boardMonthlyTarget);
 }
@@ -197,7 +197,7 @@ vector<string> buildManagerActionLines(const Career& career, size_t limit) {
         pushUniqueLine(lines,
                        "Directiva en alerta: toca sumar progreso visible en el objetivo mensual o en la tabla.");
     }
-    if (team.youthIdentity.find("Cantera") != string::npos && boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::YouthStarts) {
+    if (team.youthIdentity.find("Cantera") != string::npos && career.effectiveBoardMonthlyObjectiveType() == BoardObjectiveType::YouthStarts) {
         pushUniqueLine(lines,
                        "Activar proyecto juvenil: comienza a dar minutos a los sub-20 para cumplir el objetivo mensual.");
     }
@@ -383,6 +383,7 @@ bool adoptSuggestedBoardObjective(Career& career) {
     if (objective.empty()) return false;
 
     career.boardMonthlyObjective = objective;
+    career.boardMonthlyObjectiveType = boardObjectiveTypeFromText(objective);
     career.boardMonthlyDeadlineWeek =
         min(static_cast<int>(career.schedule.size()), career.currentWeek + 4);
     career.boardMonthlyProgress = 0;

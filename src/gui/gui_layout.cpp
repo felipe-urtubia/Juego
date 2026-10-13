@@ -511,7 +511,7 @@ std::vector<DashboardSpotlightCard> buildDashboardSpotlightCards(const AppState&
     const int rankPulse = clampValue(100 - ((rank - 1) * 100 / std::max(1, fieldSize - 1)), 0, 100);
     const int squadPulse = clampValue(team.morale - injured * 7 - lowFitness * 3, 0, 100);
     const bool deskRankingObjective = boardObjectiveIsRanking(
-        boardObjectiveTypeFromText(state.career.boardMonthlyObjective));
+        state.career.effectiveBoardMonthlyObjectiveType());
     const int deskPulse = state.career.boardMonthlyTarget > 0
         ? (deskRankingObjective
             ? (state.career.boardMonthlyProgress > 0
@@ -662,7 +662,7 @@ std::vector<DashboardSpotlightCard> buildContextInsightCards(const AppState& sta
         const int fieldSize = std::max(1, state.career.currentCompetitiveFieldSize());
         const int boardPulse = clampValue(state.career.boardConfidence, 0, 100);
         const bool boardRankingObjective = boardObjectiveIsRanking(
-            boardObjectiveTypeFromText(state.career.boardMonthlyObjective));
+            state.career.effectiveBoardMonthlyObjectiveType());
         const int objectivePulse = state.career.boardMonthlyTarget > 0
             ? (boardRankingObjective
                 ? (state.career.boardMonthlyProgress > 0

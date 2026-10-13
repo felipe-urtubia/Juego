@@ -61,6 +61,46 @@ inline BoardObjectiveType boardObjectiveTypeFromText(
     return BoardObjectiveType::Unknown;
 }
 
+inline const char* boardObjectiveStableId(BoardObjectiveType type) {
+    switch (type) {
+        case BoardObjectiveType::Points:
+            return "points";
+
+        case BoardObjectiveType::YouthStarts:
+            return "youth_starts";
+
+        case BoardObjectiveType::Position:
+            return "position";
+
+        case BoardObjectiveType::Budget:
+            return "budget";
+
+        case BoardObjectiveType::Recovery:
+            return "recovery";
+
+        case BoardObjectiveType::RelegationRisk:
+            return "relegation_risk";
+
+        case BoardObjectiveType::Unknown:
+            return "unknown";
+    }
+
+    return "unknown";
+}
+
+inline BoardObjectiveType boardObjectiveTypeFromStableId(
+    const std::string& id) {
+
+    if (id == "points") return BoardObjectiveType::Points;
+    if (id == "youth_starts") return BoardObjectiveType::YouthStarts;
+    if (id == "position") return BoardObjectiveType::Position;
+    if (id == "budget") return BoardObjectiveType::Budget;
+    if (id == "recovery") return BoardObjectiveType::Recovery;
+    if (id == "relegation_risk") return BoardObjectiveType::RelegationRisk;
+
+    return BoardObjectiveType::Unknown;
+}
+
 inline bool boardObjectiveIsRanking(BoardObjectiveType type) {
     return type == BoardObjectiveType::Position ||
            type == BoardObjectiveType::RelegationRisk;
