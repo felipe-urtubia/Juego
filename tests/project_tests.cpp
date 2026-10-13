@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "ai/ai_match_manager.h"
 #include "ai/ai_squad_planner.h"
 #include "ai/ai_transfer_manager.h"
@@ -4396,6 +4397,50 @@ void testManagerAdviceHighlightsUrgentActions() {
 }
 
 void testSuggestedBoardObjectiveReasonMatchesSituation() {
+    expect(boardObjectiveTypeFromText("Sumar al menos 6 puntos en 4 semanas") ==
+               BoardObjectiveType::Points,
+           "Clasificador central: objetivo de puntos.");
+
+    expect(boardObjectiveTypeFromText("Dar 2 titularidades a sub-20") ==
+               BoardObjectiveType::YouthStarts,
+           "Clasificador central: objetivo juvenil.");
+
+    expect(boardObjectiveTypeFromText("Mejorar la posicion liguera") ==
+               BoardObjectiveType::Position,
+           "Clasificador central: objetivo de posicion.");
+
+    expect(boardObjectiveTypeFromText("Mantener presupuesto por sobre $200000") ==
+               BoardObjectiveType::Budget,
+           "Clasificador central: objetivo de presupuesto.");
+
+    expect(boardObjectiveTypeFromText("Rotar jugadores y cuidar cargas en 4 semanas") ==
+               BoardObjectiveType::Recovery,
+           "Clasificador central: objetivo de recuperacion.");
+
+    expect(boardObjectiveTypeFromText("Salir de la zona de riesgo de descenso en 4 semanas") ==
+               BoardObjectiveType::RelegationRisk,
+           "Clasificador central: objetivo nuevo de descenso.");
+
+    expect(boardObjectiveTypeFromText("No descender en las proximas 4 semanas") ==
+               BoardObjectiveType::RelegationRisk,
+           "Clasificador central: compatibilidad con descenso antiguo.");
+
+    expect(boardObjectiveTypeFromText("Entrar al top 3") ==
+               BoardObjectiveType::Position,
+           "Clasificador central: objetivo personalizado de clasificacion.");
+
+    expect(boardObjectiveTypeFromText("Objetivo desconocido") ==
+               BoardObjectiveType::Unknown,
+           "Clasificador central: objetivo no reconocido.");
+
+    expect(boardObjectiveUnderPressure(BoardObjectiveType::Position, 15, 12) &&
+               !boardObjectiveUnderPressure(BoardObjectiveType::Position, 10, 12),
+           "La presion de clasificacion debe interpretar correctamente las posiciones.");
+
+    expect(boardObjectiveUnderPressure(BoardObjectiveType::Points, 4, 6) &&
+               !boardObjectiveUnderPressure(BoardObjectiveType::Points, 6, 6),
+           "La presion de puntos debe interpretar correctamente el progreso.");
+
     Career career;
     career.currentSeason = 1;
     career.currentWeek = 2;
@@ -4415,6 +4460,27 @@ void testSuggestedBoardObjectiveReasonMatchesSituation() {
     expect(reason.find("finanzas") != string::npos || reason.find("deuda") != string::npos,
            "La razon debe mencionar finanzas o deuda en escenarios de presupuesto ajustado.");
 
+    // Adopcion real de una recomendacion financiera.
+    career.schedule.resize(12);
+
+    expect(manager_advice::adoptSuggestedBoardObjective(career),
+           "La directiva debe permitir adoptar el objetivo financiero.");
+
+    expect(career.boardMonthlyObjective == objective,
+           "La adopcion debe conservar el objetivo recomendado.");
+
+    expect(career.boardMonthlyTarget == 100000 &&
+               career.boardMonthlyProgress == 45000,
+           "La adopcion financiera debe calcular meta y progreso.");
+
+    expect(career.boardMonthlyDeadlineWeek == 6,
+           "La adopcion debe establecer un plazo de cuatro semanas.");
+
+    // Restaurar el escenario antes de evaluar las lesiones.
+    career.boardMonthlyObjective.clear();
+    career.boardMonthlyTarget = 0;
+    career.boardMonthlyProgress = 0;
+    career.boardMonthlyDeadlineWeek = 0;
     career.myTeam->budget = 300000;
     career.myTeam->debt = 0;
     career.myTeam->players[0].injured = true;
@@ -4426,6 +4492,31 @@ void testSuggestedBoardObjectiveReasonMatchesSituation() {
            "El objetivo sugerido debe recomendar rotacion cuando hay varias lesiones.");
     expect(injuryReason.find("lesionados") != string::npos,
            "La razon debe mencionar lesionados cuando hay un riesgo de bajas.");
+    // Adopcion real de una recomendacion de recuperacion.
+    expect(manager_advice::adoptSuggestedBoardObjective(career),
+           "La directiva debe permitir adoptar el objetivo de recuperacion.");
+
+    expect(career.boardMonthlyObjective == injuryObjective,
+           "La adopcion debe conservar la recomendacion por lesiones.");
+
+    expect(boardObjectiveTypeFromText(career.boardMonthlyObjective) ==
+               BoardObjectiveType::Recovery,
+           "La adopcion debe identificar el objetivo de recuperacion.");
+
+    expect(career.boardMonthlyTarget == 1 &&
+               career.boardMonthlyProgress == 0 &&
+               career.boardMonthlyDeadlineWeek == 6,
+           "La recuperacion debe requerir una accion en cuatro semanas.");
+
+    // Sin club controlado, el servicio no debe alterar los objetivos.
+    Career withoutTeam;
+    withoutTeam.boardMonthlyObjective = "Objetivo anterior";
+    withoutTeam.boardMonthlyTarget = 7;
+
+    expect(!manager_advice::adoptSuggestedBoardObjective(withoutTeam) &&
+               withoutTeam.boardMonthlyObjective == "Objetivo anterior" &&
+               withoutTeam.boardMonthlyTarget == 7,
+           "No se debe adoptar un objetivo cuando falta el equipo.");
     // Prueba de riesgo de descenso mensual.
     Career relegationCareer;
     relegationCareer.currentSeason = 1;

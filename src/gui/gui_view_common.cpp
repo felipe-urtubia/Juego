@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "gui/gui_view_builders.h"
 
 #ifdef _WIN32
@@ -220,7 +221,11 @@ std::vector<std::string> buildAlertLines(const Career& career) {
     if (career.boardConfidence < 35) {
         alerts.push_back("[Directiva] La confianza cae a " + std::to_string(career.boardConfidence) + "/100");
     }
-    if (!career.boardMonthlyObjective.empty() && career.boardMonthlyProgress < career.boardMonthlyTarget &&
+    if (!career.boardMonthlyObjective.empty() &&
+        boardObjectiveUnderPressure(
+            boardObjectiveTypeFromText(career.boardMonthlyObjective),
+            career.boardMonthlyProgress,
+            career.boardMonthlyTarget) &&
         career.boardMonthlyDeadlineWeek - career.currentWeek <= 2) {
         alerts.push_back("[Objetivo] " + career.boardMonthlyObjective + " queda bajo presion");
     }

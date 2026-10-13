@@ -166,38 +166,14 @@ void editClubPhilosophy(Career& career) {
 
 void applySuggestedBoardObjective(Career& career) {
     if (!career.myTeam) return;
-    const string objective = manager_advice::buildSuggestedBoardObjective(career);
-    if (objective.empty()) {
+
+    if (!manager_advice::adoptSuggestedBoardObjective(career)) {
         cout << "No hay sugerencia disponible." << endl;
         return;
     }
 
-    career.boardMonthlyDeadlineWeek = min(static_cast<int>(career.schedule.size()), career.currentWeek + 4);
-    career.boardMonthlyProgress = 0;
-    career.boardMonthlyTarget = 0;
-    career.boardMonthlyObjective = objective;
-
-    if (objective.find("titularidades") != string::npos) {
-        career.boardMonthlyTarget = 2;
-    } else if (objective.find("presupuesto") != string::npos) {
-        career.boardMonthlyTarget = static_cast<int>(min<long long>(max(100000LL, career.myTeam->budget * 80 / 100), 2000000000LL));
-        career.boardMonthlyProgress = static_cast<int>(min<long long>(career.myTeam->budget, 2000000000LL));
-    } else if (objective.find("descender") != string::npos ||
-               objective.find("zona de riesgo de descenso") != string::npos) {
-        career.boardMonthlyTarget =
-            max(1, career.currentCompetitiveFieldSize() * 3 / 4);
-        career.boardMonthlyProgress = career.currentCompetitiveRank();
-    } else if (objective.find("puntos") != string::npos) {
-        career.boardMonthlyTarget = 6;
-    } else if (objective.find("posicion") != string::npos) {
-        career.boardMonthlyTarget = max(1, career.currentCompetitiveRank() - 1);
-        career.boardMonthlyProgress = career.currentCompetitiveRank();
-    } else {
-        career.boardMonthlyTarget = 1;
-    }
-
-    career.addNews("Directiva: objetivo mensual actualizado a \"" + career.boardMonthlyObjective + "\".");
-    cout << "Objetivo sugerido aplicado: " << career.boardMonthlyObjective << endl;
+    cout << "Objetivo sugerido aplicado: "
+         << career.boardMonthlyObjective << endl;
 }
 
 vector<string> latestMatchDigest(const Career& career) {

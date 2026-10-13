@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "career/week_simulation.h"
 #include "career/career_service.h"
 #include "week_match_helpers.h"
@@ -357,7 +358,7 @@ void applyFinancesPhase(Career& career, const unordered_map<TeamId, int>& points
 void updateManagerGameState(Career& career, int myTeamPointsDelta) {
     maybeInvokeIdle();
     if (career.myTeam) {
-        if (career.boardMonthlyObjective.find("puntos") != string::npos) {
+        if (boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::Points) {
             career.boardMonthlyProgress += myTeamPointsDelta;
         }
         updateSquadDynamics(career, myTeamPointsDelta);

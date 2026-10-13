@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "gui/gui_view_builders.h"
 
 #ifdef _WIN32
@@ -58,13 +59,8 @@ struct BoardPressureSnapshot {
 };
 
 bool isRankingObjective(const std::string& objective) {
-    const std::string lower = toLower(objective);
-    return lower.find("puesto") != std::string::npos ||
-           lower.find("posicion") != std::string::npos ||
-           lower.find("top") != std::string::npos ||
-           lower.find("entrar") != std::string::npos ||
-           lower.find("descender") != std::string::npos ||
-           lower.find("zona de riesgo de descenso") != std::string::npos;
+    return boardObjectiveIsRanking(
+        boardObjectiveTypeFromText(objective));
 }
 
 std::string boardPressureLabel(int score) {

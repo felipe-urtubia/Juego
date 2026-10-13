@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "career/manager_advice.h"
 
 #include "ai/ai_squad_planner.h"
@@ -54,12 +55,10 @@ int youthProjects(const Team& team) {
 
 bool monthlyObjectiveUnderPressure(const Career& career) {
     if (career.boardMonthlyObjective.empty()) return false;
-    if (career.boardMonthlyObjective.find("posicion") != string::npos ||
-        career.boardMonthlyObjective.find("descender") != string::npos ||
-        career.boardMonthlyObjective.find("zona de riesgo de descenso") != string::npos) {
-        return career.boardMonthlyProgress > 0 && career.boardMonthlyProgress > career.boardMonthlyTarget;
-    }
-    return career.boardMonthlyProgress < career.boardMonthlyTarget;
+    return boardObjectiveUnderPressure(
+        boardObjectiveTypeFromText(career.boardMonthlyObjective),
+        career.boardMonthlyProgress,
+        career.boardMonthlyTarget);
 }
 
 string nextFixtureVenueLabel(const Career& career) {
@@ -198,7 +197,7 @@ vector<string> buildManagerActionLines(const Career& career, size_t limit) {
         pushUniqueLine(lines,
                        "Directiva en alerta: toca sumar progreso visible en el objetivo mensual o en la tabla.");
     }
-    if (team.youthIdentity.find("Cantera") != string::npos && career.boardMonthlyObjective.find("titularidades") != string::npos) {
+    if (team.youthIdentity.find("Cantera") != string::npos && boardObjectiveTypeFromText(career.boardMonthlyObjective) == BoardObjectiveType::YouthStarts) {
         pushUniqueLine(lines,
                        "Activar proyecto juvenil: comienza a dar minutos a los sub-20 para cumplir el objetivo mensual.");
     }
@@ -377,4 +376,58 @@ string buildTransferPackageLabel(const TransferTarget& target) {
            " | salario " + formatMoneyValue(target.expectedWage);
 }
 
+bool adoptSuggestedBoardObjective(Career& career) {
+    if (!career.myTeam) return false;
+
+    const string objective = buildSuggestedBoardObjective(career);
+    if (objective.empty()) return false;
+
+    career.boardMonthlyObjective = objective;
+    career.boardMonthlyDeadlineWeek =
+        min(static_cast<int>(career.schedule.size()), career.currentWeek + 4);
+    career.boardMonthlyProgress = 0;
+    career.boardMonthlyTarget = 0;
+
+    switch (boardObjectiveTypeFromText(objective)) {
+        case BoardObjectiveType::YouthStarts:
+            career.boardMonthlyTarget = 2;
+            break;
+
+        case BoardObjectiveType::Budget:
+            career.boardMonthlyTarget = static_cast<int>(
+                min<long long>(
+                    max(100000LL, career.myTeam->budget * 80 / 100),
+                    2000000000LL));
+            career.boardMonthlyProgress = static_cast<int>(
+                min<long long>(career.myTeam->budget, 2000000000LL));
+            break;
+
+        case BoardObjectiveType::RelegationRisk:
+            career.boardMonthlyTarget =
+                max(1, career.currentCompetitiveFieldSize() * 3 / 4);
+            career.boardMonthlyProgress = career.currentCompetitiveRank();
+            break;
+
+        case BoardObjectiveType::Points:
+            career.boardMonthlyTarget = 6;
+            break;
+
+        case BoardObjectiveType::Position:
+            career.boardMonthlyTarget =
+                max(1, career.currentCompetitiveRank() - 1);
+            career.boardMonthlyProgress = career.currentCompetitiveRank();
+            break;
+
+        case BoardObjectiveType::Recovery:
+        case BoardObjectiveType::Unknown:
+            career.boardMonthlyTarget = 1;
+            break;
+    }
+
+    career.addNews(
+        "Directiva: objetivo mensual actualizado a \"" +
+        career.boardMonthlyObjective + "\".");
+
+    return true;
+}
 }  // namespace manager_advice

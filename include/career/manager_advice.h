@@ -13,6 +13,7 @@ std::vector<std::string> buildManagerActionLines(const Career& career, std::size
 std::vector<std::string> buildCareerStorylines(const Career& career, std::size_t limit = 5);
 std::string buildSuggestedBoardObjective(const Career& career);
 std::string buildSuggestedBoardObjectiveReason(const Career& career);
+bool adoptSuggestedBoardObjective(Career& career);
 
 std::string buildTransferCompetitionLabel(const Career& career,
                                           const Team& seller,

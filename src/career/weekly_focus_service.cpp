@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "career/weekly_focus_service.h"
 
 #include "ai/ai_squad_planner.h"
@@ -50,17 +51,11 @@ void pushFocus(vector<RankedFocus>& items,
 }
 
 bool monthlyObjectiveUnderPressure(const Career& career) {
-    if (career.boardMonthlyObjective.empty() || career.boardMonthlyTarget <= 0) return false;
-    const string objective = toLower(career.boardMonthlyObjective);
-    if (objective.find("posicion") != string::npos ||
-        objective.find("puesto") != string::npos ||
-        objective.find("top") != string::npos ||
-        objective.find("descender") != string::npos ||
-        objective.find("zona de riesgo de descenso") != string::npos) {
-        return career.boardMonthlyProgress > 0 &&
-               career.boardMonthlyProgress > career.boardMonthlyTarget;
-    }
-    return career.boardMonthlyProgress < career.boardMonthlyTarget;
+    if (career.boardMonthlyObjective.empty()) return false;
+    return boardObjectiveUnderPressure(
+        boardObjectiveTypeFromText(career.boardMonthlyObjective),
+        career.boardMonthlyProgress,
+        career.boardMonthlyTarget);
 }
 
 int countHeavyLoad(const Team& team) {

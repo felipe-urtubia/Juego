@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "engine/models.h"
 
 #include "competition/competition.h"
@@ -649,50 +650,70 @@ void Career::initializeDynamicObjective() {
 void Career::updateDynamicObjectiveStatus() {
     if (!myTeam || boardMonthlyObjective.empty()) return;
 
-    const bool recoveryObjective =
-        boardMonthlyObjective.find("Rotar jugadores") != string::npos;
+    const BoardObjectiveType objectiveType =
+        boardObjectiveTypeFromText(boardMonthlyObjective);
 
-    const bool relegationRiskObjective =
-        boardMonthlyObjective.find("descender") != string::npos ||
-        boardMonthlyObjective.find("zona de riesgo de descenso") != string::npos;
+    switch (objectiveType) {
+        case BoardObjectiveType::YouthStarts: {
+            int youthStarts = 0;
+            for (const auto& player : myTeam->players) {
+                if (player.age <= 20) {
+                    youthStarts += player.startsThisSeason;
+                }
+            }
+            boardMonthlyProgress = youthStarts;
+            break;
+        }
 
-    int youthStarts = 0;
-    for (const auto& player : myTeam->players) {
-        if (player.age <= 20) youthStarts += player.startsThisSeason;
-    }
+        case BoardObjectiveType::Position:
+        case BoardObjectiveType::RelegationRisk:
+            boardMonthlyProgress = currentCompetitiveRank();
+            break;
 
-    if (boardMonthlyObjective.find("titularidades") != string::npos) {
-        boardMonthlyProgress = youthStarts;
-    } else if (boardMonthlyObjective.find("posicion") != string::npos) {
-        boardMonthlyProgress = currentCompetitiveRank();
-    } else if (boardMonthlyObjective.find("presupuesto") != string::npos) {
-        boardMonthlyProgress =
-            static_cast<int>(min<long long>(myTeam->budget, 2000000000LL));
-    } else if (relegationRiskObjective) {
-        boardMonthlyProgress = currentCompetitiveRank();
+        case BoardObjectiveType::Budget:
+            boardMonthlyProgress = static_cast<int>(
+                min<long long>(myTeam->budget, 2000000000LL));
+            break;
+
+        case BoardObjectiveType::Points:
+        case BoardObjectiveType::Recovery:
+        case BoardObjectiveType::Unknown:
+            break;
     }
 
     if (currentWeek < boardMonthlyDeadlineWeek) return;
 
     bool success = false;
 
-    if (boardMonthlyObjective.find("puntos") != string::npos) {
-        success = boardMonthlyProgress >= boardMonthlyTarget;
-    } else if (boardMonthlyObjective.find("titularidades") != string::npos) {
-        success = boardMonthlyProgress >= boardMonthlyTarget;
-    } else if (boardMonthlyObjective.find("posicion") != string::npos) {
-        success = boardMonthlyProgress > 0 &&
-                  boardMonthlyProgress <= boardMonthlyTarget;
-    } else if (boardMonthlyObjective.find("presupuesto") != string::npos) {
-        success = boardMonthlyProgress >= boardMonthlyTarget;
-    } else if (relegationRiskObjective) {
-        const int safeRankLimit =
-            max(1, currentCompetitiveFieldSize() * 3 / 4);
+    switch (objectiveType) {
+        case BoardObjectiveType::Points:
+        case BoardObjectiveType::YouthStarts:
+        case BoardObjectiveType::Budget:
+            success = boardMonthlyProgress >= boardMonthlyTarget;
+            break;
 
-        success = boardMonthlyProgress > 0 &&
-                  boardMonthlyProgress <= safeRankLimit;
-    } else if (recoveryObjective) {
-        success = boardMonthlyProgress >= max(1, boardMonthlyTarget);
+        case BoardObjectiveType::Position:
+            success = boardMonthlyProgress > 0 &&
+                      boardMonthlyProgress <= boardMonthlyTarget;
+            break;
+
+        case BoardObjectiveType::RelegationRisk: {
+            const int safeRankLimit =
+                max(1, currentCompetitiveFieldSize() * 3 / 4);
+
+            success = boardMonthlyProgress > 0 &&
+                      boardMonthlyProgress <= safeRankLimit;
+            break;
+        }
+
+        case BoardObjectiveType::Recovery:
+            success = boardMonthlyProgress >=
+                      max(1, boardMonthlyTarget);
+            break;
+
+        case BoardObjectiveType::Unknown:
+            success = false;
+            break;
     }
 
     boardConfidence = clampInt(
@@ -706,6 +727,7 @@ void Career::updateDynamicObjectiveStatus() {
 
     initializeDynamicObjective();
 }
+
 int Career::currentCompetitiveRank() const {
     if (!myTeam) return -1;
     vector<Team*> teams = boardRelevantTeams(*this);

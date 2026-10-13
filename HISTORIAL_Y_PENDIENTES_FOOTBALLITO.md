@@ -22,7 +22,14 @@ Los archivos originales `TODO.md` y `TODO_actualizado.md` fueron sustituidos por
   - Se incorporaron pruebas de regresion para recuperacion cumplida e incumplida, riesgo de descenso cumplido e incumplido y texto antiguo.
   - Compilacion correcta: `cmake --build build-ci --config Release`.
   - Pruebas correctas: `ctest --test-dir build-ci -C Release --output-on-failure` (1 de 1 pruebas registradas aprobada).
-- [ ] Mejora arquitectonica posterior: identificar objetivos mensuales mediante tipos estructurados en lugar de fragmentos de texto y ampliar las pruebas del flujo de adopcion desde la interfaz.
+- [x] Mejora arquitectonica de objetivos mensuales completada:
+  - Se incorporo BoardObjectiveType para centralizar la identificacion de puntos, juveniles, posicion, presupuesto, recuperacion y descenso.
+  - Se eliminaron comparaciones duplicadas en la evaluacion mensual, decisiones semanales, recomendaciones, interfaz y carga de partidas.
+  - Se conserva la compatibilidad con objetivos antiguos mediante la clasificacion de sus textos.
+  - Se traslado la adopcion de sugerencias al servicio manager_advice::adoptSuggestedBoardObjective().
+  - Se agregaron pruebas del clasificador y de adopcion real de objetivos financieros y de recuperacion.
+  - Compilacion Release correcta y pruebas CTest aprobadas (1 de 1).
+- [ ] Mejora futura: almacenar un identificador tipado estable en las partidas y ampliar las pruebas de interaccion directa con la interfaz.
 ### Estado de refactorizacion y Match Center
 
 - `simulateCareerWeek()` ya orquesta seis fases; algunas responsabilidades residuales todavia permanecen en `week_simulation.cpp`.

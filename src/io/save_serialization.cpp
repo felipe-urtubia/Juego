@@ -1,3 +1,4 @@
+#include "career/board_objective.h"
 #include "io/save_serialization.h"
 
 #include "competition/league_registry.h"
@@ -1489,8 +1490,8 @@ bool deserializeCareer(istream& file, Career& career) {
         if (!cupActive && career.getActiveTeamCount() > 0) career.initializeSeasonCup();
         if (hasIntegrity && !validateLoadedIntegrity(career, expectedIntegrity)) return false;
         if (!validateLoadedCareerBasics(career)) return false;
-        if (boardMonthlyObjective.find("descender") != string::npos ||
-            boardMonthlyObjective.find("zona de riesgo de descenso") != string::npos) {
+        if (boardObjectiveTypeFromText(boardMonthlyObjective) ==
+            BoardObjectiveType::RelegationRisk) {
             boardMonthlyTarget =
                 max(1, career.currentCompetitiveFieldSize() * 3 / 4);
             boardMonthlyProgress = career.currentCompetitiveRank();
